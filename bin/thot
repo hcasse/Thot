@@ -97,7 +97,7 @@ if options.defines:
 			env[d[:p]] = d[p+1:]
 
 # open the output
-document = doc.Document(env)
+document = doc.Document(os.path.splitext(env["THOT_FILE"])[0], env)
 out_name = env["THOT_OUT_TYPE"]
 out_path = os.path.join(document.env["THOT_LIB"], "backs")
 out_driver = common.loadModule(out_name,  out_path)

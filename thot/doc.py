@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import re
 
 import thot.common as common
@@ -1212,60 +1213,72 @@ class HashSource:
 		not known by the source, a None is returned. Else a document word
 		must be returned."""
 		return None
-	
 
-class Document(Container):
-	"""This is the top object of the document, containing the headings
-	and also the configuration environment."""
+
+class Environment:
+	"""Collection of variables and accessor/mutator functions."""
 	env = None
-	features = None
-	labels = { }
-	inv_labels = { }
-	hashes = None
-	hash_srcs = None
 
-	def __init__(self, env):
-		Container.__init__(self)
-		self.env = env
-		self.features = []
-		self.hashes = { }
-		self.hash_srcs = []
-	
-	def onEvent(self, man, event):
-		if event.level is L_WORD:
-			self.add(man, Par())
-			man.send(event)
-		elif event.level is L_DOC and event.id is ID_END:
-			pass
-		else:
-			self.add(man, event.make())
+	def __init__(self, env = None):
+		self.env = {} if env == None else dict(env)
 
 	def reduceVars(self, text):
-		"""Reduce variables in the given text.
-		- doc -- current document
-		- text -- text to replace in."""
-
+		"""Reduce variables in the given text."""
+		# should be optimized using a buffer
 		m = VAR_REC.search(text)
 		while m:
-			val = str(self.getVar(m.group('varid')))
+			try:
+				val = str(self.env[m.group('varid')])
+			except KeyError:
+				val = ""
 			text = text[:m.start()] + val + text[m.end():]
 			m = VAR_REC.search(text)
 		return text
 
 	def getVar(self, id, default = ""):
-		"""Get a variable and evaluates the variables in its content."""
+		"""Get a variable and evaluates the variables in its content.
+		If the variable is not found, return "". """
 		if id in self.env:
 			return self.reduceVars(self.env[id])
 		else:
 			return default
 
 	def setVar(self, name, val):
+		"""Set the value of a variable."""
 		self.env[name] = val
 
-	def dumpHead(self, tab = ""):
-		for k in iter(self.env):
-			print(k + "=" + self.env[k])
-		print(tab + "document(")
+	def __getitem__(self, id):
+		return self.getVar(id)
+
+	def __setitem__(self, id, val):
+		self.setVar(id, val)
+	
+
+
+class Folder(Environment):
+	"""A folder represents a collection of documents that share ressources
+	and references. A folder contains several components shared by the
+	documents (and therefore can be cross-referenced):
+	* features (plug-in special generation processing),
+	* labels (identifier associated with some noes),
+	* hashes (shortcut for making links inside and outside documents)."""
+
+	path = None
+	features = None
+	labels = None
+	inv_labels = None
+	hashes = None
+	hash_srcs = None
+
+	def __init__(self, path, env = None):
+		Environment.__init__(self, env)
+		self.path = path
+		self.docs = []
+		self.features = []
+		self.labels = {}
+		self.inv_labels = {}
+		self.hashes = {}
+		self.hash_srcs = []
 
 	def addFeature(self, feature):
 		"""Add a feature to the document."""
@@ -1297,10 +1310,6 @@ class Document(Container):
 		else:
 			return None
 
-	def visit(self, visitor):
-		"""Visit the content of a document using the visitor interface."""
-		visitor.onDocument(self)
-	
 	def add_hash_source(self, src):
 		"""Add an hash source (involved in the #WORD resolution).
 		Several modules can add their own hash definitions. The src
@@ -1320,6 +1329,78 @@ class Document(Container):
 					self.hashes[word] = res
 					return res
 			return None
+
+
+
+class Document(Container):
+	"""This is the top object of the document, containing the headings
+	and also the configuration environment."""
+	path = None
+	env = None
+	folder = None
+	env = None
+
+	def __init__(self, path, env = None, folder = None):
+		Container.__init__(self)
+		self.path = path
+		if folder != None:
+			self.folder = folder
+		else:
+			self.folder = Folder(os.path.dirname(path), env)
+		if env == None:
+			self.env = Environment(dict(self.folder.env))
+		else:
+			self.env = Environment(env)
+	
+	def onEvent(self, man, event):
+		if event.level is L_WORD:
+			self.add(man, Par())
+			man.send(event)
+		elif event.level is L_DOC and event.id is ID_END:
+			pass
+		else:
+			self.add(man, event.make())
+
+	def reduceVars(self, text):
+		return self.env.reduceVars(text)
+
+	def getVar(self, id, default = ""):
+		return self.env.getVar(id, default)
+
+	def setVar(self, name, val):
+		self.env.setVar(name, val)
+
+	def dumpHead(self, tab = ""):
+		for k in iter(self.env):
+			print(k + "=" + self.env[k])
+		print(tab + "document(")
+
+	def addFeature(self, feature):
+		"""Add a feature to the document."""
+		self.folder.addFeature(feature)
+
+	def pregen(self, gen):
+		"""Call the prepare method of features of the document."""
+		self.folder.pregen(gen)
+
+	def addLabel(self, label, node):
+		self.folder.addLabel(label, node)
+	
+	def getLabel(self, label):
+		return self.folder.getLabel(label)
+
+	def getLabelFor(self, node):
+		return self.folder.getLabelFor(node)
+
+	def visit(self, visitor):
+		"""Visit the content of a document using the visitor interface."""
+		visitor.onDocument(self)
+
+	def add_hash_source(self, src):
+		return self.folder.add_hash_source(src)
+	
+	def resolve_hash(self, word):
+		return self.folder.resolve_hash(word)
 
 
 class Visitor:
@@ -1359,9 +1440,9 @@ class Visitor:
 class Factory:
 	"""Factory to customize the building of objects."""
 	
-	def makeDocument(self, env):
+	def makeDocument(self, path, env):
 		"""Build a document."""
-		return Document(env)
+		return Document(path, env)
 	
 	def makeHeader(self, level):
 		"""Build a new header."""
@@ -1438,4 +1519,5 @@ class Factory:
 	def makeRef(self, ref):
 		"""Make a reference."""
 		return Ref(ref)
+
 

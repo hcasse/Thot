@@ -45,7 +45,7 @@ ALL = [
 	Test("unicode-html", "unicode.thot"),
 	Test("lexicon-html", "lexicon.thot"),
 	Test("doxygen-html", "doxygen.thot"),
-	Test("wiki", "wiki.thot", "-t wiki")
+#	Test("wiki", "wiki.thot", "-t wiki")
 ]
 
 

@@ -270,10 +270,13 @@ class HeaderRef:
 		self.node = node
 
 	def label(self):
+		pass
 
 	def number(self):
+		pass
 
 	def link(self, relative):
+		pass
 		
 
 
