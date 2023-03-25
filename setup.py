@@ -16,20 +16,10 @@ setuptools.setup(
 	author_email = "hug.casse@gmail.com",
 	license = "GPLv3",
 
-	#packages = ['thot', 'thot/mods', 'thot/backs'],
 	packages = packs,
 	entry_points = {
 		'console_scripts': ['thot=thot.command:main']
 	},
 
-	#package_dir = { "": "."},
 	include_package_data = True,
-	#package_data={
-	#	'thot.data.box': [ "*.css" "*.png" ]
-	#}
-	#package_data = {
-	# 	"share/thot/css/minima/": glob.glob("css/minima/*.css"),
-	#	"share/thot/css/minima/": glob.glob("css/minima/*.css"),
-	#	"share/thot/box": glob.glob("share/thot/box/*")
-	#}
 )
