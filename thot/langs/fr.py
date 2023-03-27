@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import i18n
-import doc
+import thot.i18n as i18n
+import thot.doc as doc
 
 DICT = {
 	i18n.ID_CONTENT 		: "Sommaire",

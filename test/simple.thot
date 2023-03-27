@@ -3,7 +3,7 @@
 @AUTHORS=H. Cassé <hugues.casse@laposte.net>, moi oui <ici@labas.fr>
 @VERSION=0.1
 @LANG=en_EN
-@HTML_STYLES=@(THOT_BASE)/css/minima/green.css
+@HTML_STYLES=@(THOT_BASE)/doc-styles/minima-green.css
 
 introduction
 
@@ -75,15 +75,15 @@ And the french quote ? >>
 A smiley :-) ???
 
 A simple image:
-{{@(THOT_BASE)/pix/thot5.gif}}
+{{thot5.png}}
 
-A 16xN image: {{@(THOT_BASE)/pix/thot5.gif?16|16xN}} 16 x N
+A 16xN image: {{thot5.png?16|16xN}} 16 x N
 
 A Nx16 image:
-{{@(THOT_BASE)/pix/thot5.gif?x16|Nx16}}	N x 16
+{{thot5.png?x16|Nx16}}	N x 16
 
 A 16x16 image:
-{{@(THOT_BASE)/pix/thot5.gif?16x16|16x16}}	16 x 16
+{{thot5.png?16x16|16x16}}	16 x 16
 
 Image with relative name:
 {{gravure-thot.gif}}

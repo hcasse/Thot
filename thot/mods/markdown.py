@@ -95,6 +95,7 @@ def handle_id_def(man, match):
 	man.defs[match.group("id")] = (match.group("URL"), match.group("text")) 
 
 def handle_style(man, style):
+	print("DEBUG: style", style)
 	man.send(doc.StyleEvent(style))
 
 def handle_word(man, word):
@@ -144,39 +145,39 @@ __syntax__ = True
 
 __words__ = [
 	(handle_link,
-		r"\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)]*)\)",
+		"\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)]*)\)",
 		"""the text is marked with a link to the URL."""
 	),
 	(lambda man, match: handle_word(man, match.group("char")),
-		r"\\(?P<char>.)",
+		"\\\\(?P<char>.)",
 		"""protect a character from interpretation."""
 	),
-	(lambda man, match: handle_style(man, doc.STYLE_EMPHASIZED),
-		r"[*_]",
+	(lambda man, match: handle_style(man, doc.STYLE_STRONG),
+		"\\*\\*|__",
 		"""open and close emphasis style"""
 	),
-	(lambda man, match: handle_style(man, doc.STRONG),
-		r"\*\*|__",
+	(lambda man, match: handle_style(man, doc.STYLE_EMPHASIZED),
+		"[*_]",
 		"""open and close emphasis style"""
 	),
 	(handle_backtrick,
-		r"``(?P<text_backtrick>(`[^`]|[^`])*)``",
+		"``(?P<text_backtrick>(`[^`]|[^`])*)``",
 		"""code text that can contain single backquote '`'"""
 	),
 	(handle_code_word,
-		r"`",
+		"`",
 		"""open and close code text."""
 	),
 	(handle_image,
-		r"!\[(?P<alttext_img>[^\]]*)\]\s*\[(?P<id_img>[^\]]*)\]",
+		"!\[(?P<alttext_img>[^\]]*)\]\s*\[(?P<id_img>[^\]]*)\]",
 		"""insert image corresponding to id with alternate text alttext"""
 	),
 	(handle_auto_link,
-		r"<(?P<url_auto>[a-zA-Z_0-9]+://[^>]*)>",
+		"<(?P<url_auto>[a-zA-Z_0-9]+://[^>]*)>",
 		"""insert a link around the given url."""
 	),
 	(handle_mailto_link,
-		r"<(?P<email_auto>[a-zA-Z_0-9.]+@[a-zA-Z0-9_.]*)>",
+		"<(?P<email_auto>[a-zA-Z_0-9.]+@[a-zA-Z0-9_.]*)>",
 		"""insert a link corresponding to the email address."""
 	),
 	(handle_html,
@@ -184,7 +185,7 @@ __words__ = [
 		"""rough HTML code (may only be compatible with html back-end)"""
 	),
 	(handle_ref,
-		r"\[(?P<text_ref>[^\]]*)\]\s*\[(?P<id_ref>[^\]]*)\]",
+		"\[(?P<text_ref>[^\]]*)\]\s*\[(?P<id_ref>[^\]]*)\]",
 		"""the text is marked with a link to reference id."""
 	)
 ]

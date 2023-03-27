@@ -59,18 +59,19 @@ class PagePolicy:
 		return	"#" + number
 
 	def gen_header(self, gen):
-		out = gen.out
-		styles = gen.doc.getVar("HTML_STYLES")
-		if styles:
-			for style in styles.split(':'):
-				if style == "":
-					continue
-				new_style = gen.importCSS(style)
-				out.write('	<link rel="stylesheet" type="text/css" href="' + new_style + '">\n')
-		short_icon = gen.doc.getVar('HTML_SHORT_ICON')
-		if short_icon:
-			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
-		self.gen.genScripts()
+		gen.gen_header()
+		# out = gen.out
+		# styles = gen.doc.getVar("HTML_STYLES")
+		# if styles:
+			# for style in styles.split(':'):
+				# if style == "":
+					# continue
+				# new_style = gen.importCSS(style)
+				# out.write('	<link rel="stylesheet" type="text/css" href="' + new_style + '">\n')
+		# short_icon = gen.doc.getVar('HTML_SHORT_ICON')
+		# if short_icon:
+			# out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
+		# self.gen.genScripts()
 
 	def get_file(self, node):
 		"""Return the file name containing the given node."""

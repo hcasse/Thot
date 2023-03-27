@@ -25,6 +25,7 @@ import thot.common as common
 import thot.doc as doc
 import thot.doc as tdoc
 import thot.highlight as highlight
+import thot.htmlman as htmlman
 import thot.i18n as i18n
 
 def escape_cdata(s):
@@ -64,22 +65,6 @@ STYLES = {
 	doc.STYLE_CITE:			('<cite>', '</cite>'),
 	doc.STYLE_CODE:			('<code>', '</code>')
 }
-
-# ESCAPE_MAP = {
-	# '<'	: "&lt;",	
-	# '>'	: "&gt;",
-	# '&'	: "&amp;"
-# }
-# def escape(s):
-	# r = ""
-	# for c in s:
-		# if ord(c) >= 128:
-			# r = r + ("&#%d;" % ord(c))
-		# elif c in ESCAPE_MAP:
-			# r = r + ESCAPE_MAP[c]
-		# else:
-			# r = r + c
-	# return r
 
 def getStyle(style):
 	if style in STYLES:
@@ -298,8 +283,9 @@ class Generator(back.Generator):
 	refs = None
 	scripts = None
 	template = None
+	man = None
 
-	def __init__(self, doc):
+	def __init__(self, doc, man = None):
 		back.Generator.__init__(self, doc)
 		self.footnotes = []
 		self.pages = { }
@@ -307,6 +293,13 @@ class Generator(back.Generator):
 		self.stack = []
 		self.refs = { }
 		self.scripts = []
+		if man != None:
+			self.man = man
+		else:
+			path = doc.getVar("THOT_FILE")
+			self.man = htmlman.LocalManager(
+				os.path.splitext(os.path.basename(path))[0],
+				outdir = os.path.dirname(path))
 
 	def getType(self):
 		return "html"
@@ -321,6 +314,20 @@ class Generator(back.Generator):
 				self.template = PlainPage()
 		return self.template
 
+	def gen_header(self):
+		out = self.out
+		styles = self.doc.getVar("HTML_STYLES")
+		if styles:
+			for style in styles.split(':'):
+				if style == "":
+					continue
+				new_style = self.importCSS(style)
+				out.write('	<link rel="stylesheet" type="text/css" href="' + new_style + '">\n')
+		short_icon = self.doc.getVar('HTML_SHORT_ICON')
+		if short_icon:
+			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
+		self.genScripts()
+
 	def newScript(self):
 		"""Create and record a new script for the header generation."""
 		s = Script()
@@ -328,7 +335,7 @@ class Generator(back.Generator):
 		return s
 	
 	def genScripts(self):
-		"""Generate the script needed by the page."""
+		"""Generate the script needed by the page. This functions can be called in two forms."""
 		for s in self.scripts:
 			s.gen(self.out)
 	
@@ -528,10 +535,13 @@ class Generator(back.Generator):
 
 	def genHeaderTitle(self, header):
 		"""Generate the title of a header."""
-		number = self.refs[header][1]
+		number = self.man.get_number(header)
+		anchor = self.man.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
-		self.out.write('<a name="' + number + '"></a>')
-		self.out.write(number)
+		if anchor != None:
+			self.out.write('<a name="' + number + '"></a>')
+		if number != None:
+			self.out.write(number)
 		header.genTitle(self)
 		self.out.write('</h' + str(header.getHeaderLevel() + 1) + '>\n')
 

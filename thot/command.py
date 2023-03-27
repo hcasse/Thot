@@ -257,3 +257,6 @@ def main():
 			out_driver.output(document)
 		except common.BackException as e:
 			common.onError(str(e))
+
+if __name__ == "__main__":
+	main()

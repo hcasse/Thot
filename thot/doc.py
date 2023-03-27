@@ -389,9 +389,12 @@ class Container(Node):
 	"""A container is an item containing other items."""
 	content = None
 
-	def __init__(self):
+	def __init__(self, content = None):
 		Node.__init__(self)
-		self.content = []
+		if content != None:
+			self.content = content
+		else:
+			self.content = []
 
 	def add(self, man, item):
 		if item:
@@ -695,8 +698,8 @@ class Link(Container):
 # Par family
 class Par(Container):
 
-	def __init__(self):
-		Container.__init__(self)
+	def __init__(self, content = None):
+		Container.__init__(self, content)
 
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
