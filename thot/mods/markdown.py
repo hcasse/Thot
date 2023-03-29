@@ -95,7 +95,6 @@ def handle_id_def(man, match):
 	man.defs[match.group("id")] = (match.group("URL"), match.group("text")) 
 
 def handle_style(man, style):
-	print("DEBUG: style", style)
 	man.send(doc.StyleEvent(style))
 
 def handle_word(man, word):
@@ -112,8 +111,12 @@ def handle_backtrick(man, match):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, style))
 
 def handle_image(man, match):
-	# TODO
-	pass
+	alttext = match.group("alttext_img")
+	id = match.group("id_img")
+	caption = doc.Par()
+	caption.append(doc.Word(alttext))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
+		doc.Image(id, None, None, caption)))
 
 def handle_auto_link(man, match):
 	url = match.group('url_auto')
@@ -169,7 +172,7 @@ __words__ = [
 		"""open and close code text."""
 	),
 	(handle_image,
-		"!\[(?P<alttext_img>[^\]]*)\]\s*\[(?P<id_img>[^\]]*)\]",
+		r"!\[(?P<alttext_img>[^\]]*)\]\s*\((?P<id_img>[^\]]*)\)",
 		"""insert image corresponding to id with alternate text alttext"""
 	),
 	(handle_auto_link,

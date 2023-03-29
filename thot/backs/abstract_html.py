@@ -38,7 +38,7 @@ def escape_attr(s):
 	of XML elements."""
 	return common.escape(s, True)
 
-CSS_URL_RE = re.compile('url\(([^)]*)\)')
+#CSS_URL_RE = re.compile('url\(([^)]*)\)')
 
 LISTS = {
 	'ul': ('<ul %s>', '<li>', '</li>', '</ul>'),
@@ -339,62 +339,62 @@ class Generator(back.Generator):
 		for s in self.scripts:
 			s.gen(self.out)
 	
-	def importCSS(self, spath, base = ""):
-		"""Perform import of files found in a CSS stylesheet.
-		spath -- path to the original CSS stylesheet.
-		base -- base path of the source."""
+	# def importCSS(self, spath, base = ""):
+		# """Perform import of files found in a CSS stylesheet.
+		# spath -- path to the original CSS stylesheet.
+		# base -- base path of the source."""
 
-		# get target path
-		if spath.startswith(self.getImportDir()):
-			return spath
-		path = self.get_friend(spath, base)
-		if path:
-			return path
-		if os.path.isabs(spath):
-			base = os.path.dirname(spath)
-			spath = os.path.basename(spath)
-		tpath = self.new_friend(spath)
-		spath = os.path.join(base, spath)
+		# # get target path
+		# if spath.startswith(self.getImportDir()):
+			# return spath
+		# path = self.get_friend(spath, base)
+		# if path:
+			# return path
+		# if os.path.isabs(spath):
+			# base = os.path.dirname(spath)
+			# spath = os.path.basename(spath)
+		# tpath = self.new_friend(spath)
+		# spath = os.path.join(base, spath)
 
-		# open files
-		try:
-			input = open(spath)
-		except FileNotFoundError as e:
-			raise common.BackException(str(e))
-		output = open(tpath, "w")
-		rbase = os.path.dirname(spath)
+		# # open files
+		# try:
+			# input = open(spath)
+		# except FileNotFoundError as e:
+			# raise common.BackException(str(e))
+		# output = open(tpath, "w")
+		# rbase = os.path.dirname(spath)
 
-		# perform the copy
-		for line in input:
-			m = CSS_URL_RE.search(line)
-			while m:
-				output.write(line[:m.start()])
-				url = m.group(1)
-				res = urlparse.urlparse(url)
-				if res[0]:
-					output.write(m.group())
-				else:
-					rpath = os.path.relpath(os.path.join(rbase, res[2]), base)
-					rpath = self.use_friend(rpath, base)
-					output.write("url(%s)" % self.relative_friend(rpath, os.path.dirname(tpath)))
-				line = line[m.end():]
-				m = CSS_URL_RE.search(line)
-			output.write(line)
+		# # perform the copy
+		# for line in input:
+			# m = CSS_URL_RE.search(line)
+			# while m:
+				# output.write(line[:m.start()])
+				# url = m.group(1)
+				# res = urlparse.urlparse(url)
+				# if res[0]:
+					# output.write(m.group())
+				# else:
+					# rpath = os.path.relpath(os.path.join(rbase, res[2]), base)
+					# rpath = self.use_friend(rpath, base)
+					# output.write("url(%s)" % self.relative_friend(rpath, os.path.dirname(tpath)))
+				# line = line[m.end():]
+				# m = CSS_URL_RE.search(line)
+			# output.write(line)
 
-		# return path
-		return tpath
+		# # return path
+		# return tpath
 
-	def genFootNote(self, note):
-		if note.kind != doc.FOOTNOTE_REF:
-			self.footnotes.append(note)
-		if note.kind != doc.FOOTNOTE_DEF:
-			if note.ref:
-				id = note.id
-				ref = "#footnote-custom-%s" % note.ref
-			else:
-				id = str(len(self.footnotes))
-				ref = "#footnote-%s" % id
-			self.out.write('<a class="footnumber" href="%s">%s</a>' % (ref, id))
+	# def genFootNote(self, note):
+		# if note.kind != doc.FOOTNOTE_REF:
+			# self.footnotes.append(note)
+		# if note.kind != doc.FOOTNOTE_DEF:
+			# if note.ref:
+				# id = note.id
+				# ref = "#footnote-custom-%s" % note.ref
+			# else:
+				# id = str(len(self.footnotes))
+				# ref = "#footnote-%s" % id
+			# self.out.write('<a class="footnumber" href="%s">%s</a>' % (ref, id))
 
 	def genFootNotes(self):
 		if not self.footnotes:
@@ -552,9 +552,17 @@ class Generator(back.Generator):
 		return True
 
 	def genLinkBegin(self, url):
-		if url.startswith("mailto:"):
-			url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
-		self.out.write('<a href="' + url + '">')
+
+		# process the URL
+		if ":" in url:
+			if url.startswith("mailto:"):
+				url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
+		else:
+			self.man.add_resource(url, self.doc)
+			url = self.man.get_resource_loc(url, self.doc)
+
+		# generate the code
+		self.out.write('<a href="%s">' % url)
 
 	def genLinkEnd(self, url):
 		self.out.write('</a>')
@@ -570,7 +578,13 @@ class Generator(back.Generator):
 		self.out.write('/>')
 		
 	def genImage(self, url, node, caption):
-		new_url = self.use_friend(url)
+		print("DEBUG: url=", url)
+		if ":" in url:
+			new_url = url
+		else:
+			self.man.add_resource(url, self.doc)
+			new_url = self.man.get_resource_loc(url, self.doc)
+		print("DEBUG: new_url=", new_url)
 		self.genImageTag(new_url, node, caption)
 
 	def genFigure(self, url, node, caption):
@@ -583,7 +597,6 @@ class Generator(back.Generator):
 		else:
 			self.out.write(' style="text-align:center"')
 		self.out.write('>\n')
-		new_url = self.use_friend(url)
 		self.genImageTag(new_url, node, caption)
 		self.genLabel(node)
 		self.out.write("</div>\n")
