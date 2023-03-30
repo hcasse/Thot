@@ -282,6 +282,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.end_headers()
 		file.generate(self)
 
+	def log_message(self, fmt, *args):
+		pass
+
+
 class MyServer(http.server.HTTPServer):
 
 	def __init__(self, doc):
