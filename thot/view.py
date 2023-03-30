@@ -16,6 +16,9 @@ import thot.htmlman as htmlman
 import thot.tparser as tparser
 import thot.backs.abstract_html as ahtml
 
+"""Heartbeat time-out in seconds."""
+HEARTBEAT_TIMEOUT = 1.1		
+
 PARSERS = {
 	".md": "markdown",
 	".thot": None,
@@ -143,30 +146,29 @@ class DocResource(Resource, ahtml.PageHandler):
 		self.node.gen(gen)
 		gen.genRaw("""
 <script>
-	
+	const thot_request = new XMLHttpRequest();
+	const heartbeat_delay = 1000;
+	var heartbeat_timeout;
 
-	function quit(e) {
-		const xhttp = new XMLHttpRequest();
-		xhttp.onreaddystatechange = function() {
-			if(this.readyState == 4) {
-				if(this.status == 200) {
-					window.close();
-				}
-			}
+	function heartbeat() {
+		start_heartbeat();
+		thot_request.open("GET", "/heartbeat", true);
+		thot_request.send();
+	}
+
+	function start_heartbeat() {
+		console.log("start heartbeat!");
+		heartbeat_timeout = setTimeout(heartbeat, heartbeat_delay);
+	}
+
+	function stop_heartbeat() {
+		if(heartbeat_timeout != null) {
+			clearTimeout(heartbeat_timeout);
+			heartbeat_timeout = null;
 		}
-		xhttp.open("GET", "quit", true);
-		xhttp.send();
-		now = (new Date()).getTime();
-		while(((new Date()).getTime() - now) < 250);
 	}
 
-	function link_to(url) {
-		window.onunload = null;
-		window.location = url;
-	}
-
-	var body = document.getElementsByTagName("BODY")[0];
-	body.onunload = quit;
+	start_heartbeat();
 
 </script>
 """)
@@ -182,6 +184,7 @@ class Manager(htmlman.Manager):
 		self.map['/index.html'] = gen
 		self.map['/index.htm'] = gen
 		self.map['/%s' % os.path.basename(document)] = gen
+		self.map["/heartbeat"] = Resource("/heartbeat")
 		self.fsmap = {}
 		self.counter = 0
 		self.tmpdir = None
@@ -218,7 +221,7 @@ class Manager(htmlman.Manager):
 				res = self.make_gen(path, loc)
 			self.fsmap[path] = res
 			self.map[loc] = res
-			print("DEBUG: add", path, "loc=", loc)
+			#print("DEBUG: add", path, "loc=", loc)
 		return path
 
 	def create_resource(self, ext, id = None):
@@ -261,15 +264,8 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.wfile.write(text)
 
 	def do_GET(self):
-		print("DEBUG: path=", self.path)
-		if self.path == "/quit":
-			self.log_message("Exiting...")
-			self.send_response(200)
-			self.end_headers()
-			assassin = threading.Thread(target=server.shutdown)
-			assassin.daemon = True
-			assassin.start()
-			return
+		#print("DEBUG: path=", self.path)
+		self.server.heartbeat()
 		try:
 			file = self.server.manager.map[self.path]
 			file.prepare()
@@ -286,9 +282,43 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.end_headers()
 		file.generate(self)
 
-def run_browser(addr):
-	time.sleep(.5)
-	webbrowser.open_new_tab("http://%s:%d" % addr)
+class MyServer(http.server.HTTPServer):
+
+	def __init__(self, doc):
+		http.server.HTTPServer.__init__(self,
+			('localhost', 0),
+			RequestHandler)
+		self.manager = Manager(doc)
+		self.make_timer()
+
+	def make_timer(self):
+		self.timer = threading.Timer(
+			HEARTBEAT_TIMEOUT,
+			self.handle_timeout)
+
+	def heartbeat(self):
+		self.timer.cancel()
+		self.make_timer()
+		self.timer.start()
+
+	def handle_timeout(self):
+		self.shutdown()
+
+	def get_address(self):
+		return self.socket.getsockname()
+
+	def run_browser(self):
+		time.sleep(.5)
+		webbrowser.open_new_tab("http://%s:%d" % self.get_address())
+
+	def serve_forever(self):
+		print("Listening to", self.get_address())
+		threading.Thread(target = self.run_browser).start()
+		self.timer.start()
+		try:
+			http.server.HTTPServer.serve_forever(self)
+		except KeyboardInterrupt:
+			self.shutdown()
 
 
 if __name__ == "__main__":
@@ -301,16 +331,7 @@ if __name__ == "__main__":
 	parser.add_argument('document', nargs=1)
 	args = parser.parse_args()
 
-	# build the environment
-	manager = Manager(args.document[0])
-	try:
-		server = http.server.HTTPServer(('localhost', 0), RequestHandler)
-		server.manager = manager
-		addr = server.socket.getsockname()
-		print("Listing to", addr)
-		threading.Thread(target = run_browser, args=(addr,)).start()
-		server.serve_forever()
-	except KeyboardInterrupt:
-		server.shutdown()
+	# run the server
+	MyServer(args.document[0]).serve_forever()
 
 	
