@@ -7,7 +7,23 @@
 		<meta http-equiv="Content-Type" content="text/html; charset='<thot:text>@ENCODING@</thot:text>'">
 		<thot:header/>
 	</head>
-<body>
+
+	<script>
+		const thot_request = new XMLHttpRequest();
+
+		function send(cmd) {
+			thot_request.open("GET", cmd, true);
+			thot_request.send();		
+		}
+		
+		function quit() {
+			send("/quit");
+			sleep(500);
+		}
+
+	</script>
+
+<body onbeforeunload="quit();">
 
 <header>
 	<h1><thot:title/></h1>
@@ -30,33 +46,6 @@
 		Theme <thot:style_authoring/>
 	</div>
 </footer>
-
-<script>
-	const thot_request = new XMLHttpRequest();
-	const heartbeat_delay = 500;
-	var heartbeat_timeout;
-
-	function heartbeat() {
-		start_heartbeat();
-		thot_request.open("GET", "/heartbeat", true);
-		thot_request.send();
-	}
-
-	function start_heartbeat() {
-		console.log("start heartbeat!");
-		heartbeat_timeout = setTimeout(heartbeat, heartbeat_delay);
-	}
-
-	function stop_heartbeat() {
-		if(heartbeat_timeout != null) {
-			clearTimeout(heartbeat_timeout);
-			heartbeat_timeout = null;
-		}
-	}
-
-	start_heartbeat();
-
-</script>
 
 </body>
 </html>

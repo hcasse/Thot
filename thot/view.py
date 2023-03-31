@@ -1,8 +1,25 @@
+# view -- thot-view implementation
+# Copyright (C) 2009  <hugues.casse@laposte.net>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """Implements the command thot-view."""
 
 import argparse
 import http.server
 import mimetypes
+import os
 import os.path
 import tempfile
 import threading
@@ -15,6 +32,7 @@ import thot.doc as doc
 import thot.htmlman as htmlman
 import thot.tparser as tparser
 import thot.backs.abstract_html as ahtml
+
 
 """Heartbeat time-out in seconds."""
 HEARTBEAT_TIMEOUT = 1.1		
@@ -57,13 +75,29 @@ class Resource:
 
 class HeartBeatResource(Resource):
 
-	def __init__(self):
-			Resource.__init__(self, "/heartbeat")
+	def __init__(self, loc, fun = lambda: None):
+			Resource.__init__(self, loc)
+			self.fun = fun
 
 	def get_mime(self):
 		return "text/plain"
 
 	def generate(self, out):
+		self.fun()
+		out.write("\n")
+
+
+class ActionResource(Resource):
+
+	def __init__(self, loc, fun = lambda: None):
+			Resource.__init__(self, loc)
+			self.fun = fun
+
+	def get_mime(self):
+		return "text/plain"
+
+	def generate(self, out):
+		self.fun()
 		out.write("\n")
 
 
@@ -77,14 +111,17 @@ class FileResource(Resource):
 	def get_mime(self):
 		return mimetypes.guess_type(self.path)[0]		
 
+	def prepare(self):
+		if not os.access(self.path, os.R_OK):
+			raise common.ThotException("cannot access %s" % self.path)
+
 	def generate(self, out):
 
 		# send text file
 		if self.get_mime() in TEXT_MIMES:
-			file = open(self.path, encoding="utf-8")
-			for l in file:
-				out.write(l)
-			file.close()
+			with open(self.path, encoding="utf-8") as file:
+				for l in file:
+					out.write(l)
 
 		# send binary file
 		else:
@@ -120,6 +157,8 @@ class DocResource(Resource, ahtml.PageHandler):
 		self.document = document
 		self.node = None
 		self.man = man
+		self.style = "@(THOT_BASE)/view/blue-penguin.css"
+		self.style_author = None
 
 	def get_mime(self):
 		return "text/html"
@@ -132,9 +171,7 @@ class DocResource(Resource, ahtml.PageHandler):
 		env['THOT_OUT_TYPE'] = 'html'
 		env["THOT_FILE"] = self.document
 		env["THOT_DOC_DIR"] = os.path.dirname(self.document)
-		env["HTML_STYLES"] = os.path.join(
-			env["THOT_BASE"],
-			"view/blue-penguin.css")
+		env["HTML_STYLES"] = env.reduce(self.style)
 
 		# build the document
 		self.node = doc.Document(env)
@@ -156,12 +193,25 @@ class DocResource(Resource, ahtml.PageHandler):
 			self.title = doc.Par([doc.Word(title)])
 
 		# find base level
-		self.node.dump('')
+		#self.node.dump('')
 		self.base_level = 10;
 		for c in self.node.content:
 			if isinstance(c, doc.Header):
 				self.base_level = min(self.base_level, c.header_level)
-		print("DEBUG: base_level=", self.base_level)
+
+	def gen_style_authoring(self, gen):
+		if self.style_author == None:
+			name = os.path.splitext(os.path.basename(self.style))[0]
+			self.style_author = name
+			try:
+				with open(self.node.env.reduce(self.style)) as input:
+					l = input.readline()
+					if l.startswith("/*") and l.endswith("*/\n"):
+						self.style_author = '<a href="%s">%s</a>' \
+							% (l[2:-3].strip(), name)
+			except OSError:
+				pass
+		gen.out.write(self.style_author)
 
 	def generate(self, out):
 		if self.node == None:
@@ -169,7 +219,7 @@ class DocResource(Resource, ahtml.PageHandler):
 		template = ahtml.TemplatePage(
 			os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
 			self.node.env,
-			style_authoring = lambda gen: None)
+			style_authoring = self.gen_style_authoring)
 		gen = Generator(self.node, self.man, template, self.base_level, )
 		self.node.pregen(gen)
 		gen.out = out
@@ -195,14 +245,13 @@ class Manager(htmlman.Manager):
 		self.map['/index.html'] = gen
 		self.map['/index.htm'] = gen
 		self.map['/%s' % os.path.basename(document)] = gen
-		self.map["/heartbeat"] = HeartBeatResource()
 		self.fsmap = {}
 		self.counter = 0
 		self.tmpdir = None
 
-	def release(self):
-		"""Called to release resources used by the manager."""
-		pass
+	def link_resource(self, res):
+		"""Add a resource."""
+		self.map[res.loc] = res
 
 	def make_gen(self, path, loc):
 		"""Build a generator for the given path."""
@@ -232,7 +281,6 @@ class Manager(htmlman.Manager):
 				res = self.make_gen(path, loc)
 			self.fsmap[path] = res
 			self.map[loc] = res
-			#print("DEBUG: add", path, "loc=", loc)
 		return path
 
 	def create_resource(self, ext, id = None):
@@ -251,7 +299,6 @@ class Manager(htmlman.Manager):
 		path = self.canonize(path, doc)
 		try:
 			loc = self.fsmap[path].loc
-			print("DEBUG: link for", path, loc)
 			return loc
 		except KeyError:
 			return "broken link"
@@ -276,15 +323,14 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 	def do_GET(self):
 		#print("DEBUG: path=", self.path)
-		self.server.heartbeat()
 		try:
 			file = self.server.manager.map[self.path]
 			file.prepare()
 		except KeyError:
-			self.send_error(404)
-			self.log_error("no %s" % self.path)
+			msg = "%s not found" % self.path
+			self.send_error(404, msg)
 			return
-		except (IOError, OSError) as e:
+		except common.ThotException as e:
 			self.send_error(500)
 			self.error("error for %s: %s" % (self.path, e))
 			return
@@ -295,7 +341,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		file.generate(self)
 
 	def error(self, msg):
-		self.error("%s %s", self.log_date_time_string(), msg)
+		self.log_error("%s %s", self.log_date_time_string(), msg)
 
 	def log_error(self, fmt, *args):
 		http.server.SimpleHTTPRequestHandler.log_message(self, fmt % args)
@@ -311,20 +357,8 @@ class MyServer(http.server.HTTPServer):
 			('localhost', 0),
 			RequestHandler)
 		self.manager = Manager(doc)
-		self.make_timer()
-
-	def make_timer(self):
-		self.timer = threading.Timer(
-			HEARTBEAT_TIMEOUT,
-			self.handle_timeout)
-
-	def heartbeat(self):
-		self.timer.cancel()
-		self.make_timer()
-		self.timer.start()
-
-	def handle_timeout(self):
-		self.shutdown()
+		self.manager.link_resource(ActionResource("/quit",
+			self.quit))
 
 	def get_address(self):
 		return self.socket.getsockname()
@@ -333,14 +367,16 @@ class MyServer(http.server.HTTPServer):
 		time.sleep(.5)
 		webbrowser.open_new_tab("http://%s:%d" % self.get_address())
 
+	def quit(self):
+		threading.Thread(target = self.shutdown).start()
+
 	def serve_forever(self):
 		print("Listening to", self.get_address())
 		threading.Thread(target = self.run_browser).start()
-		self.timer.start()
-		#try:
-		http.server.HTTPServer.serve_forever(self)
-		#except KeyboardInterrupt:
-		#	self.shutdown()
+		try:
+			http.server.HTTPServer.serve_forever(self)
+		except KeyboardInterrupt:
+			self.shutdown()
 
 
 if __name__ == "__main__":

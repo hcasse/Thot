@@ -419,7 +419,7 @@ class Env:
 	name/value. It provides several facilties to handle definitions
 	and [...] operator access."""
 
-	VAR_RE = "@\((?P<varid>[a-zA-Z_0-9]+)\)"
+	VAR_RE = r"@\((?P<varid>[a-zA-Z_0-9]+)\)"
 	VAR_REC = re.compile(VAR_RE)
 
 	def __init__(self, map = None):
@@ -452,7 +452,7 @@ class Env:
 		- text -- text to replace in."""
 		m = Env.VAR_REC.search(text)
 		while m:
-			val = str(self.getVar(m.group('varid')))
+			val = str(self.get(m.group('varid')))
 			text = text[:m.start()] + val + text[m.end():]
 			m = Env.VAR_REC.search(text)
 		return text

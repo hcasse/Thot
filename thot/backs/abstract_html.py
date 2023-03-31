@@ -550,13 +550,11 @@ class Generator(back.Generator):
 		self.out.write('/>')
 		
 	def genImage(self, url, node, caption):
-		print("DEBUG: url=", url)
 		if ":" in url:
 			new_url = url
 		else:
 			self.man.add_resource(url, self.doc)
 			new_url = self.man.get_resource_loc(url, self.doc)
-		print("DEBUG: new_url=", new_url)
 		self.genImageTag(new_url, node, caption)
 
 	def genFigure(self, url, node, caption):
