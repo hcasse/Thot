@@ -55,6 +55,18 @@ class Resource:
 		pass
 
 
+class HeartBeatResource(Resource):
+
+	def __init__(self):
+			Resource.__init__(self, "/heartbeat")
+
+	def get_mime(self):
+		return "text/plain"
+
+	def generate(self, out):
+		out.write("\n")
+
+
 class FileResource(Resource):
 	"""Resource for the content of a file."""
 
@@ -71,7 +83,7 @@ class FileResource(Resource):
 		if self.get_mime() in TEXT_MIMES:
 			file = open(self.path, encoding="utf-8")
 			for l in file:
-				out.write(bytes(l, "utf-8"))
+				out.write(l)
 			file.close()
 
 		# send binary file
@@ -84,8 +96,21 @@ class FileResource(Resource):
 				else:
 					out.write_bin(b)
 			file.close()
-		
-		
+
+
+class Generator(ahtml.Generator):
+	"""Specialized generator."""
+
+	def __init__(self, doc, man, template, base_level):
+		ahtml.Generator.__init__(self, doc, man, template)
+		self.base_level = base_level
+
+	def genHeader(self, header):
+		header.header_level -= self.base_level
+		ahtml.Generator.genHeader(self, header)
+		header.header_level += self.base_level
+		return True
+
 
 class DocResource(Resource, ahtml.PageHandler):
 	"""Generator for Thot document."""
@@ -107,6 +132,9 @@ class DocResource(Resource, ahtml.PageHandler):
 		env['THOT_OUT_TYPE'] = 'html'
 		env["THOT_FILE"] = self.document
 		env["THOT_DOC_DIR"] = os.path.dirname(self.document)
+		env["HTML_STYLES"] = os.path.join(
+			env["THOT_BASE"],
+			"view/blue-penguin.css")
 
 		# build the document
 		self.node = doc.Document(env)
@@ -127,10 +155,22 @@ class DocResource(Resource, ahtml.PageHandler):
 			title = os.path.splitext(os.path.basename(self.document))[0]
 			self.title = doc.Par([doc.Word(title)])
 
+		# find base level
+		self.node.dump('')
+		self.base_level = 10;
+		for c in self.node.content:
+			if isinstance(c, doc.Header):
+				self.base_level = min(self.base_level, c.header_level)
+		print("DEBUG: base_level=", self.base_level)
+
 	def generate(self, out):
 		if self.node == None:
 			self.prepare()
-		gen = ahtml.Generator(self.node, self.man)
+		template = ahtml.TemplatePage(
+			os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
+			self.node.env,
+			style_authoring = lambda gen: None)
+		gen = Generator(self.node, self.man, template, self.base_level, )
 		self.node.pregen(gen)
 		gen.out = out
 		gen.getTemplate().apply(self, gen)
@@ -139,39 +179,10 @@ class DocResource(Resource, ahtml.PageHandler):
 		gen.gen_header()
 
 	def gen_title(self, gen):
-		self.title.gen(gen)
-		
+		doc.Container.gen(self.title, gen)
+
 	def gen_content(self, gen):
-		#self.node.dump('')
 		self.node.gen(gen)
-		gen.genRaw("""
-<script>
-	const thot_request = new XMLHttpRequest();
-	const heartbeat_delay = 1000;
-	var heartbeat_timeout;
-
-	function heartbeat() {
-		start_heartbeat();
-		thot_request.open("GET", "/heartbeat", true);
-		thot_request.send();
-	}
-
-	function start_heartbeat() {
-		console.log("start heartbeat!");
-		heartbeat_timeout = setTimeout(heartbeat, heartbeat_delay);
-	}
-
-	function stop_heartbeat() {
-		if(heartbeat_timeout != null) {
-			clearTimeout(heartbeat_timeout);
-			heartbeat_timeout = null;
-		}
-	}
-
-	start_heartbeat();
-
-</script>
-""")
 
 
 class Manager(htmlman.Manager):
@@ -184,7 +195,7 @@ class Manager(htmlman.Manager):
 		self.map['/index.html'] = gen
 		self.map['/index.htm'] = gen
 		self.map['/%s' % os.path.basename(document)] = gen
-		self.map["/heartbeat"] = Resource("/heartbeat")
+		self.map["/heartbeat"] = HeartBeatResource()
 		self.fsmap = {}
 		self.counter = 0
 		self.tmpdir = None
@@ -271,16 +282,23 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 			file.prepare()
 		except KeyError:
 			self.send_error(404)
+			self.log_error("no %s" % self.path)
 			return
 		except (IOError, OSError) as e:
 			self.send_error(500)
-			self.log_error(str(e))
+			self.error("error for %s: %s" % (self.path, e))
 			return
 			
 		self.send_response(200)
 		self.send_header("Content-type",  file.get_mime())
 		self.end_headers()
 		file.generate(self)
+
+	def error(self, msg):
+		self.error("%s %s", self.log_date_time_string(), msg)
+
+	def log_error(self, fmt, *args):
+		http.server.SimpleHTTPRequestHandler.log_message(self, fmt % args)
 
 	def log_message(self, fmt, *args):
 		pass
@@ -319,10 +337,10 @@ class MyServer(http.server.HTTPServer):
 		print("Listening to", self.get_address())
 		threading.Thread(target = self.run_browser).start()
 		self.timer.start()
-		try:
-			http.server.HTTPServer.serve_forever(self)
-		except KeyboardInterrupt:
-			self.shutdown()
+		#try:
+		http.server.HTTPServer.serve_forever(self)
+		#except KeyboardInterrupt:
+		#	self.shutdown()
 
 
 if __name__ == "__main__":

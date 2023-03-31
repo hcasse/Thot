@@ -38,8 +38,6 @@ def escape_attr(s):
 	of XML elements."""
 	return common.escape(s, True)
 
-#CSS_URL_RE = re.compile('url\(([^)]*)\)')
-
 LISTS = {
 	'ul': ('<ul %s>', '<li>', '</li>', '</ul>'),
 	'ol': ('<ol %s>', '<li>', '</li>', '</ol>'),
@@ -144,7 +142,7 @@ class PlainPage(Page):
 		out = gen.out
 		
 		# output header
-		out.write('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n')
+		out.write('<!DOCTYPE html>\n')
 		out.write('<html>\n')
 		out.write('<head>\n')
 		out.write("	<title>")
@@ -181,7 +179,6 @@ class PlainPage(Page):
 
 
 # TemplatePage class
-template_re = re.compile("<thot:([^/]+)\/>")
 
 class TemplatePage(Page):
 	"""Page supporting template in HTML. The template may contain
@@ -190,21 +187,29 @@ class TemplatePage(Page):
 	* <thot:authors> -- list of authors,
 	* <thot:menu> -- table of content of the document,
 	* <thot:content> -- content of the document.
+	* <thot:text>...</thot:text> -- where @VAR@ are replaced.
 	"""
-	path = None
+
+	RE = re.compile(r"<thot:([^/]+)\/>|<thot:text>(([^<]|<(?!/thot:text>)/)*)</thot:text>")
 	
-	def __init__(self, path):
+	def __init__(self, path, env = None, **defs):
 		self.path = path
+		self.defs = dict(defs)
+		self.env = env
+
+	def gen_text(self, text, gen):
+		if self.env != None:
+			text = self.env.reduce(text)
+		gen.out.write(text)
 	
 	def apply(self, handler, gen):
-		map = {
-			"authors": handler.gen_authors,
-			"content": handler.gen_content,
-			"header":  handler.gen_header,
-			"title":   handler.gen_title,
-			"toc":    handler.gen_menu
-		}
 		global template_re
+		self.defs["authors"] = handler.gen_authors
+		self.defs["content"] = handler.gen_content
+		self.defs["header"] =  handler.gen_header
+		self.defs["title"] = handler.gen_title
+		self.defs["toc"] = handler.gen_menu
+		self.defs["footnotes"] = lambda gen: gen.genFootNotes()
 
 		try:
 			tpl = open(self.path, "r")
@@ -212,14 +217,21 @@ class TemplatePage(Page):
 			for line in tpl.readlines():
 				n = n + 1
 				f = 0
-				for m in template_re.finditer(line):
+				for m in TemplatePage.RE.finditer(line):
 					gen.out.write(line[f:m.start()])
 					f = m.end()
-					try:
-						kw = m.group(1)
-						map[kw](gen)
-					except KeyError as e:
-						common.onError("unknown element %s at %d" % (kw, n))					
+					kw = m.group(1)
+					if kw == None:
+						self.gen_text(m.group(2), gen)
+					else:
+						try:
+							x = self.defs[kw]
+							if callable(x):
+								x(gen)
+							else:
+								self.gen_text(str(x), gen)				
+						except KeyError as e:
+							common.onError("unknown element %s at %d" % (kw, n))	
 				gen.out.write(line[f:])
 			
 		except IOError as e:
@@ -246,6 +258,7 @@ class Ref:
 		the link absolute (relatively to the project root) or
 		relative to the given file."""
 		return ""
+
 
 class HeaderRef:
 	"""A reference for header."""
@@ -282,10 +295,9 @@ class Generator(back.Generator):
 	label = None
 	refs = None
 	scripts = None
-	template = None
 	man = None
 
-	def __init__(self, doc, man = None):
+	def __init__(self, doc, man = None, template = None):
 		back.Generator.__init__(self, doc)
 		self.footnotes = []
 		self.pages = { }
@@ -293,6 +305,7 @@ class Generator(back.Generator):
 		self.stack = []
 		self.refs = { }
 		self.scripts = []
+		self.template = template
 		if man != None:
 			self.man = man
 		else:
@@ -339,62 +352,21 @@ class Generator(back.Generator):
 		for s in self.scripts:
 			s.gen(self.out)
 	
-	# def importCSS(self, spath, base = ""):
-		# """Perform import of files found in a CSS stylesheet.
-		# spath -- path to the original CSS stylesheet.
-		# base -- base path of the source."""
+	def importCSS(self, spath, base = ""):
+		self.man.add_resource(spath, self.doc)
+		return self.man.get_resource_loc(spath, self.doc)
 
-		# # get target path
-		# if spath.startswith(self.getImportDir()):
-			# return spath
-		# path = self.get_friend(spath, base)
-		# if path:
-			# return path
-		# if os.path.isabs(spath):
-			# base = os.path.dirname(spath)
-			# spath = os.path.basename(spath)
-		# tpath = self.new_friend(spath)
-		# spath = os.path.join(base, spath)
-
-		# # open files
-		# try:
-			# input = open(spath)
-		# except FileNotFoundError as e:
-			# raise common.BackException(str(e))
-		# output = open(tpath, "w")
-		# rbase = os.path.dirname(spath)
-
-		# # perform the copy
-		# for line in input:
-			# m = CSS_URL_RE.search(line)
-			# while m:
-				# output.write(line[:m.start()])
-				# url = m.group(1)
-				# res = urlparse.urlparse(url)
-				# if res[0]:
-					# output.write(m.group())
-				# else:
-					# rpath = os.path.relpath(os.path.join(rbase, res[2]), base)
-					# rpath = self.use_friend(rpath, base)
-					# output.write("url(%s)" % self.relative_friend(rpath, os.path.dirname(tpath)))
-				# line = line[m.end():]
-				# m = CSS_URL_RE.search(line)
-			# output.write(line)
-
-		# # return path
-		# return tpath
-
-	# def genFootNote(self, note):
-		# if note.kind != doc.FOOTNOTE_REF:
-			# self.footnotes.append(note)
-		# if note.kind != doc.FOOTNOTE_DEF:
-			# if note.ref:
-				# id = note.id
-				# ref = "#footnote-custom-%s" % note.ref
-			# else:
-				# id = str(len(self.footnotes))
-				# ref = "#footnote-%s" % id
-			# self.out.write('<a class="footnumber" href="%s">%s</a>' % (ref, id))
+	def genFootNote(self, note):
+		if note.kind != doc.FOOTNOTE_REF:
+			self.footnotes.append(note)
+		if note.kind != doc.FOOTNOTE_DEF:
+			if note.ref:
+				id = note.id
+				ref = "#footnote-custom-%s" % note.ref
+			else:
+				id = str(len(self.footnotes))
+				ref = "#footnote-%s" % id
+			self.out.write('<a class="footnumber" href="%s">%s</a>' % (ref, id))
 
 	def genFootNotes(self):
 		if not self.footnotes:

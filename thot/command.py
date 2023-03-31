@@ -34,7 +34,7 @@ import thot.tparser as tparser
 
 def make_env():
 	"""Prepare the environment."""
-	env = os.environ.copy()
+	env = common.Env(os.environ.copy())
 	thot_dir = os.path.abspath(os.path.dirname(thot.__file__))
 	env["THOT_VERSION"] = "0.9"
 	env["ENCODING"] = locale.getpreferredencoding()

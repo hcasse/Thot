@@ -1,0 +1,182 @@
+/* https://github.com/jody-frankowski/blue-penguin/tree/311a5208c030ea62d85bbca952e31b6775a50c2c */
+
+/* global */
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+img, p, h4, h5, h6 {
+  margin-top: 1.2em;
+}
+
+body {
+	  font-family: Georgia, serif;
+	  font-size: 16px;
+	  line-height: 1.5em;
+}
+
+/* structure */
+header {
+	padding: 0 10px;
+	max-width: 910px;
+	margin: auto;
+	padding: 1.5rem 0 .5rem;
+}
+
+header h1 {
+	color: #15A9DB;
+	font-size: 1.5em;
+	line-height: 1em;
+	margin: 0;
+}
+
+main {
+	margin-top: 0;
+	margin-left: 2.6em;
+	padding: 1em;
+	max-width: 910px;
+}
+
+footer {
+	  font-family: sans-serif;
+	  line-height: 2.5em;
+	  text-align: center;
+	  color: #BBB;
+	  margin: 3em 0;
+	  border: 1px solid #EEE;
+	  border-radius: 5px;
+}
+
+
+/* heads */
+h1, h2, h3, h4, h5, h6 {
+	font-family: sans-serif;
+	font-weight: bold;
+}
+
+h1, h2, h3 {
+	font-size: 1.5em;
+	line-height: 1em;
+	margin: 1em 0;
+	color: #15A9DB;
+}
+
+/* paragraphs */
+p {
+	text-align: justify;
+}
+
+blockquote {
+  margin: 1.5em 1.5em 1.5em .75em;
+  padding-left: .75em;
+  border-left: 1px solid #EEE;
+}
+
+ol {
+	list-style: outside decimal;
+}
+
+ul {
+	list-style: outside disc;	
+}
+
+table {
+	width: 100%;
+	margin: 1em 0;	
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+thead {
+	border-bottom: 1px solid black;
+}
+
+img {
+	box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.15);
+	border-radius: 0.3em;
+	max-width: 100%;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;	
+}
+
+/* text */
+strong {
+  font-weight: bold;
+}
+
+em {
+  font-style: italic;
+}
+
+code {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	box-sizing: border-box;
+	color: #C7254E;
+	font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+	font-size: 12.6px;
+	line-height: 18px;
+	padding-bottom: 2px;
+	padding-left: 0px;
+	padding-right: 4px;
+	padding-top: 2px;	
+}
+
+a {
+	text-decoration: none;
+	color: #15A9DB;
+}
+
+sub, sup {
+	position: relative;
+	font-size: 75%;
+	line-height: 0;
+	vertical-align: baseline;
+}
+
+sup {
+  top: -0.5em;
+}
+
+
+/* source coloring */
+.source {
+	margin-top: 1.2em;
+	background-color: #002b36;
+	color: #93a1a1;
+	border-radius: 3px;
+}
+
+
+/* footnote */
+.footnote-ref {
+	position: relative;
+	font-size: 75%;
+	line-height: 0;
+	vertical-align: baseline;
+	top: -0.5em;
+}
+
+.footnote-label {
+	
+}
+
+.footnote-text {
+	
+}
+
+.footnote-section {
+
+}

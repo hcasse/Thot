@@ -52,7 +52,7 @@ def handle_header(man, match):
 	title = match.group("title")
 	if title[-level:] == match.group("level"):
 		title = title[:-level]
-	man.send(doc.ObjectEvent(doc.L_HEAD, doc.ID_NEW, doc.Header(level)))
+	man.send(doc.ObjectEvent(doc.L_HEAD, doc.ID_NEW, doc.Header(level-1)))
 	tparser.handleText(man, title)
 	man.send(doc.Event(doc.L_HEAD, doc.ID_TITLE))
 

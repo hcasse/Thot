@@ -1247,23 +1247,14 @@ class Document(Container):
 		"""Reduce variables in the given text.
 		- doc -- current document
 		- text -- text to replace in."""
+		return self.env.reduce(text)
 
-		m = VAR_REC.search(text)
-		while m:
-			val = str(self.getVar(m.group('varid')))
-			text = text[:m.start()] + val + text[m.end():]
-			m = VAR_REC.search(text)
-		return text
-
-	def getVar(self, id, default = ""):
+	def getVar(self, name, default = ""):
 		"""Get a variable and evaluates the variables in its content."""
-		if id in self.env:
-			return self.reduceVars(self.env[id])
-		else:
-			return default
+		return self.env.get(name, default)
 
 	def setVar(self, name, val):
-		self.env[name] = val
+		self.env.set(name, val)
 
 	def dumpHead(self, tab = ""):
 		for k in iter(self.env):

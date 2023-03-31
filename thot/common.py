@@ -412,3 +412,56 @@ def display_syntax(syn):
 				print("%s %s" % (" " * m, l[:w]))
 				l = l[w:]
 			print("%s %s" % (" " * m, l))
+
+
+class Env:
+	"""Represents an environment, that is, a collection of defnitions
+	name/value. It provides several facilties to handle definitions
+	and [...] operator access."""
+
+	VAR_RE = "@\((?P<varid>[a-zA-Z_0-9]+)\)"
+	VAR_REC = re.compile(VAR_RE)
+
+	def __init__(self, map = None):
+		if map == None:
+			self.map = {}
+		else:
+			self.map = map
+
+	def set(self, name, val):
+		"""Set a new definition or overwrite an existing one."""
+		self.map[name] = val
+
+	def get(self, name, default = ""):
+		"""Get the value in an environment. If the value does not
+		exist, return an empty string (or the default value)."""
+		try:
+			return self.map[name]
+		except KeyError:
+			return default
+
+	def __getitem__(self, key):
+		return self.get(key)
+
+	def __setitem__(self, key, val):
+		self.set(key, val)
+
+	def reduce(self, text):
+		"""Reduce variables in the given text.
+		- doc -- current document
+		- text -- text to replace in."""
+		m = Env.VAR_REC.search(text)
+		while m:
+			val = str(self.getVar(m.group('varid')))
+			text = text[:m.start()] + val + text[m.end():]
+			m = Env.VAR_REC.search(text)
+		return text
+
+	def __iter__(self):
+		return iter(self.map)
+
+	def copy(self):
+		"""Get a new environment copy of this one."""
+		return Env(dict(self.map))
+
+	
