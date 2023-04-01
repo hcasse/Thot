@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import html
 import imp
+import locale
 import os
 import os.path
 import re
@@ -423,10 +425,17 @@ class Env:
 	VAR_REC = re.compile(VAR_RE)
 
 	def __init__(self, map = None):
-		if map == None:
-			self.map = {}
-		else:
+		if map != None:
 			self.map = map
+		else:
+			self.map = os.environ.copy()
+			thot_dir = os.path.abspath(os.path.dirname(__file__))
+			self.map["THOT_VERSION"] = "2.0"
+			self.map["ENCODING"] = locale.getpreferredencoding()
+			self.map["THOT_LIB"] = thot_dir
+			self.map["THOT_BASE"] = os.path.join(thot_dir, "data", "")
+			self.map["THOT_USE_PATH"] = os.path.join(thot_dir, "mods", "")
+			self.map["THOT_DATE"] = str(datetime.datetime.today())
 
 	def set(self, name, val):
 		"""Set a new definition or overwrite an existing one."""
@@ -464,4 +473,43 @@ class Env:
 		"""Get a new environment copy of this one."""
 		return Env(dict(self.map))
 
-	
+
+class Monitor:
+	"""Interface of classes in charge of communicating with human user."""
+
+	ANSI = supports_ansi()
+	NORMAL = "\033[0m" if ANSI else ""
+	ERROR_STYLE = "\033[31m" if ANSI else ""
+	WARN_STYLE = "\033[32m" if ANSI else ""
+	INFO_STYLE = "\033[36m" if ANSI else ""
+	VERB_STYLE = "\033[3;37m" if ANSI else ""
+	ERROR_FMT = ERROR_STYLE + "ERROR: " + NORMAL + "%s\n"
+	WARN_FMT = WARN_STYLE + "WARNING: " + NORMAL + "%s\n"
+	INFO_FMT = INFO_STYLE + "INFO: " + NORMAL + "%s\n"
+	VERB_FMT = VERB_STYLE + "> %s" + NORMAL + "\n"
+
+	def __init__(self):
+		self.out = sys.stdout
+		self.err = sys.stderr
+		self.verbose = False
+
+	def set_verbosity(self, verbose):
+		"""Enable/disable verbose mode."""
+		self.verbose = verbose
+
+	def error(self, msg, *args):
+		"""Print an error."""
+		self.err.write(Monitor.ERROR_FMT % (msg % args))
+
+	def warn(self, msg, *args):
+		"""Print a warning."""
+		self.err.write(Monitor.WARN_FMT % (msg % args))
+
+	def info(self, msg, *args):
+		"""Print an information."""
+		self.err.write(Monitor.INFO_FMT % (msg % args))
+
+	def say(self, msg, *args):
+		"""Print a verbose message."""
+		if self.verbose:
+			self.err.write(Monitor.VERB_FMT % (msg % args))

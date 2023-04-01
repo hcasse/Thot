@@ -3,8 +3,8 @@
 	<head>
 		<title><thot:title/></title>
 		<meta name="AUTHOR" content="<thot:authors/>">
-		<meta name="GENERATOR" content="Thot <thot:text>@THOT_VERSION@</thot:text>/>">
-		<meta http-equiv="Content-Type" content="text/html; charset='<thot:text>@ENCODING@</thot:text>'">
+		<meta name="GENERATOR" content="Thot <thot:text>@(THOT_VERSION)</thot:text>/>">
+		<meta http-equiv="Content-Type" content="text/html; charset='<thot:text>@(ENCODING)</thot:text>'">
 		<thot:header/>
 	</head>
 
@@ -41,7 +41,7 @@
 		<thot:authors/>
 	</div>
 	<div class="tool-authors">
-		Powered by <a href="https://github.com/hcasse/Thot">Thot.</a>
+		Powered by <a href="https://github.com/hcasse/Thot"><thot:text>Thot v@(THOT_VERSION)</thot:text></a>
 		-
 		Theme <thot:style_authoring/>
 	</div>

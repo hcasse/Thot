@@ -165,9 +165,10 @@ class DocResource(Resource, ahtml.PageHandler):
 
 	def prepare(self):
 		"""Read the document."""
+		env = self.manager.env
+		parser = self.manager.parser
 
 		# prepare the environment
-		env = command.make_env()
 		env['THOT_OUT_TYPE'] = 'html'
 		env["THOT_FILE"] = self.document
 		env["THOT_DOC_DIR"] = os.path.dirname(self.document)
@@ -175,13 +176,12 @@ class DocResource(Resource, ahtml.PageHandler):
 
 		# build the document
 		self.node = doc.Document(env)
-		parser = tparser.Manager(self.node)
+		parser.reset(self.node)
 		ext = os.path.splitext(self.document)[1]
 		mod = PARSERS[ext]
 		if mod != None:
 			parser.use(mod)
-		with open(self.document) as input:
-			parser.parse(input, self.document)
+		parser.parse(self.document)
 
 		# look for the structure
 		if len(self.node.content) == 1 \
@@ -236,15 +236,50 @@ class DocResource(Resource, ahtml.PageHandler):
 
 
 class Manager(htmlman.Manager):
+	"""Manager for thot-view."""
 
-	def __init__(self, document):
+	def __init__(self, document, verbose = False):
+		self.verbose = verbose
+		self.mon = common.Monitor()
+		self.mon.set_verbosity(verbose)
+
+		# prepare environment
 		self.dir = os.path.abspath(os.path.dirname(document))
-		gen = DocResource(document, self, "/index.html")
+		self.env = common.Env()
+		config_path = None
+		home = os.path.expanduser('~')
+		dir = self.dir
+		while True:
+			path = os.path.join(dir, 'config.thot')
+			if os.path.exists(path):
+				config_path = path
+				break
+			if dir == home:
+				break
+			ndir = os.path.dirname(dir)
+			if ndir == dir:
+				break
+			dir = ndir
+		self.base_doc = doc.Document(self.env)
+		if config_path != None:
+			self.mon.say("readind configuration from %s", config_path)
+			self.dir = dir
+			self.parser = tparser.Manager(self.base_doc)
+			try:
+				self.parser.parse(config_path, self.base_doc)
+			except common.ParseException as e:
+				self.mon.error("error in parsing %s: %s (ignoring)",
+					config_path, e)
+
+		# prepare basic map
 		self.map = {}
+		gen = DocResource(document, self, "/index.html")
+		self.link_resource(gen)
 		self.map['/'] = gen
-		self.map['/index.html'] = gen
 		self.map['/index.htm'] = gen
 		self.map['/%s' % os.path.basename(document)] = gen
+
+		# prepare file system
 		self.fsmap = {}
 		self.counter = 0
 		self.tmpdir = None
@@ -252,6 +287,7 @@ class Manager(htmlman.Manager):
 	def link_resource(self, res):
 		"""Add a resource."""
 		self.map[res.loc] = res
+		res.manager = self
 
 	def make_gen(self, path, loc):
 		"""Build a generator for the given path."""
@@ -280,7 +316,7 @@ class Manager(htmlman.Manager):
 				self.counter += 1
 				res = self.make_gen(path, loc)
 			self.fsmap[path] = res
-			self.map[loc] = res
+			self.link_resource(res)
 		return path
 
 	def create_resource(self, ext, id = None):
@@ -341,10 +377,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		file.generate(self)
 
 	def error(self, msg):
-		self.log_error("%s %s", self.log_date_time_string(), msg)
+		self.server.mon.error(msg)
 
 	def log_error(self, fmt, *args):
-		http.server.SimpleHTTPRequestHandler.log_message(self, fmt % args)
+		self.error(fmt % args)
 
 	def log_message(self, fmt, *args):
 		pass
@@ -352,13 +388,13 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 class MyServer(http.server.HTTPServer):
 
-	def __init__(self, doc):
+	def __init__(self, manager):
 		http.server.HTTPServer.__init__(self,
 			('localhost', 0),
 			RequestHandler)
-		self.manager = Manager(doc)
-		self.manager.link_resource(ActionResource("/quit",
-			self.quit))
+		self.manager = manager
+		self.mon = manager.mon
+		manager.link_resource(ActionResource("/quit", self.quit))
 
 	def get_address(self):
 		return self.socket.getsockname()
@@ -368,10 +404,11 @@ class MyServer(http.server.HTTPServer):
 		webbrowser.open_new_tab("http://%s:%d" % self.get_address())
 
 	def quit(self):
+		self.mon.say("Quit.")
 		threading.Thread(target = self.shutdown).start()
 
 	def serve_forever(self):
-		print("Listening to", self.get_address())
+		self.mon.say("Listening to %s", self.get_address())
 		threading.Thread(target = self.run_browser).start()
 		try:
 			http.server.HTTPServer.serve_forever(self)
@@ -387,9 +424,13 @@ if __name__ == "__main__":
 			description = "Fast viewer for wiki-like documentation."
 		)
 	parser.add_argument('document', nargs=1)
+	parser.add_argument('-v', '--verbose', action='store_true',
+		help="Enable verbose mode.")
+	
 	args = parser.parse_args()
 
 	# run the server
-	MyServer(args.document[0]).serve_forever()
+	manager = Manager(args.document[0], args.verbose)
+	MyServer(manager).serve_forever()
 
 	

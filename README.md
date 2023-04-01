@@ -34,7 +34,7 @@ To perform testing,
 	$ PYTHON ./test/test.py
 ```
 
-Test items can invoked individually. To get their list:
+Test items can be invoked individually. To get their list:
 ```
 	$ PYTHON ./test/test.py -l
 ```

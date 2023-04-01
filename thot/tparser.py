@@ -200,30 +200,25 @@ class DefaultParser:
 
 
 class Manager:
-	item = None
-	items = None
-	parser = None
-	lines = None
-	words = None
-	words_re = None
-	added_lines = None
-	added_words = None
-	line_num = None
-	file_name = None
-	used_mods = None
-	factory = None
 
 	def __init__(self, document, factory = doc.Factory()):
-		self.item = document
-		self.doc = document
-		self.parser = DefaultParser()
-		self.items = []
+		words_re = None
 		self.lines = INITIAL_LINES
 		self.words = INITIAL_WORDS
 		self.added_lines = []
 		self.added_words = []
 		self.used_mods = []
 		self.factory = factory
+		self.line_num = None
+		self.file_name = None
+		self.reset(document)
+
+	def reset(self, document):
+		"""Reset the parser to process a new document."""
+		self.doc = document
+		self.item = document
+		self.items = []
+		self.parser = DefaultParser()
 
 	def get_doc(self):
 		return self.doc
@@ -296,12 +291,22 @@ class Manager:
 		self.parser.parse(self, str)
 
 	def parse(self, file, name = '<unknown>'):
-		try:
-			self.parseInternal(file, name)
-			self.send(doc.Event(doc.L_DOC, doc.ID_END))
-			self.doc.clean()
-		except common.ParseException as e:
-			common.onError(self.message(e))
+		"""Parse the given file. The file may be an input stream or
+		a file name. Raise common.ParseException in case of error."""
+		if isinstance(file, str):
+			try:
+				with open(file) as input:
+					self.parse(input, file)
+				return
+			except OSError as e:
+				raise common.ParseException(str(e))				
+		else:
+			try:
+				self.parseInternal(file, name)
+				self.send(doc.Event(doc.L_DOC, doc.ID_END))
+				self.doc.clean()
+			except common.ParseException as e:
+				raise common.ParseException(self.message(e))
 
 	def message(self, msg):
 		"""Generate a message prefixed with error line and file."""

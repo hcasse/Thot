@@ -32,19 +32,6 @@ import thot.doc as doc
 import thot.tparser as tparser
 
 
-def make_env():
-	"""Prepare the environment."""
-	env = common.Env(os.environ.copy())
-	thot_dir = os.path.abspath(os.path.dirname(thot.__file__))
-	env["THOT_VERSION"] = "0.9"
-	env["ENCODING"] = locale.getpreferredencoding()
-	env["THOT_LIB"] = thot_dir
-	env["THOT_BASE"] = os.path.join(thot_dir, "data", "")
-	env["THOT_USE_PATH"] = os.path.join(thot_dir, "mods", "")
-	env["THOT_DATE"] = str(datetime.datetime.today())
-	return env
-
-
 def list_avail_modules(document):
 	"""List available modules."""
 	print("Available modules:")
@@ -150,8 +137,8 @@ def list_used_modules(man):
 
 def main():
 	"""Command line entry point."""
-	env = make_env()
-	
+	env = common.Env()
+
 	# Prepare arguments
 	oparser = optparse.OptionParser()
 	oparser.add_option("-t", "--type", action="store", dest="out_type",
