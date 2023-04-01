@@ -39,6 +39,12 @@ header h1 {
 	margin: 0;
 }
 
+header h2 {
+	font-size: 1.2em;
+	margin: .3em 0;
+	color: #DDD;
+}
+
 main {
 	margin-top: 0;
 	margin-left: 2.6em;

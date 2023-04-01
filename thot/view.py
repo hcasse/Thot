@@ -199,6 +199,11 @@ class DocResource(Resource, ahtml.PageHandler):
 			if isinstance(c, doc.Header):
 				self.base_level = min(self.base_level, c.header_level)
 
+	def gen_subtitle(self, gen):
+		title = self.node.env['TITLE']
+		if title != '':
+			gen.out.write("<h2>%s</h2>" % title)
+
 	def gen_style_authoring(self, gen):
 		if self.style_author == None:
 			name = os.path.splitext(os.path.basename(self.style))[0]
@@ -219,7 +224,8 @@ class DocResource(Resource, ahtml.PageHandler):
 		template = ahtml.TemplatePage(
 			os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
 			self.node.env,
-			style_authoring = self.gen_style_authoring)
+			style_authoring = self.gen_style_authoring,
+			subtitle = self.gen_subtitle)
 		gen = Generator(self.node, self.man, template, self.base_level, )
 		self.node.pregen(gen)
 		gen.out = out

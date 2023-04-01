@@ -205,6 +205,7 @@ class Manager:
 		words_re = None
 		self.lines = INITIAL_LINES
 		self.words = INITIAL_WORDS
+		self.words_re = None
 		self.added_lines = []
 		self.added_words = []
 		self.used_mods = []
