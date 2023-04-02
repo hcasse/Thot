@@ -24,6 +24,7 @@ import os.path
 import tempfile
 import threading
 import time
+from urllib.parse import unquote
 import webbrowser
 
 import thot.command as command
@@ -169,9 +170,11 @@ class DocResource(Resource, ahtml.PageHandler):
 		parser = self.manager.parser
 
 		# prepare the environment
-		env['THOT_OUT_TYPE'] = 'html'
 		env["THOT_FILE"] = self.document
-		env["THOT_DOC_DIR"] = os.path.dirname(self.document)
+		dir = os.path.dirname(self.document)
+		if dir == "":
+			dir = "."
+		env["THOT_DOC_DIR"] = dir
 		env["HTML_STYLES"] = env.reduce(self.style)
 
 		# build the document
@@ -218,6 +221,14 @@ class DocResource(Resource, ahtml.PageHandler):
 				pass
 		gen.out.write(self.style_author)
 
+	def gen_icon(self, gen):
+		icon = self.node.env["ICON"]
+		if icon != "":
+			ricon = self.node.env.reduce(icon)
+			self.manager.add_resource(ricon)
+			loc = self.manager.get_resource_loc(ricon, self.node)
+			gen.out.write('<div class="icon"><img src="%s"/></div>' % loc)
+
 	def generate(self, out):
 		if self.node == None:
 			self.prepare()
@@ -225,7 +236,8 @@ class DocResource(Resource, ahtml.PageHandler):
 			os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
 			self.node.env,
 			style_authoring = self.gen_style_authoring,
-			subtitle = self.gen_subtitle)
+			subtitle = self.gen_subtitle,
+			icon = self.gen_icon)
 		gen = Generator(self.node, self.man, template, self.base_level, )
 		self.node.pregen(gen)
 		gen.out = out
@@ -266,6 +278,13 @@ class Manager(htmlman.Manager):
 			if ndir == dir:
 				break
 			dir = ndir
+
+		# initialize environment
+		htmlman.Manager.__init__(self, dir)
+		self.env["THOT_BASE_DIR"] = dir
+		self.env['THOT_OUT_TYPE'] = 'html'
+
+		# load the config
 		self.base_doc = doc.Document(self.env)
 		if config_path != None:
 			self.mon.say("readind configuration from %s", config_path)
@@ -303,27 +322,20 @@ class Manager(htmlman.Manager):
 		else:
 			return FileResource(path, loc)
 
-	def canonize(self, path, doc):
-		if not os.path.isabs(path):
-			if doc != None:
-				path = os.path.join(os.path.dirname(doc.getVar("THOT_FILE")), path)
-			path = os.path.abspath(path)
-		return os.path.normpath(path)
-
-	def add_resource(self, path, doc = None):
-		path = self.canonize(path, doc)
-		if path not in self.fsmap:
-			if path.startswith(self.dir):
-				loc = path[len(self.dir):]
-				res = self.make_gen(path, loc)
+	def add_resource(self, path, ref = None):
+		rpath = self.make_path(path, ref)
+		if rpath not in self.fsmap:
+			if rpath.startswith(self.dir):
+				loc = rpath[len(self.dir):]
+				res = self.make_gen(rpath, loc)
 			else:
-				ext = os.path.splitext(path)[1]
+				ext = os.path.splitext(rpath)[1]
 				loc = "/static/file-%d%s" % (self.counter, ext)
 				self.counter += 1
-				res = self.make_gen(path, loc)
-			self.fsmap[path] = res
+				res = self.make_gen(rpath, loc)
+			self.fsmap[rpath] = res
 			self.link_resource(res)
-		return path
+		return rpath
 
 	def create_resource(self, ext, id = None):
 		if self.tmpdir == None:
@@ -337,10 +349,10 @@ class Manager(htmlman.Manager):
 		self.fsmap[path] = res
 		return path
 
-	def get_resource_loc(self, path, doc = None):
-		path = self.canonize(path, doc)
+	def get_resource_loc(self, path, ref = None):
+		rpath = self.make_path(path, ref)
 		try:
-			loc = self.fsmap[path].loc
+			loc = self.fsmap[rpath].loc
 			return loc
 		except KeyError:
 			return "broken link"
@@ -365,16 +377,17 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 	def do_GET(self):
 		#print("DEBUG: path=", self.path)
+		path = unquote(self.path)
 		try:
-			file = self.server.manager.map[self.path]
+			file = self.server.manager.map[path]
 			file.prepare()
 		except KeyError:
-			msg = "%s not found" % self.path
+			msg = "%s not found" % path
 			self.send_error(404, msg)
 			return
 		except common.ThotException as e:
 			self.send_error(500)
-			self.error("error for %s: %s" % (self.path, e))
+			self.error("error for %s: %s" % (path, e))
 			return
 			
 		self.send_response(200)

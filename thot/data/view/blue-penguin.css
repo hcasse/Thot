@@ -52,6 +52,13 @@ main {
 	max-width: 910px;
 }
 
+.icon img {
+	height: 64px;
+	float: right;
+	margin: 0;
+	box-shadow: none;
+}
+
 footer {
 	  font-family: sans-serif;
 	  line-height: 2.5em;

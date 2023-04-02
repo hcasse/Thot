@@ -8,6 +8,7 @@ import re
 import shutil
 
 from thot import common
+import thot.doc
 
 class Relocator:
 	"""These objects take in charge the fact that a file has to be moved
@@ -63,8 +64,12 @@ class CSSRelocator(Relocator):
 class Manager:
 	"""Manage the resources used during the generation."""
 
-	def __init__(self):
+	def __init__(self, base_dir = None):
 		self.relocs = { ".css": CSSRelocator() }
+		if base_dir == None:
+			self.base_dir = os.path.abspath(os.getcwd())
+		else:
+			self.base_dir = base_dir
 
 	def add_relocator(self, ext, reloc):
 		"""Add a new relocator."""
@@ -78,8 +83,22 @@ class Manager:
 		except KeyError:
 			shutil.copystat(spath, tpath)
 
-	def add_resource(self, path, doc = None):
-		"""Add a friend file to the output. Returns the actual path of the friend file. If doc is given and the resource path is relative, it is relative to the path of the document."""
+	def make_path(self, path, ref):
+		"""Build an absolute path for the given path that may be relative to the document path. Doc may be None, a path or a document."""
+		if os.path.isabs(path):
+			return path
+		elif ref == None:
+			ref = self.base_dir
+		elif isinstance(ref, thot.doc.Document):
+			dpath = ref.env["THOT_FILE"]
+			if dpath != "":
+				ref = os.path.abspath(os.path.dirname(dpath))
+			else:
+				ref = self.base_dir
+		return os.path.abspath(os.path.join(str(ref), path))
+
+	def add_resource(self, path, ref = None):
+		"""Add a resource in the currently build. Returns the actual path of the resource in the build. If the path is relative, it is relative to the ref that may be a document or a path to a file containing the relative path. If ref is None, it path is relative to the base directory of the manager."""
 		return None
 
 	def create_resource(self, ext, id = None):
@@ -88,9 +107,8 @@ class Manager:
 		and can be tested for the need of update."""
 		return None
 
-	def get_resource_loc(self, path, doc = None):
-		"""Get the resource location to do a link. This location may
-		be relative to the given document."""
+	def get_resource_loc(self, path, ref = None):
+		"""Get the resource location to do a If ref is given, it may be a path the location has to be relative to."""
 		return path
 
 	def get_number(self, node):
@@ -118,12 +136,13 @@ class LocalManager(Manager):
 	"""Manager keeping local file in place and creates non-local and new resource in a directory named "ID-imports" to make easier the
 	exportation of the generated files."""
 
-	def __init__(self, id, outdir = None):
+	def __init__(self, id, basedir = None):
 		self.id = id
-		if outdir != None:
-			self.outdir = os.path.abspath(outdir)
+		if basedir != None:
+			self.basedir = basedir
 		else:
-			self.outdir = os.path.abspath(os.getcwd())
+			self.basedir = os.getcwd()
+		self.basedir = os.path.abspath(self.basedir)
 		self.map = {}
 		self.used = []
 		self.impdir = None
@@ -159,7 +178,7 @@ class LocalManager(Manager):
 		path = os.path.join(impdir, name)
 		return path
 
-	def add_resource(self, path):
+	def add_resource(self, path, doc):
 		apath = os.path.abspath(path)
 		if apath.startswith(self.outdir):
 			return apath
