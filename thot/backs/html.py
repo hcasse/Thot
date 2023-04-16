@@ -38,13 +38,112 @@ def makeRef(nums):
 
 class PagePolicy:
 	"""A page policy allows to organize the generated document
-	according the preferences of the user."""
-	gen = None
-	page = None
+	according the preferences of the user.
+
+	The page policy supports also numbering and recording of links
+	of numbered nodes. Numbered nodes may be header (identifier by
+	the level as integer or other elements recorded by a string identifier).
+	Numbering are basically starting at 0."""
 
 	def __init__(self, gen, page):
 		self.gen = gen
 		self.page = page
+		self.man = gen.get_manager()
+		self.nums = {}
+		self.file = None
+		self.file_stack = []
+		self.hnums = None
+
+	def get_number(self, node):
+		"""Get the number for the given node or create it reset to 0."""
+		type = node.numbering()
+		try:
+			return self.nums[type]
+		except KeyError:
+			self.nums[type] = 0
+			return 0
+
+	def assign_number(self, node, type):
+		"""Produce a new number for the given type. For an header
+		number, the numbers for lower header are reset."""
+
+		# compute number
+		try:
+			num = self.nums[type]
+			num = num + 1
+			if isinstance(type, int):
+				for i in range(type+1, 7):
+					if i not in self.nums:
+						break;
+					else:
+						del self.nums[i]
+		except KeyError:
+			num = 0
+		self.nums[type] = num
+
+		# declare the link
+		self.man.declare_link(node, self.file)
+
+		# build the number
+		if not isinstance(type, int):
+			return str(num + 1)
+		else:
+			if self.hnums == None:
+				self.hnums = str(num + 1)
+			else:
+				self.hnums = "%s.%s" % (self.hnums, num + 1)
+		self.man.declare_number(node, self.hnums)
+
+	def push_file(self, path):
+		"""Record the given file for the next reference generation."""
+		self.file_stack.append(self.file)
+		self.file = path
+
+	def pop_file(self):
+		"""Pop the currently generated file and return to the previous
+		one."""
+		self.file = self.file_stack.pop()
+
+	def enter_header(self, node):
+		"""Called each time an header is entered."""
+		pass
+
+	def leave_header(self, node):
+		"""Called each time an header is left."""
+		pass
+
+	def format_number(self, node):
+		"""Called to format the number of the given node."""
+		num = node.numbering()
+		if num == None:
+			return None
+
+	def make_numbers(self, node):
+		"""Assign numbers to the given nodes and nodes below."""
+		num = node.numbering()
+
+		# no numbering or a document
+		if num == None:
+			if isinstance(node, doc.Document):
+				for item in node.getContent():
+					self.make_numbers(item)
+
+		# header or numbered embedded
+		else:
+			if isinstance(num, int):
+				old_hnums = self.hnums
+				self.enter_header(node)
+			self.assign_number(node, num)
+			if isinstance(node, doc.Container):
+				for item in node.getContent():
+					self.make_numbers(item)
+			if isinstance(num, int):
+				self.leave_header(node)
+				self.hnums = old_hnums
+
+	def get_link(self, node):
+		"""Get a link to the given node."""
+		return self.man.get_link(node, self.file)
 
 	def onHeaderBegin(self, header):
 		pass
@@ -60,22 +159,11 @@ class PagePolicy:
 
 	def gen_header(self, gen):
 		gen.gen_header()
-		# out = gen.out
-		# styles = gen.doc.getVar("HTML_STYLES")
-		# if styles:
-			# for style in styles.split(':'):
-				# if style == "":
-					# continue
-				# new_style = gen.importCSS(style)
-				# out.write('	<link rel="stylesheet" type="text/css" href="' + new_style + '">\n')
-		# short_icon = gen.doc.getVar('HTML_SHORT_ICON')
-		# if short_icon:
-			# out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
-		# self.gen.genScripts()
-
-	def get_file(self, node):
-		"""Return the file name containing the given node."""
-		return ""
+		out = gen.out
+		short_icon = gen.doc.getVar('HTML_SHORT_ICON')
+		if short_icon:
+			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
+		self.gen.genScripts()
 
 	
 class AllInOne(PagePolicy):
@@ -84,43 +172,6 @@ class AllInOne(PagePolicy):
 	def __init__(self, gen, page):
 		PagePolicy.__init__(self, gen, page)
 
-	def genRefs(self):
-		"""Generate and return the references for the given generator."""
-		self.gen.refs = { }
-		self.makeRefs([1], { }, self.gen.doc)
-
-	def makeRefs(self, nums, others, node):
-		"""Traverse the document tree and generate references in the given map."""
-		
-		# number for header
-		num = node.numbering()
-		if num == 'header':
-			r = makeRef(nums)
-			self.gen.add_ref(node, "#%s" % r, r)
-			nums.append(1)
-			for item in node.getContent():
-				self.makeRefs(nums, others, item)
-			nums.pop()
-			nums[-1] = nums[-1] + 1
-		
-		# number for embedded
-		else:
-			
-			# set number
-			if self.gen.doc.getLabelFor(node):
-				if num:
-					if num not in others:
-						others[num] = 1
-						n = 1
-					else:
-						n = others[num] + 1
-					self.gen.add_ref(node, "#%s-%d" % (num, n), str(n))
-					others[num] = n
-		
-			# look in children
-			for item in node.getContent():
-				self.makeRefs(nums, others, item)
-	
 	def gen_title(self, gen):
 		gen.genTitleText()
 	
@@ -135,7 +186,8 @@ class AllInOne(PagePolicy):
 
 	def run(self):
 		self.gen.openMain('.html')
-		self.genRefs()
+		self.file = os.path.abspath(self.gen.path)
+		self.make_numbers(self.gen.doc)
 		self.gen.doc.pregen(self.gen)
 		self.page.apply(self, self.gen)
 
@@ -371,7 +423,6 @@ class Generator(abstract_html.Generator):
 	def genBody(self):
 		self.genBodyHeader()
 		self.doc.gen(self)
-		#self.genFootNotes()
 		self.genBodyFooter()
 
 	def genFooter(self):

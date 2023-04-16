@@ -62,7 +62,10 @@ class CSSRelocator(Relocator):
 
 
 class Manager:
-	"""Manage the resources used during the generation."""
+	"""Manage the resources used during the generation.
+
+	Useful attributes include:
+	* base_dir -- Directory path for relative paths in the document system."""
 
 	def __init__(self, base_dir = None):
 		self.relocs = { ".css": CSSRelocator() }
@@ -70,6 +73,7 @@ class Manager:
 			self.base_dir = os.path.abspath(os.getcwd())
 		else:
 			self.base_dir = base_dir
+		self.anchor_count = 0
 
 	def add_relocator(self, ext, reloc):
 		"""Add a new relocator."""
@@ -111,18 +115,50 @@ class Manager:
 		"""Get the resource location to do a If ref is given, it may be a path the location has to be relative to."""
 		return path
 
+	def declare_number(self, node, number):
+		"""Record the assignment of a number to a node."""
+		node._thot_number = number
+
 	def get_number(self, node):
 		"""Get the number for a node that can support it. Return number
 		if there is one or None."""
-		return None
+		try:
+			return node._thot_number
+		except AttributeError:
+			return None
 
 	def get_anchor(self, node):
 		"""Get the anchor of the node (if any)."""
-		return None
+		try:
+			return node._thot_anchor
+		except AttributeError:
+			return None
 
-	def get_link(self, node):
-		"""Get the link to the given node."""
-		return None
+	def get_link(self, node, ref = None):
+		"""Get the link to the given node. Return None if there is no link.
+		If ref is given, the path is relative to the given path."""
+		try:
+			path = node._thot_path
+			anchor = node._thot_anchor
+			if ref != None:
+				ref = self.make_path(path, os.path.dirname(ref))
+				if path == ref:
+					res = "#%s" % anchor
+				else:
+					res = "%s#%s" % (os.path.relpath(path, ref), anchor)
+			else:
+				res = "%s#%s" % (os.path.relpath(path, self.base_dir), anchor)
+		except AttributeError:
+			res = None
+		return res
+
+	def declare_link(self, node, path, anchor = None):
+		"""Declare a link to the given node."""
+		if anchor == None:
+			anchor = "thot-%d" % self.anchor_count
+			self.anchor_count += 1
+		node._thot_path = path
+		node._thot_anchor = anchor
 
 	def needs_update(self, res, doc):
 		"""Test if the date of the resource is later than the date
@@ -136,13 +172,9 @@ class LocalManager(Manager):
 	"""Manager keeping local file in place and creates non-local and new resource in a directory named "ID-imports" to make easier the
 	exportation of the generated files."""
 
-	def __init__(self, id, basedir = None):
+	def __init__(self, id, base_dir = None):
+		Manager.__init__(self, base_dir)
 		self.id = id
-		if basedir != None:
-			self.basedir = basedir
-		else:
-			self.basedir = os.getcwd()
-		self.basedir = os.path.abspath(self.basedir)
 		self.map = {}
 		self.used = []
 		self.impdir = None
@@ -151,7 +183,7 @@ class LocalManager(Manager):
 	def get_import(self):
 		"""Get and create the import directory."""
 		if self.impdir == None:
-			self.impdir = os.path.join(self.outdir, "%s-imports" % self.id)
+			self.impdir = os.path.join(self.base_dir, "%s-imports" % self.id)
 			if not os.path.exists(self.impdir):
 				os.mkdir(self.impdir)
 			elif not os.path.isdir(self.impdir):
@@ -166,7 +198,7 @@ class LocalManager(Manager):
 		return self.impdir
 
 	def get_resource_link(self, path):
-		return os.path.relpath(path, self.outdir)
+		return os.path.relpath(path, self.base_dir)
 
 	def create_resource(self, ext, id = None):
 		impdir = self.get_import()
@@ -180,7 +212,7 @@ class LocalManager(Manager):
 
 	def add_resource(self, path, doc):
 		apath = os.path.abspath(path)
-		if apath.startswith(self.outdir):
+		if apath.startswith(self.base_dir):
 			return apath
 		else:
 			impdir = self.get_import()

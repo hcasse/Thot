@@ -355,7 +355,7 @@ class Node(Info):
 	def numbering(self):
 		"""Return the group of numbering the node belongs to.
 		Return None if there is no numbering (default).
-		"header" for header numbering, "figure" pour image and the like,
+		Level (0 is higher) for header numbering, "figure" pour image and the like,
 		"listing" for code, etc."""
 		return None
 
@@ -1188,7 +1188,7 @@ class Header(Container):
 		visitor.onHeader(self)
 
 	def numbering(self):
-		return "header"
+		return self.header_level
 	
 	def set_title(self, title):
 		"""Set the title of the header."""

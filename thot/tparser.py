@@ -17,6 +17,7 @@
 import os.path
 import re
 import sys
+import traceback
 
 import thot.doc as doc
 import thot.common as common

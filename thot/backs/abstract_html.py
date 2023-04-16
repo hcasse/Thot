@@ -203,6 +203,9 @@ class TemplatePage(Page):
 		gen.out.write(text)
 	
 	def apply(self, handler, gen):
+		"""Generate the page with standard thot:XXX are commands translated
+		as handle command and the outputs are performed on the given
+		generation gen."""
 		global template_re
 		self.defs["authors"] = handler.gen_authors
 		self.defs["content"] = handler.gen_content
@@ -312,7 +315,11 @@ class Generator(back.Generator):
 			path = doc.getVar("THOT_FILE")
 			self.man = htmlman.LocalManager(
 				os.path.splitext(os.path.basename(path))[0],
-				outdir = os.path.dirname(path))
+				base_dir = os.path.dirname(path))
+
+	def get_manager(self):
+		"""Get the resource manager."""
+		return self.man
 
 	def getType(self):
 		return "html"
@@ -511,7 +518,7 @@ class Generator(back.Generator):
 		anchor = self.man.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
 		if anchor != None:
-			self.out.write('<a name="' + number + '"></a>')
+			self.out.write('<a name="' + anchor + '"></a>')
 		if number != None:
 			self.out.write(number)
 		header.genTitle(self)
@@ -567,7 +574,7 @@ class Generator(back.Generator):
 		else:
 			self.out.write(' style="text-align:center"')
 		self.out.write('>\n')
-		self.genImageTag(new_url, node, caption)
+		self.genImageTag(url, node, caption)
 		self.genLabel(node)
 		self.out.write("</div>\n")
 
@@ -630,11 +637,11 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		return self.refs[node][0]
+		return self.man.get_link(node, self.path)
 
 	def get_number(self, node):
 		"""Get the reference number corresponding to the given node."""
-		return self.refs[node][1]
+		return self.man.get_number(node)
 
 
 # module description
