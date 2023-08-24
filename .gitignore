@@ -13,6 +13,7 @@ test/simple.out
 test/simple.pdf
 test/simple.tex
 test/simple.toc
+test/headers/*.html
 
 build
 dist

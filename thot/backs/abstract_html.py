@@ -512,16 +512,20 @@ class Generator(back.Generator):
 		_, tag = getStyle(kind)
 		self.out.write(tag)
 
-	def genHeaderTitle(self, header):
+	def genHeaderTitle(self, header, href=None):
 		"""Generate the title of a header."""
 		number = self.man.get_number(header)
 		anchor = self.man.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
 		if anchor != None:
 			self.out.write('<a name="' + anchor + '"></a>')
+		if href != None:
+			self.out.write('<a href="%s">' % href)
 		if number != None:
 			self.out.write(number)
 		header.genTitle(self)
+		if href != None:
+			self.out.write('</a>')
 		self.out.write('</h' + str(header.getHeaderLevel() + 1) + '>\n')
 
 	def genHeader(self, header):
@@ -637,7 +641,9 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		return self.man.get_link(node, self.path)
+		res = self.man.get_link(node, self.path)
+		print("DEBUG: href", res, "for", node, "in", self.path)
+		return res
 
 	def get_number(self, node):
 		"""Get the reference number corresponding to the given node."""

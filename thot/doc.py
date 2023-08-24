@@ -1112,6 +1112,7 @@ class HorizontalLine(Node):
 
 
 class Header(Container):
+	"""An header node made of a title and of content."""
 	header_level = None
 	title = None
 	do_title = None
@@ -1154,19 +1155,24 @@ class Header(Container):
 		return self.level
 
 	def getHeaderLevel(self):
+		"""Get the level of the header in range [0, 5]."""
 		return self.header_level
 
 	def getTitle(self):
+		"""Get the title of the header."""
 		return self.title
 
 	def genTitle(self, gen):
+		"""Generate the title."""
 		for item in self.title.getContent():
 			item.gen(gen)
 
 	def genBody(self, gen):
+		"""Generate the body of the header."""
 		Container.gen(self, gen)
 
 	def gen(self, gen):
+		"""Generate the header."""
 		if gen.genHeader(self):
 			return
 		gen.genHeaderBegin(self.header_level)

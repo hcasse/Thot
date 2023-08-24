@@ -1,0 +1,36 @@
+@use dokuwiki
+@TITLE=Headers test
+@AUTHORS=THOT headers
+@VERSION=0.1
+@LANG=en_EN
+@HTML_STYLES=@(THOT_BASE)/doc-styles/minima-green.css
+
+introduction
+
+====== Chapter 1 ======
+
+Intro 1
+
+===== Section 1.1 =====
+
+Text 1.1
+
+===== Section 1.2 =====
+
+Text 1.2
+
+====== Chapter 2 ======
+
+Intro 2
+
+===== Section 2.1 =====
+
+Text 2.1
+
+===== Section 2.2 =====
+
+Text 2.2
+
+====== Chapter 3 ======
+
+Text 3

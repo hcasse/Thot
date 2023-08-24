@@ -83,6 +83,7 @@ class PagePolicy:
 
 		# declare the link
 		self.man.declare_link(node, self.file)
+		#print("DEBUG: declare", self.file, "for", node)
 
 		# build the number
 		if not isinstance(type, int):
@@ -145,18 +146,6 @@ class PagePolicy:
 		"""Get a link to the given node."""
 		return self.man.get_link(node, self.file)
 
-	def onHeaderBegin(self, header):
-		pass
-
-	def onHeaderEnd(self, header):
-		pass
-
-	def unfolds(self, header):
-		return True
-
-	def ref(self, header, number):
-		return	"#" + number
-
 	def gen_header(self, gen):
 		gen.gen_header()
 		out = gen.out
@@ -192,16 +181,13 @@ class AllInOne(PagePolicy):
 		self.page.apply(self, self.gen)
 
 
-class PerSection(PagePolicy):
-	"""This page policy ensures there is one page per section."""
+class PerChapter(PagePolicy):
+	"""This page policy ensures there is one page per chapter."""
 
 	def __init__(self, gen, page):
 		PagePolicy.__init__(self, gen, page)
-
-	def genRefs(self):
-		"""Generate and return the references for the given generator."""
-		self.gen.refs = { }
-		self.makeRefs([1], { }, self.gen.doc, -1)
+		self.todo = []
+		self.current = None
 
 	def page_name(self, page):
 		"""Compute the page name."""
@@ -210,56 +196,16 @@ class PerSection(PagePolicy):
 		else:
 			return "%s-%d.html" % (self.gen.root, page)
 
-	def makeRefs(self, nums, others, node, page):
-		"""Traverse the document tree and generate references in the given map."""
-		
-		# number for header
-		num = node.numbering()
-		if num == 'header':
-			page = page + 1
-			self.gen.add_ref(node, self.page_name(page), makeRef(nums))
-			nums.append(1)
-			for item in node.getContent():
-				page = self.makeRefs(nums, others, item, page)
-			nums.pop()
-			nums[-1] = nums[-1] + 1
-		
-		# number for embedded
-		else:
-			
-			# set number
-			if num and self.gen.doc.getLabelFor(node):
-				if num not in others.has_key:
-					others[num] = 1
-					n = 1
-				else:
-					n = others[num] + 1
-				r = str(n)
-				self.gen.add_ref(node, "%s#%s-%s" % (self.page_name(page), num, r), r)
-				others[num] = n
-		
-			# look in children
-			for item in node.getContent():
-				page = self.makeRefs(nums, others, item, page)
+	def enter_header(self, header):
+		if header.getHeaderLevel() == 0:
+			name = self.page_name(len(self.todo))
+			self.push_file(name)
+			self.todo.append((name, header))
 
-		return page
+	def leave_header(self, header):
+		if header.getHeaderLevel() == 0:
+			self.pop_file()
 
-	def process(self, header):
-
-		# generate the page
-		self.gen.openPage(header)
-		self.path = self.path + [header]
-		self.page.apply(self, self.gen)
-		print("generated %s" % (self.gen.getPage(header)))
-		
-		# generate the su-headers
-		for child in header.getContent():
-			if child.getHeaderLevel() >= 0:
-				self.process(child)
-		self.path.pop()
-		
-	path = []
-	
 	def gen_title(self, gen):
 		gen.genTitleText()
 	
@@ -267,129 +213,85 @@ class PerSection(PagePolicy):
 		gen.genAuthors()
 
 	def gen_menu(self, gen):
-		if not self.path:
+		if self.current == None:
 			gen.genContent([], 0)
 		else:
-			gen.genContent(self.path, 100)
+			gen.genContent([self.current], 100)
 		
 	def gen_content(self, gen):
-		if not self.path:
+		if self.current == None:
 			for node in self.gen.doc.getContent():
 				if node.getHeaderLevel() != 0:
 					node.gen(gen)
 		else:
-			for h in self.path:
-				gen.genHeaderTitle(h)
-			for child in self.path[-1].getContent():
-				if child.getHeaderLevel() < 0:
-					child.gen(gen)
+			self.current.gen(gen)
 
 	def run(self):
-		
+
 		# preparation
 		self.gen.openMain('.html')
+		self.file = os.path.abspath(self.gen.path)
+		self.make_numbers(self.gen.doc)
 		self.gen.doc.pregen(self.gen)
-		self.genRefs()
 
-		# generate page
+		# generate first page
 		self.page.apply(self, self.gen)
 		print("generated %s" % self.gen.path)
 
 		# generate chapter pages
-		for node in self.gen.doc.getContent():
-			if node.getHeaderLevel() == 0:
-				self.process(node)
+		for (name, header) in self.todo:
+			self.current = header
+			self.gen.openPage(name)
+			self.page.apply(self, self.gen)
+			print("generated %s" % name)
 
 
-class PerChapter(PagePolicy):
-	"""This page policy ensures there is one page per chapter."""
-	node = None
-	
+class PerSection(PerChapter):
+
 	def __init__(self, gen, page):
-		PagePolicy.__init__(self, gen, page)
+		PerChapter.__init__(self, gen, page)
+		self.header_stack = []
 
-	def genRefs(self):
-		"""Generate and return the references for the given generator."""
-		self.gen.refs = { }
-		self.makeRefs([1], { }, self.gen.doc, self.gen.root + ".html")
+	def enter_header(self, header):
+		name = self.page_name(len(self.todo))
+		self.push_file(name)
+		self.todo.append((name, header))
+		self.header_stack.append(header)
+		header.header_stack = list(self.header_stack)
 
-	def makeRefs(self, nums, others, node, page):
-		"""Traverse the document tree and generate references in the given map."""
-		
-		# number for header
-		num = node.numbering()
-		if num == 'header':
-			if node.header_level == 0:
-				page = "%s-%d.html" % (self.gen.root, nums[0] - 1)
-				self.gen.add_ref(node, page, str(nums[0]))
-			else:
-				r = makeRef(nums)
-				self.gen.add_ref(node, "%s#%s" % (page, r), r)
-			nums.append(1)
-			for item in node.getContent():
-				self.makeRefs(nums, others, item, page)
-			nums.pop()
-			nums[-1] = nums[-1] + 1
-		
-		# number for embedded
-		else:
-			
-			# set number
-			if num and self.gen.doc.getLabelFor(node):
-				if num not in others:
-					others[num] = 1
-					n = 1
-				else:
-					n = others[num] + 1
-				r = str(n)
-				self.gen.add_ref(node, "%s#%s-%s" % (page, num, r), r)
-				others[num] = n
-		
-			# look in children
-			for item in node.getContent():
-				self.makeRefs(nums, others, item, page)
-	
-	def gen_title(self, gen):
-		gen.genTitleText()
-	
-	def gen_authors(self, gen):
-		gen.genAuthors()
+	def leave_header(self, header):
+		self.pop_file()
+		self.header_stack.pop()
 
 	def gen_menu(self, gen):
-		if not self.node:
-			self.gen.genContent([], 0)
+		if self.current == None:
+			gen.genContent([], 0)
 		else:
-			self.gen.genContent([self.node], 100)
-		
+			gen.genContent(self.current.header_stack, 100)
+	
 	def gen_content(self, gen):
-		if not self.node:		
-			for node in self.gen.doc.getContent():
-				if node.getHeaderLevel() != 0:
-					node.gen(gen)
+
+		# get content
+		if self.current == None:
+			content = self.gen.doc.getContent()			
 		else:
-			self.node.gen(self.gen)
+			content = self.current.getContent()
+			self.gen.genHeaderTitle(self.current)
+			
+		# print the content
+		for node in content:
+			if node.getHeaderLevel() < 0:
+				node.gen(self.gen)
+			else:
+				self.gen.genHeaderTitle(node, self.gen.get_href(node))
 
-	def run(self):
-		chapters = []
 
-		# generate main page
-		self.gen.openMain('.html')
-		self.genRefs()
-		self.gen.doc.pregen(self.gen)
-		for node in self.gen.doc.getContent():
-			if node.getHeaderLevel() == 0:
-				chapters.append(node)
-		self.page.apply(self, self.gen)
-		print("generated %s" % self.gen.path)
-
-		# generate chapter pages
-		for node in chapters:
-			self.gen.openPage(node)
-			self.node = node
-			self.page.apply(self, self.gen)
-			self.gen.closePage()
-			print("generated %s" % (self.gen.getPage(node)))
-
+POLICIES = {
+	'': AllInOne,
+	'document': AllInOne,
+	'chapter': 	PerChapter,
+	'section':	PerSection
+}
 
 class Generator(abstract_html.Generator):
 	"""Generator for HTML output."""
@@ -427,6 +329,9 @@ class Generator(abstract_html.Generator):
 
 	def genFooter(self):
 		self.out.write("</div>\n</body>\n</html>\n")
+
+	def get_href(self, node):
+		return self.man.get_link(node, self.out_path)
 
 	def genContentEntry(self, node, indent):
 		"""Generate a content entry (including numbering, title and link)."""
@@ -482,34 +387,28 @@ class Generator(abstract_html.Generator):
 		self.expandContentTo(self.doc, path, level, '  ')
 		self.out.write('</div>\n')
 
-	def getPage(self, header):
-		if header not in self.pages:
-			self.pages[header] = "%s-%d.html" % (self.root, self.page_count)
-			self.page_count += 1
-		return self.pages[header]
+	def openMain(self, ext):
+		abstract_html.Generator.openMain(self, ext)
+		self.out_path = os.path.abspath(self.path)
 
-	def openPage(self, header):
-		path = self.getPage(header)
-		self.stack.append((self.out, self.footnotes))
+	def openPage(self, path):
+		#self.stack.append((self.out, self.out_path, self.footnotes))
+		self.out_path = os.path.abspath(path)
 		self.out = open(path, 'w')
 		self.footnotes = []
 
 	def closePage(self):
 		self.out.close()
-		self.out, self.footnotes = self.stack.pop()
+		#self.out, self.footnotes = self.stack.pop()
 
 	def run(self):
 
 		# select the policy
 		template = self.getTemplate()
 		self.struct = self.doc.getVar('HTML_ONE_FILE_PER')
-		if self.struct == 'document' or self.struct == '':
-			policy = AllInOne(self, template)
-		elif self.struct == 'chapter':
-			policy = PerChapter(self, template)
-		elif self.struct == 'section':
-			policy = PerSection(self, template)
-		else:
+		try:
+			policy = POLICIES[self.struct](self, template)
+		except KeyError:
 			common.onError('one_file_per %s structure is not supported' % self.struct)
 
 		# generate the document

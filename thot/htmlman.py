@@ -138,18 +138,19 @@ class Manager:
 		"""Get the link to the given node. Return None if there is no link.
 		If ref is given, the path is relative to the given path."""
 		try:
-			path = node._thot_path
+			path = os.path.abspath(node._thot_path)
 			anchor = node._thot_anchor
 			if ref != None:
-				ref = self.make_path(path, os.path.dirname(ref))
+				ref = self.make_path(ref, self.base_dir)
 				if path == ref:
 					res = "#%s" % anchor
 				else:
-					res = "%s#%s" % (os.path.relpath(path, ref), anchor)
+					res = "%s#%s" % (os.path.relpath(path, os.path.dirname(ref)), anchor)
 			else:
 				res = "%s#%s" % (os.path.relpath(path, self.base_dir), anchor)
 		except AttributeError:
 			res = None
+		#print("DEBUG:", path, anchor, "ref", ref, "to", res)
 		return res
 
 	def declare_link(self, node, path, anchor = None):
