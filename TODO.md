@@ -6,6 +6,9 @@
 
 ## Core
 
+  [ ] Add ``thot-view`` command.
+  [ ] Add ``thot-gen`` command.  
+  [ ] Remove ``thot.py`` command.  
   [ ] Support for language local to a part of text.
   [ ] Add more standard paragraph types (like blockquote, file, verse, etc).
   [ ] Add inclusion from shell with syntax like @{command line}.
@@ -17,10 +20,10 @@
 
   [ ] Accept to output reference to label for textual form (title, Section, etc).
   [ ] Support of reStructuredText: http://docutils.sourceforge.net/rst.html.
-  [ ] Support Textile.
+  [X] Support Textile.
   [X] Support for Markdown.
 
-## DokuWiki
+### DokuWiki
 
   [ ] ``:::`` in table for vertical spanning.
   [ ] Use of internal links [[...]] for inetr-document linking.
@@ -30,8 +33,10 @@
   [ ] ``<html>`` ... ``</html>`` -- HTML embedding (``<php>`` ... ``</ph>`` -- currently, no meaning).
 
 
-===== Modules =====
+## Modules
 
-==== SCORM ===
+## Attic
 
-  [ ] Finalize.
+### SCORM
+
+Obsolete standard (it seems).

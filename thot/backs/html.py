@@ -14,23 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import html as my_html
 import os
-import re
-import shutil
-import sys
-import urllib.parse as urlparse
 
-import thot.back as back
 import thot.backs.abstract_html as abstract_html
 import thot.common as common
 import thot.doc as doc
-import thot.doc as tdoc
-import thot.highlight as highlight
 import thot.i18n as i18n
 
-from thot.backs.abstract_html import escape_cdata
-from thot.backs.abstract_html import escape_attr
+from thot.backs.abstract_html import escape_cdata, escape_attr
 
 def makeRef(nums):
 	"""Generate a reference from an header number array."""

@@ -27,7 +27,7 @@ $ export PYTHONPATH=$PWD:$PYTHONPATH
 
 Read it from an HTTP local server:
 ```
-$ pydoc3.8 -b
+$ pydoc3 -b
 ```
 
 ## Adding module
