@@ -14,6 +14,8 @@ test/simple.pdf
 test/simple.tex
 test/simple.toc
 test/headers/*.html
+test/embed/*.html
+test/embed/*-imports
 
 build
 dist

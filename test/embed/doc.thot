@@ -1,0 +1,68 @@
+@use dokuwiki
+@TITLE=Embedded test
+@AUTHORS=Myself
+@VERSION=1.0
+@LANG=en_EN
+@HTML_STYLES=@(THOT_BASE)/doc-styles/minima-green.css
+@use dot
+
+introduction
+
+====== Alone embedding ======
+
+<code c>
+#include <stdio.h>
+
+int main() {
+	printf("Hello, World!\n");
+	return 0;
+}
+</code>
+
+<dot>
+digraph G {
+	A -> B;
+	A -> C;
+	B -> C;
+	B -> B;
+}
+</dot>
+
+===== Duplicate mebedding =====
+
+Text 1.1
+
+<code c>
+int sum(int t[], int n) {
+	int s = 0;
+	for(int i = 0; i < 10; i++)
+		s += t[i];
+	return s;
+}
+</code>
+
+<code python>
+#!/usr/bin/python3
+
+print("Hello, World!")
+</code>
+
+
+===== Section 1.2 =====
+
+Text 1.2
+
+<dot>
+digraph G2 {
+	A -> A;
+	B -> B;
+	C -> C;
+}
+</dot>
+
+====== Chapter 2 ======
+
+
+====== Chapter 3 ======
+
+Text 3

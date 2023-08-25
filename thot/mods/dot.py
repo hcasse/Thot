@@ -52,11 +52,12 @@ class DotBlock(doc.Block):
 					stdout = subprocess.PIPE,
 					stderr = subprocess.PIPE,
 					close_fds = True,
-					shell = True
+					shell = True,
+					encoding='utf8'
 				)
 			text = self.toText()
-			(out, err) = process.communicate(text.encode('utf-8'))
-			if process.returncode:
+			(out, err) = process.communicate(text)
+			if process.returncode != 0:
 				sys.stderr.write(err)
 				self.onError('error during dot call on %s' % text)
 			if err:
