@@ -14,14 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Definition of the abstract class back.Generator to help generation
+"""
+Definition of the abstract class back.Generator to help generation
 of output files.
-
-The following variables are supported:
-* FRIEND_RELOC - option to handle friend files ("local" (default): relocate all except relative
-  files, "all": relocate all files)
 """
 
+import tempfile
 import os.path
 import shutil
 import sys
@@ -30,198 +28,179 @@ import thot.common as common
 import thot.doc as tdoc
 import thot.i18n as i18n
 
+STDOUT = "<stdout>"
+
+
+class Manager:
+	"""The manager is in charge of organizing where to put files invovled in the building of a document."""
+
+	def use_resource(self, path):
+		"""Inform the manager that a file path is used. It returns the path
+		of the resource as used in the building. Notice that this call
+		can be performed on the same used path and will return the same
+		build path in this case."""
+		return None
+
+	def new_resource(self, path = None, ext = None):
+		"""Create a new resource to be used in the bulding of the project.
+		Returns  the build path. id is the path of the created resource;
+		if path is none, a file a created with the given extension."""
+		return None
+
+	def relocate(self, spath, dpath):
+		"""Called to relocate a used path (spath) )into the current build path (dpath). The default implementation just copies the file."""
+		self.copystat(spath, dpath)
+
+	def get_resource_path(self, path, gen):
+		"""Get a resource path to be used in the given generator.
+		The default implementation returns an absolute path."""
+		return os.path.abspath(path)
+		
+
+class LocalManager(Manager):
+	"""A manager that keeps local files (in the same directory as output) as is and creates new files and move non-local files in a devoted directory named import directory and derived from the output path PATH by adding suffixing it with "imports"."""
+	
+
+	def __init__(self, out_path):
+		self.out_dir = os.path.dirname(out_path)
+		self.import_dir = os.path.splitext(out_path)[0] + "-imports"
+		self.import_done = False
+		self.map = { }
+		self.tmp = 0
+		self.used = []
+
+	def ensure_dir(self, dir):
+		"""Ensure that the given directory is built.
+		Raise a BackException in the reverse case."""
+		if not os.path.exists(dir):
+			try:
+				os.makedirs(dir)
+			except OSError as e:
+				raise common.BackException("cannot creare %s: %s" % (dir, e))
+		elif not os.path.isdir(dir):
+			raise common.BackException("%s is not a directory" % dir)
+
+	def get_import(self):
+		"""Get the import directory and ensures it exists."""
+		if not self.import_done:
+			self.ensure_dir(self.import_dir)
+			self.import_done = True
+		return self.import_dir
+
+	def new_resource(self, path = None, ext = None):
+		if path == None:
+			path = "+file-%d.%s" % (self.tmp, ext)
+			self.tmp += 1
+		path = os.path.join(self.get_import(), path)
+		dpath = os.path.dirname(path)
+		self.ensure_dir(dpath)
+		return path
+
+	def use_resource(self, path):
+		try:
+			apath = os.path.abspath(path)
+			return self.map[apath]
+		except KeyError:
+			if apath.startswith(self.out_dir):
+				self.map[apath] = apath
+				return apath
+			else:
+				dir, name = os.path.split(path)
+				while name in self.used:
+					dir, dname = os.path.split(dir)
+					name = "%s-%s" % (dname, name)
+				fpath = os.path.join(self.get_import(), name)	
+				self.used.append(name)
+				self.map[apath] = fpath
+				self.relocate(path, fpath)
+				return fpath
+
+	def get_resource_path(self, path, gen):
+		path = os.path.abspath(path)
+		gpath = os.path.dirname(gen.get_out_path())
+		return os.path.relpath(path, gpath)
 
 class Generator:
 	"""Abstract back-end generator."""
+	manager = None
 	doc = None
-	friend_reloc = "local"
-	path = None
-	root = None
+	out_path = None
+	base_path = None
+	import_path = None
+	trans = None
 	out = None
-	from_files = None
-	to_files = None
-	added_files = None
+	tmp = -1
 
-	def __init__(self, doc):
+	def __init__(self, doc, manager = None):
 		"""Build the abstract generator.
 		doc -- document to generate."""
 		self.doc = doc
 		self.trans = i18n.getTranslator(self.doc)
-		self.from_files = { }
-		self.to_files = { }
-		self.added_files = []
-		
-		# new friend system
-		self.friend_reloc = doc.getVar("FRIEND_RELOC", "local")
-		self.friends = []
-		self.friend_map = { }
+		if manager != None:
+			self.manager = manager
+		else:
+			self.manager = LocalManager(self.get_out_path())
 
 	def getType(self):
 		"""Get type of the back-end: html, latex, xml."""
 		return None
 
-	def addedFiles(self):
-		"""Get the added files."""
-		return self.added_files
+	def get_out_ext(self):
+		"""Get extension of the generated file (prefixed by ".")."""
+		return ""
 
-	def addFile(self, file):
-		"""Add a file to the list of files linked to the document."""
-		if file not in self.added_files:
-			self.added_files.append(file)
-
-	def friendFiles(self):
-		"""Get the friend files of the document."""
-		print(self.from_files)
-		print(self.to_files)
-		return(self.to_files)
-
-	def getImportDir(self):
-		"""Get the directory containing the imports."""
-		return self.root + "-imports"
-
-	def openMain(self, suff, out_name = None):
-		"""Create and open an out file for the given document.
-		suff -- suffix of the out file.
-		out_name -- default file to output to (special "<stdout>" supported).
-		Set path, root and out fields."""
-
-		self.path = self.doc.getVar("THOT_OUT_PATH")
-		if self.path:
-			self.out = open(self.path, "w")
-			if self.path.endswith(suff):
-				self.root = self.path[:-5]
-			else:
-				self.root = self.path
-		else:
-			if out_name:
-				in_name = out_name
-			else:
-				in_name = self.doc.getVar("THOT_FILE")
-			if not in_name or in_name == "<stdout>":
-				self.out = sys.stdout
-				self.path = "stdout"
-				self.root = "stdout"
-			else:
-				if in_name.endswith(".thot"):
-					self.path = in_name[:-5] + suff
-					self.root = in_name[:-5]
+	def get_out_path(self):
+		"""Get the path to the generated file."""
+		if self.out_path == None:
+			self.out_path = self.doc.getVar("THOT_OUT_PATH")
+			if self.out_path == "":
+				in_path = self.doc.getVar("THOT_FILE")
+				if in_path == "":
+					self.out_path = STDOUT
 				else:
-					self.path = in_name + suff
-					self.root = self.path
-				self.out = open(self.path, "w")
+					self.out_path = os.path.splitext(in_path)[0] + self.get_out_ext()
+		return self.out_path
 
-
-	def get_friend(self, path, base = ''):
-		"""Test if a file is a friend file and returns its generation
-		relative path. Return None if the the file is not part
-		of the generation.
-		path -- path of the file,
-		base -- potential file base."""
-		
-		if not os.path.isabs(path):
-			if base:
-				apath = os.path.join(base, path)
+	def get_base_path(self):
+		"""Get the base path, that is, the directory that contains the input.
+		If input is <stdin>, the current directory."""
+		if self.base_path == None:
+			in_path = self.doc.getVar("THOT_FILE")
+			if in_path == "":
+				self.base_path = os.getcwd()
 			else:
-				apath = os.path.abspath(path)
+				self.base_path = os.path.dirname(in_path)
+		return self.base_path
+
+	def get_import_dir(self):
+		"""Get the directory containing the imports."""
+		return self.manager.get_import()
+
+	def openMain(self):
+		"""Create and open an out file for the given document."""
+		out_path = self.get_out_path()
+		if out_path == STDOUT:
+			self.out = sys.stdout
 		else:
-			apath = os.path.normpath(path)
-		if apath in self.from_files:
-			return self.from_files[apath]
-		else:
-			return None
+			self.out = open(self.get_out_path(), "w")
 
-	def prepare_friend(self, path):
-		"""Prepare friend file to be created (ensuring uniqueness)
-		and existence of directories (maintain the same path suffix).
-		Return the actual path."""
-		
-		# create directories
-		dpath = os.path.dirname(path)
-		if not os.path.exists(dpath):
-			try:
-				os.makedirs(dpath)
-			except os.error as e:
-				common.onError('cannot create directory "%s": %s' % (dpath, e))
-		
-		# ensure uniqueness
-		file, ext = os.path.splitext(path)
-		cnt = 0
-		while path in self.to_files:
-			path = "%s-%d%s" % (file, cnt, ext)
-			cnt = cnt + 1
-		return path
+	def closeMain(self):
+		"""Close the main output."""
+		if self.get_out_path() != STDOUT:
+			self.out.close()
+			self.out =None
 
-	def new_friend(self, path):
-		"""Allocate a place in friend files for the given path
-		(that must be relative)."""
-		fpath = self.prepare_friend(os.path.join(self.getImportDir(), path))
-		self.addFile(fpath)
-		self.to_files[fpath] = ""
-		return fpath
+	def use_resource(self, path):
+		return self.manager.use_resource(path)
 
-	def copy_friend(self, spath, tpath):
-		"""Load a friend file in the generation location.
-		path -- relative path to write to.
-		base -- absolute file to the file to copy."""
-		tpath = self.prepare_friend(tpath)
-		try:
-			shutil.copyfile(spath, tpath)
-			return tpath
-		except shutil.Error as e:
-			common.onError('can not copy "%s" to "%s": %s' % (spath, tpath, str(e)))
-		except IOError as e:
-			common.onError('can not copy "%s" to "%s": %s' % (spath, tpath, str(e)))
+	def new_resource(self, path = None, ext = None):
+		return self.manager.new_resource(path, ext)
 
-	def is_local(self, path):
-		"""Test if a path is local to the current document."""
-		return True
+	def get_resource_path(self, path):
+		return self.manager.get_resource_path(path, self)
 
-	def use_friend(self, path, base = ''):
-		"""Ensure that a friend is available. If not, get it from
-		the given path. If absolute, the file is loaded in the import
-		directory and a relative path (to the document directory) is
-		returned.
-		path -- path to the file
-		base -- base directory containing the file ('' for CWD files)"""
 
-		# already declared?
-		tpath = self.get_friend(path, base)
-		if tpath:
-			return tpath 
-
-		# make target path
-		if base:
-			base = os.path.normpath(base)
-		if os.path.isabs(path):
-			apath = path
-			if base:
-				tpath = os.path.join(self.getImportDir(), os.path.relpath(path, base))
-			else:
-				tpath = os.path.join(self.getImportDir(), os.path.basename(path))
-		elif base:
-			apath = os.path.join(base, path)
-			tpath = os.path.join(self.getImportDir(), path)
-		else:
-			apath = os.path.abspath(path)
-			if self.friend_reloc == "local":
-				tpath = path
-			else:
-				tpath = os.path.join(self.getImportDir(), path)
-
-		# need to load?
-		if tpath != path:
-			tpath = self.copy_friend(apath, tpath)
-
-		# record all
-		self.from_files[apath] = tpath
-		self.to_files[tpath] = apath;
-		self.addFile(tpath)		
-		return tpath
-
-	def relative_friend(self, fpath, bpath):
-		"""Get the relative path of fpath reative to bpath."""
-		r = os.path.relpath(fpath, bpath)
-		return r
+	# Node generation functions
 
 	def genFootNote(self, note):
 		pass
@@ -321,4 +300,3 @@ class Generator:
 	def genRef(self, ref):
 		"""Called to generate a reference."""
 		pass
-

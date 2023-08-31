@@ -177,8 +177,11 @@ class Generator(back.Generator):
 	def getType(self):
 		return 'latex'
 
+	def get_out_ext(self):
+		return ".tex"
+
 	def run(self):
-		self.openMain('.tex')
+		self.openMain()
 		self.doc.pregen(self)
 
 		# get class
@@ -292,12 +295,12 @@ class Generator(back.Generator):
 		# generate final format
 		output = self.doc.getVar('OUTPUT')
 		if not output or output == 'latex':
-			print("SUCCESS: result in %s" % self.path)
+			print("SUCCESS: result in %s" % self.get_out_path())
 		elif output == 'pdf':
 
 			# perform compilation
-			for i in xrange(0, 2):	# two times for TOC (sorry)
-				dir, file = os.path.split(self.path)
+			for i in range(0, 2):	# two times for TOC (sorry)
+				dir, file = os.path.split(self.get_out_path())
 				cmd = 'pdflatex -halt-on-error %s' % file
 				if dir == "":
 					dir = "."
@@ -315,7 +318,7 @@ class Generator(back.Generator):
 					return
 
 			# display result
-			file, ext = os.path.splitext(self.path)
+			file, ext = os.path.splitext(self.get_out_path())
 			if ext == ".tex":
 				path = file
 			else:
@@ -487,13 +490,14 @@ class Generator(back.Generator):
 		# handle unsupported image format
 		root, ext = os.path.splitext(url)
 		if ext.lower() not in UNSUPPORTED_IMAGE:
-			link = self.use_friend(url)
+			link = self.use_resource(url)
 		else:
 			root, ext = os.path.splitext(url)
-			link = self.new_friend(os.path.abspath(root + ".png"))
+			link = self.use_resource(os.path.abspath(root + ".png"))
 			res = subprocess.call(['convert %s %s' % (url, link)], shell = True)
 			if res != 0:
 				common.onError('cannot convert image "%s" to "%s"' % (url, link))
+		link = self.get_resource_path(link)
 
 		# build the command
 		args = ''
@@ -573,6 +577,12 @@ def output(doc):
 	gen = Generator(doc)
 	gen.run()
 
+__vars__ = common.make_var_doc([
+	("LATEX_CLASS",		"latex class for document (default book)"),
+	("LATEX_PAPER",		"latex paper format (a4paper, letter, etc)"),
+	("LATEX_PREAMBLE",	"to be inserted just after document definition"),
+	("OUTPUT",			"one of 'latex' (latex output) or 'pdf' (latex and PDF output)")
+])
 
 __short__ = "back-end for Latex output and PDF"
 __description__ = \
@@ -581,10 +591,5 @@ file DOC.latex that, then, can be compiled into PDF, for instance,
 using "pdflatex" command.
 
 Following variables are supported:
-""" + common.make_var_doc([
-	("LATEX_CLASS",		"latex class for document (default book)"),
-	("LATEX_PAPER",		"latex paper format (a4paper, letter, etc)"),
-	("LATEX_PREAMBLE",	"to be inserted just after document definition"),
-	("OUTPUT",			"one of 'latex' (latex output) or 'pdf' (latex and PDF output)")
-])
+""" + __vars__
 

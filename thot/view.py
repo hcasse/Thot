@@ -435,7 +435,7 @@ class MyServer(http.server.HTTPServer):
 			self.shutdown()
 
 
-if __name__ == "__main__":
+def main():
 
 	# entry point
 	parser = argparse.ArgumentParser(
@@ -451,5 +451,9 @@ if __name__ == "__main__":
 	# run the server
 	manager = Manager(args.document[0], args.verbose)
 	MyServer(manager).serve_forever()
+	
+
+if __name__ == "__main__":
+	main()
 
 	

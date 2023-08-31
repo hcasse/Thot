@@ -392,6 +392,15 @@ class Manager:
 		else:
 			common.onError('cannot find module %s' % name)
 
+	def fix_path(self, path):
+		"""Fix the given path if it is not absole to be relative to the current document path."""
+		if os.path.isabs(path):
+			return path
+		elif self.file_name == '<unknown>':
+			return os.path.join(os.getcwd(), path)
+		else:
+			return os.path.join(os.path.dirname(self.file_name), path)
+
 
 class BlockParser:
 	old = None

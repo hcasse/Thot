@@ -41,7 +41,7 @@ class DotBlock(doc.Block):
 
 	def gen(self, gen):
 		global count
-		path = gen.new_friend('dot/graph-%s.png' % count)
+		path = gen.new_resource('dot/graph-%s.png' % count)
 		cmd = '%s -Tpng -o %s' % (self.kind, path)
 		common.onVerbose(lambda _: "CMD: %s" % cmd)
 		count += 1

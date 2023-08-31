@@ -16,6 +16,7 @@
 
 import os
 
+import thot.back as back
 import thot.backs.abstract_html as abstract_html
 import thot.common as common
 import thot.doc as doc
@@ -26,6 +27,14 @@ from thot.backs.abstract_html import escape_cdata, escape_attr
 def makeRef(nums):
 	"""Generate a reference from an header number array."""
 	return ".".join([str(i) for i in nums])
+
+class LocalManager(back.LocalManager, abstract_html.Manager):
+	"""Manager for HTML storing additional file in an import directory."""
+
+	def __init__(self, out_path):
+		abstract_html.Manager.__init__(self)
+		back.LocalManager.__init__(self, out_path)
+	
 
 class PagePolicy:
 	"""A page policy allows to organize the generated document
@@ -74,7 +83,6 @@ class PagePolicy:
 
 		# declare the link
 		self.man.declare_link(node, self.file)
-		#print("DEBUG: declare", self.file, "for", node)
 
 		# build the number
 		if not isinstance(type, int):
@@ -165,8 +173,8 @@ class AllInOne(PagePolicy):
 		self.gen.genBody()		
 
 	def run(self):
-		self.gen.openMain('.html')
-		self.file = os.path.abspath(self.gen.path)
+		self.gen.openMain()
+		self.file = os.path.abspath(self.gen.get_out_path())
 		self.make_numbers(self.gen.doc)
 		self.gen.doc.pregen(self.gen)
 		self.page.apply(self, self.gen)
@@ -183,9 +191,9 @@ class PerChapter(PagePolicy):
 	def page_name(self, page):
 		"""Compute the page name."""
 		if page < 0:
-			return "%s.html" % self.gen.root
+			return "%s.html" % self.gen.get_out_path()
 		else:
-			return "%s-%d.html" % (self.gen.root, page)
+			return "%s-%d.html" % (os.path.splitext(self.gen.get_out_path())[0], page)
 
 	def enter_header(self, header):
 		if header.getHeaderLevel() == 0:
@@ -220,14 +228,14 @@ class PerChapter(PagePolicy):
 	def run(self):
 
 		# preparation
-		self.gen.openMain('.html')
-		self.file = os.path.abspath(self.gen.path)
+		self.gen.openMain()
+		self.file = os.path.abspath(self.gen.get_out_path())
 		self.make_numbers(self.gen.doc)
 		self.gen.doc.pregen(self.gen)
 
 		# generate first page
 		self.page.apply(self, self.gen)
-		print("generated %s" % self.gen.path)
+		print("generated %s" % self.gen.get_out_path())
 
 		# generate chapter pages
 		for (name, header) in self.todo:
@@ -289,6 +297,7 @@ class Generator(abstract_html.Generator):
 
 	def __init__(self, doc):
 		abstract_html.Generator.__init__(self, doc)
+		self.manager = LocalManager(self.get_out_path())
 
 	def getType(self):
 		return 'html'
@@ -322,11 +331,11 @@ class Generator(abstract_html.Generator):
 		self.out.write("</div>\n</body>\n</html>\n")
 
 	def get_href(self, node):
-		return self.man.get_link(node, self.out_path)
+		return self.manager.get_link(node, self.out_path)
 
 	def genContentEntry(self, node, indent):
 		"""Generate a content entry (including numbering, title and link)."""
-		self.out.write('%s<a href="%s">' % (indent, self.get_href(node)))
+		self.out.write('%s<a href="%s">' % (indent, self.manager.get_link(node, self)))
 		self.out.write(self.get_number(node))
 		self.out.write(' ')
 		node.genTitle(self)
@@ -378,10 +387,6 @@ class Generator(abstract_html.Generator):
 		self.expandContentTo(self.doc, path, level, '  ')
 		self.out.write('</div>\n')
 
-	def openMain(self, ext):
-		abstract_html.Generator.openMain(self, ext)
-		self.out_path = os.path.abspath(self.path)
-
 	def openPage(self, path):
 		#self.stack.append((self.out, self.out_path, self.footnotes))
 		self.out_path = os.path.abspath(path)
@@ -404,7 +409,7 @@ class Generator(abstract_html.Generator):
 
 		# generate the document
 		policy.run()
-		print("SUCCESS: result in %s" % self.path)
+		print("SUCCESS: result in %s" % self.get_out_path())
 
 
 def output(doc):

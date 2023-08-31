@@ -25,7 +25,7 @@ import thot.common as common
 import thot.doc as doc
 import thot.doc as tdoc
 import thot.highlight as highlight
-import thot.htmlman as htmlman
+#import thot.htmlman as htmlman
 import thot.i18n as i18n
 
 def escape_cdata(s):
@@ -69,6 +69,126 @@ def getStyle(style):
 		return STYLES[style]
 	else:
 		raise Exception('style ' + style + ' not supported')
+
+class Relocator:
+	"""These objects take in charge the fact that a file has to be moved
+	to some building directory. It may be used to relocate and fix
+	associated file or special transformation due to this move."""
+
+	def move(self, spath, tpath, man):
+		"""Move the file from source path to the target path.
+		For information, location used for links and manager are
+		given.
+
+		If there is an error, must raise a BackException."""
+		pass
+
+
+class CSSRelocator(Relocator):
+	"""Relocator for CSS files."""
+
+	CSS_URL_RE = re.compile('url\(([^)]*)\)')
+
+	def __init__(self):
+		Relocator.__init__(".css")
+
+	def move(self, opath, tpath, loc, man):
+
+		# open files
+		try:
+			input = open(opath)
+		except FileNotFoundError as e:
+			raise common.BackException(str(e))
+		output = open(tpath, "w")
+		rbase = os.path.dirname(tpath)
+
+		# perform the copy
+		for line in input:
+			m = CSSRelocator.CSS_URL_RE.search(line)
+			while m:
+				output.write(line[:m.start()])
+				url = m.group(1)
+				res = urlparse.urlparse(url)
+				if res[0]:
+					output.write(m.group())
+				else:
+					rpath = man.add_resource(res[2])
+					rpath = os.path.relpath(rpath, rbase)
+					output.write("url(%s)" % rpath)
+				line = line[m.end():]
+				m = CSSRelocator.CSS_URL_RE.search(line)
+			output.write(line)
+
+
+# Known relocators
+RELOCATORS = {
+	".css": CSSRelocator()
+}
+
+
+class Manager(back.Manager):
+	"""Manager specialized for HTML output."""
+
+	def __init__(self):
+		self.anchor_count = 0
+		print("init abstract_html.Manager.__init__")
+
+	def relocate(self, spath, tpath):
+		try:
+			reloc = RELOCATORS[os.path.splitext(spath)]
+			reloc.move(spath, tpath, loc, self)
+		except KeyError:
+			back.Manager.relocate(self, spath, tpath)
+
+	def declare_number(self, node, number):
+		"""Record the assignment of a number to a node."""
+		node._thot_number = number
+
+	def get_number(self, node):
+		"""Get the number for a node that can support it. Return number
+		if there is one or None."""
+		try:
+			return node._thot_number
+		except AttributeError:
+			return None
+
+	def declare_link(self, node, path, anchor = ""):
+		"""Declare a link to the given node with the given build path. If no anchor is given, a new anchor is created. If anchor is None, no anchor is used."""
+		if anchor == "":
+			anchor = "thot-%d" % self.anchor_count
+			self.anchor_count += 1
+		node._thot_path = path
+		node._thot_anchor = anchor
+		print("DEBUG:", node, ":", path, "#", anchor)
+
+	def get_anchor(self, node):
+		"""Get the anchor of the node (if any). None else."""
+		try:
+			return node._thot_anchor
+		except AttributeError:
+			return None
+
+	def get_link(self, node, gen):
+		"""Get the link to the given node. Return None if there is no link.
+		If ref is given, the path is relative to the given path."""
+		try:
+			path = node._thot_path
+			anchor = node._thot_anchor
+			if path == os.path.abspath(gen.get_out_path()):
+				res = "#%s" % anchor
+			else:
+				path = self.get_resource_path(path, gen)
+				if anchor == None:
+					res = path
+				else:
+					res = "%s#%s" % (path, anchor)
+		except AttributeError:
+			res = "<unlabelled node>"
+		return res	
+
+	def get_resource_link(self, path, gen):
+		"""Get the link to a resource for the given generator."""
+		return self.get_resource_path(path, gen)
 
 
 class Script:
@@ -242,65 +362,61 @@ class TemplatePage(Page):
 
 
 # Ref classes
-class Ref:
-	"""Abstract class representing a reference inside a document or
-	a set of documents."""
+# class Ref:
+	# """Abstract class representing a reference inside a document or
+	# a set of documents."""
 
-	def label(self):
-		"""Return the label associated with reference: for example,
-		for a chapter, this is the title of the chapter."""
-		return ""
+	# def label(self):
+		# """Return the label associated with reference: for example,
+		# for a chapter, this is the title of the chapter."""
+		# return ""
 
-	def number(self):
-		"""Return the number associated with the referenced: chapter
-		number for a chapter."""
-		return ""
+	# def number(self):
+		# """Return the number associated with the referenced: chapter
+		# number for a chapter."""
+		# return ""
 
-	def link(self, relative=None):
-		"""Return the URL link corresponding to the reference:
-		the link absolute (relatively to the project root) or
-		relative to the given file."""
-		return ""
+	# def link(self, relative=None):
+		# """Return the URL link corresponding to the reference:
+		# the link absolute (relatively to the project root) or
+		# relative to the given file."""
+		# return ""
 
 
-class HeaderRef:
-	"""A reference for header."""
+#class HeaderRef:
+#	"""A reference for header."""
+#
+	# def __init__(self, file, node):
+		# self.file = file
+		# self.node = node
 
-	def __init__(self, file, node):
-		self.file = file
-		self.node = node
+	# def label(self):
+		# pass
 
-	def label(self):
-		pass
+	# def number(self):
+		# pass
 
-	def number(self):
-		pass
-
-	def link(self, relative):
-		pass
+	# def link(self, relative):
+		# pass
 
 
 
 # Generator class
+
 class Generator(back.Generator):
 	"""Generator for HTML output."""
 	trans = None
 	doc = None
-	path = None
-	root = None
-	from_files = None
-	to_files = None
 	footnotes = None
 	struct = None
 	pages = None
 	page_count = None
 	stack = None
 	label = None
-	refs = None
 	scripts = None
-	man = None
+	manager = None
 
-	def __init__(self, doc, man = None, template = None):
+	def __init__(self, doc, manager = None, template = None):
 		back.Generator.__init__(self, doc)
 		self.footnotes = []
 		self.pages = { }
@@ -309,20 +425,13 @@ class Generator(back.Generator):
 		self.refs = { }
 		self.scripts = []
 		self.template = template
-		if man != None:
-			self.man = man
-		else:
-			path = doc.getVar("THOT_FILE")
-			self.man = htmlman.LocalManager(
-				os.path.splitext(os.path.basename(path))[0],
-				base_dir = os.path.dirname(path))
-
-	def get_manager(self):
-		"""Get the resource manager."""
-		return self.man
+		self.manager = manager
 
 	def getType(self):
 		return "html"
+
+	def get_out_ext(self):
+		return ".html"
 
 	def getTemplate(self):
 		"""Get the template of page."""
@@ -341,8 +450,9 @@ class Generator(back.Generator):
 			for style in styles.split(':'):
 				if style == "":
 					continue
-				new_style = self.importCSS(style)
-				out.write('	<link rel="stylesheet" type="text/css" href="' + new_style + '">\n')
+				style_res = self.manager.use_resource(style)
+				style_link = self.manager.get_resource_link(style_res, self)
+				out.write('	<link rel="stylesheet" type="text/css" href="' + style_link + '">\n')
 		short_icon = self.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
 			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
@@ -360,7 +470,7 @@ class Generator(back.Generator):
 			s.gen(self.out)
 	
 	def importCSS(self, spath, base = ""):
-		self.man.add_resource(spath, self.doc)
+		self.manager.add_resource(spath, self.doc)
 		return self.man.get_resource_loc(spath, self.doc)
 
 	def genFootNote(self, note):
@@ -514,8 +624,8 @@ class Generator(back.Generator):
 
 	def genHeaderTitle(self, header, href=None):
 		"""Generate the title of a header."""
-		number = self.man.get_number(header)
-		anchor = self.man.get_anchor(header)
+		number = self.manager.get_number(header)
+		anchor = self.manager.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
 		if anchor != None:
 			self.out.write('<a name="' + anchor + '"></a>')
@@ -541,8 +651,9 @@ class Generator(back.Generator):
 			if url.startswith("mailto:"):
 				url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
 		else:
-			self.man.add_resource(url, self.doc)
-			url = self.man.get_resource_loc(url, self.doc)
+			# to add for view/web
+			#self.manager.add_resource(url, self.doc)
+			url = self.manager.get_resource_link(url, self)
 
 		# generate the code
 		self.out.write('<a href="%s">' % url)
@@ -551,7 +662,12 @@ class Generator(back.Generator):
 		self.out.write('</a>')
 
 	def genImageTag(self, url, node, caption):
-		self.out.write('<img src="' + url + '"')
+		if ":" in url:
+			new_url = url
+		else:
+			self.manager.use_resource(url)
+			new_url = self.manager.get_resource_link(url, self)
+		self.out.write('<img src="' + new_url + '"')
 		if node.get_width() != None:
 			self.out.write(' width="%d"' % node.get_width())
 		if node.get_height() != None:
@@ -561,12 +677,7 @@ class Generator(back.Generator):
 		self.out.write('/>')
 		
 	def genImage(self, url, node, caption):
-		if ":" in url:
-			new_url = url
-		else:
-			self.man.add_resource(url, self.doc)
-			new_url = self.man.get_resource_loc(url, self.doc)
-		self.genImageTag(new_url, node, caption)
+		self.genImageTag(url, node, caption)
 
 	def genFigure(self, url, node, caption):
 		align = node.getInfo(tdoc.INFO_ALIGN)
@@ -641,15 +752,18 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		res = self.man.get_link(node, self.path)
-		print("DEBUG: href", res, "for", node, "in", self.path)
+		res = self.manager.get_link(node, self.path)
 		return res
 
 	def get_number(self, node):
 		"""Get the reference number corresponding to the given node."""
-		return self.man.get_number(node)
+		return self.manager.get_number(node)
+
+	def get_manager(self):
+		"""Get the file manager for the generator."""
+		return self.manager
 
 
 # module description
-__short__ = "common facilities by HTML back-end"
+__short__ = "Common facilities for HTML back-end"
 __description__ = """Cannot be used as a back-end per se."""

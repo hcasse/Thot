@@ -272,7 +272,7 @@ class Feature(doc.Feature):
 		# build the CSS file
 		if type in CSS_BACKS:
 			try:
-				css = gen.new_friend('highlight/highlight.css')
+				css = gen.new_resource('highlight/highlight.css')
 				cfd = True
 				if os.name == "nt":
 					cfd = False
@@ -298,7 +298,7 @@ class Feature(doc.Feature):
 		# build .sty
 		if type == 'latex':
 			try:
-				css = gen.new_friend('highlight/highlight.sty')
+				css = gen.new_resource('highlight/highlight.sty')
 				process = subprocess.Popen(
 					['%s -f --syntax=c --style-outfile=%s %s' % (command, css, BACKS[type])],
 					stdin = subprocess.PIPE,
@@ -315,7 +315,7 @@ class Feature(doc.Feature):
 			preamble = gen.doc.getVar('LATEX_PREAMBLE')
 			preamble += '\\usepackage{color}\n'
 			preamble += '\\usepackage{alltt}\n'
-			preamble += '\\input {%s}\n' % css
+			preamble += '\\input {%s}\n' % gen.get_resource_path(css)
 			gen.doc.setVar('LATEX_PREAMBLE', preamble)
 
 

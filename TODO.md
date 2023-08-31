@@ -2,13 +2,14 @@
 
 ## Application
 
-  [ ] add a --clean option to clean generated filkes.
+  [ ] Add ``thot-view`` command.
+  [ ] Add ``thot-gen`` command.  
+  [ ] Add a --clean option to clean generated filkes.
+  [ ] Add ANSI colorization.
+  [ ] Remove ``thot.py`` command.  
 
 ## Core
 
-  [ ] Add ``thot-view`` command.
-  [ ] Add ``thot-gen`` command.  
-  [ ] Remove ``thot.py`` command.  
   [ ] Support for language local to a part of text.
   [ ] Add more standard paragraph types (like blockquote, file, verse, etc).
   [ ] Add inclusion from shell with syntax like @{command line}.
@@ -22,6 +23,12 @@
   [ ] Support of reStructuredText: http://docutils.sourceforge.net/rst.html.
   [X] Support Textile.
   [X] Support for Markdown.
+
+### Markdown
+
+  [ ] Supports array.
+  [ ] Support formatting in links.
+  [ ] Support code.
 
 ### DokuWiki
 

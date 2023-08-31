@@ -121,7 +121,7 @@ class ExternalBlock(doc.Block):
 	def get_path(self, gen):
 		"""Declare the given block file as friend and generate a valid path."""
 		if not self.path:
-			self.path = gen.new_friend('extern/%s-%s%s' % (self.meta.name, self.new_num(), self.meta.ext))
+			self.path = gen.new_resource('extern/%s-%s%s' % (self.meta.name, self.new_num(), self.meta.ext))
 		return self.path
 
 	def dumpHead(self, tab):

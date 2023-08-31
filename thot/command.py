@@ -181,7 +181,10 @@ def main():
 		env["THOT_FILE"] = "<stdin>"
 		env["THOT_DOC_DIR"] = "."
 	else:
-		input = open(args[0])
+		try:
+			input = open(args[0])
+		except FileNotFoundError:
+			common.onError("cannot open file '%s'" % args[0]) 
 		env["THOT_FILE"] = args[0]
 		env["THOT_DOC_DIR"] = os.path.dirname(args[0])
 		if not env["THOT_DOC_DIR"]:

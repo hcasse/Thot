@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+
+import thot.common as common
 import thot.doc as doc
+import thot.highlight as highlight
 import thot.tparser as tparser
 
 def handle_blockquote(man, match):
@@ -23,9 +27,7 @@ def handle_blockquote(man, match):
 	pass
 
 def handle_html(man, match):
-	# TODO
-	print("DEBUG: html!")
-	pass
+	man.warn("Markdown  HTML inclusion is not supported.")
 
 def handle_new_par(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_END, doc.Par()))
@@ -46,7 +48,6 @@ def handle_head_under(man, match, level, hrule):
 			break
 		man.pop()
 		
-
 def handle_header(man, match):
 	level = len(match.group("level"))
 	title = match.group("title")
@@ -64,13 +65,10 @@ def handle_number_list(man, match):
 	man.send(doc.ItemEvent(doc.LIST_NUMBER, 1))
 	tparser.handleText(man, match.group("text"))
 
+END_CODE = re.compile("^\s*```\s*$")
 def handle_code_block(man, match):
-	
-	# lookup for a previous list
-	
-	# else it is a code block
-	
-	pass
+	lang = match.group('lang')
+	tparser.BlockParser(man, highlight.CodeBlock(man, lang), END_CODE)
 
 def handle_hrule(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, doc.HorizontalLine()))
@@ -226,7 +224,7 @@ __lines__ = [
 		"""define a link with an identifier that can be referenced later."""
 	),
 	(handle_code_block,
-		"^(    |\t)(?P<text>.*)$",
-		"""sub-paragraph included in the previous list."""
+		"^\s*```(?P<lang>\S*)\s*$",
+		"""Code with the given language."""
 	),
 ]

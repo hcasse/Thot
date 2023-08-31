@@ -152,6 +152,7 @@ def scanAuthors(text):
 
 
 def is_exe(fpath):
+	"""Test if a path is executable."""
 	return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
 

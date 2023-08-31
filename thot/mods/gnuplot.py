@@ -54,7 +54,7 @@ class GnuPlotBlock(doc.Block):
 				self.h = self.w
 			opt = "size %s,%s"  % (self.w, self.h)
 		
-		path = gen.new_friend('gnuplot/graph-%s.png' % count)
+		path = gen.new_resource('gnuplot/graph-%s.png' % count)
 		count += 1
 		try:
 			process = subprocess.Popen(
@@ -72,7 +72,7 @@ class GnuPlotBlock(doc.Block):
 				return
 			if process.returncode:
 				print("ERROR: %d" % process.returncode)
-				sys.stderr.write(err)
+				sys.stderr.write(err.decode('utf-8'))
 				self.onError('error during gnuplot call')
 			gen.genEmbeddedBegin(self)
 			gen.genImage(path, self, self.caption)

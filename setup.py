@@ -18,7 +18,11 @@ setuptools.setup(
 
 	packages = packs,
 	entry_points = {
-		'console_scripts': ['thot=thot.command:main']
+		'console_scripts': [
+			'thot=thot.command:main',
+			'thot-gen=thot.command:main',
+			'thot-view=thot.view:main'
+		]
 	},
 
 	include_package_data = True,
