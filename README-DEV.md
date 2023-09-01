@@ -37,6 +37,12 @@ Just add `.py` in `thot/mods`.
 Put data in `thot/data` and complete `MANIFEST.in`.
 
 
+## TODO
+
+	[ ] Use monitor every to produce errors.
+	[ ] Share the parser extension list ( `thot.view` ) with other modules in `thot.tparser`.
+
+
 ## Design
 
 

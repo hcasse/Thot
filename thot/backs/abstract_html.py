@@ -92,15 +92,16 @@ class CSSRelocator(Relocator):
 	def __init__(self):
 		Relocator.__init__(".css")
 
-	def move(self, opath, tpath, loc, man):
+	def move(self, spath, tpath, man):
 
 		# open files
 		try:
-			input = open(opath)
+			input = open(spath)
 		except FileNotFoundError as e:
 			raise common.BackException(str(e))
 		output = open(tpath, "w")
-		rbase = os.path.dirname(tpath)
+		sdir = os.path.dirname(spath)
+		tdir = os.path.dirname(tpath)
 
 		# perform the copy
 		for line in input:
@@ -112,9 +113,12 @@ class CSSRelocator(Relocator):
 				if res[0]:
 					output.write(m.group())
 				else:
-					rpath = man.add_resource(res[2])
-					rpath = os.path.relpath(rpath, rbase)
-					output.write("url(%s)" % rpath)
+					surl = res[2]
+					if ":" not in surl:
+						surl = os.path.join(sdir, surl)
+					burl = man.use_resource(surl)
+					turl = os.path.relpath(burl, tdir)
+					output.write("url(%s)" % turl)
 				line = line[m.end():]
 				m = CSSRelocator.CSS_URL_RE.search(line)
 			output.write(line)
@@ -135,8 +139,8 @@ class Manager(back.Manager):
 
 	def relocate(self, spath, tpath):
 		try:
-			reloc = RELOCATORS[os.path.splitext(spath)]
-			reloc.move(spath, tpath, loc, self)
+			reloc = RELOCATORS[os.path.splitext(spath)[1]]
+			reloc.move(spath, tpath, self)
 		except KeyError:
 			back.Manager.relocate(self, spath, tpath)
 
@@ -159,7 +163,7 @@ class Manager(back.Manager):
 			self.anchor_count += 1
 		node._thot_path = path
 		node._thot_anchor = anchor
-		print("DEBUG:", node, ":", path, "#", anchor)
+		#print("DEBUG:", node, ":", path, "#", anchor)
 
 	def get_anchor(self, node):
 		"""Get the anchor of the node (if any). None else."""
@@ -361,47 +365,6 @@ class TemplatePage(Page):
 			common.onError(str(e))
 
 
-# Ref classes
-# class Ref:
-	# """Abstract class representing a reference inside a document or
-	# a set of documents."""
-
-	# def label(self):
-		# """Return the label associated with reference: for example,
-		# for a chapter, this is the title of the chapter."""
-		# return ""
-
-	# def number(self):
-		# """Return the number associated with the referenced: chapter
-		# number for a chapter."""
-		# return ""
-
-	# def link(self, relative=None):
-		# """Return the URL link corresponding to the reference:
-		# the link absolute (relatively to the project root) or
-		# relative to the given file."""
-		# return ""
-
-
-#class HeaderRef:
-#	"""A reference for header."""
-#
-	# def __init__(self, file, node):
-		# self.file = file
-		# self.node = node
-
-	# def label(self):
-		# pass
-
-	# def number(self):
-		# pass
-
-	# def link(self, relative):
-		# pass
-
-
-
-# Generator class
 
 class Generator(back.Generator):
 	"""Generator for HTML output."""
@@ -442,6 +405,10 @@ class Generator(back.Generator):
 			else:
 				self.template = PlainPage()
 		return self.template
+
+	def is_distant_url(self, url):
+		"""Test if the URL is distant, not local."""
+		return ":" not in url
 
 	def gen_header(self):
 		out = self.out
@@ -647,12 +614,10 @@ class Generator(back.Generator):
 	def genLinkBegin(self, url):
 
 		# process the URL
-		if ":" in url:
+		if self.is_distant_url(url):
 			if url.startswith("mailto:"):
 				url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
 		else:
-			# to add for view/web
-			#self.manager.add_resource(url, self.doc)
 			url = self.manager.get_resource_link(url, self)
 
 		# generate the code

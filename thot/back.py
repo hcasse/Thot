@@ -49,7 +49,8 @@ class Manager:
 
 	def relocate(self, spath, dpath):
 		"""Called to relocate a used path (spath) )into the current build path (dpath). The default implementation just copies the file."""
-		self.copystat(spath, dpath)
+		shutil.copyfile(spath, dpath)
+		shutil.copystat(spath, dpath)
 
 	def get_resource_path(self, path, gen):
 		"""Get a resource path to be used in the given generator.
@@ -101,7 +102,7 @@ class LocalManager(Manager):
 			apath = os.path.abspath(path)
 			return self.map[apath]
 		except KeyError:
-			if apath.startswith(self.out_dir):
+			if apath.startswith(os.path.abspath(self.out_dir)):
 				self.map[apath] = apath
 				return apath
 			else:

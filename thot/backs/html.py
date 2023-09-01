@@ -388,14 +388,12 @@ class Generator(abstract_html.Generator):
 		self.out.write('</div>\n')
 
 	def openPage(self, path):
-		#self.stack.append((self.out, self.out_path, self.footnotes))
 		self.out_path = os.path.abspath(path)
 		self.out = open(path, 'w')
 		self.footnotes = []
 
 	def closePage(self):
 		self.out.close()
-		#self.out, self.footnotes = self.stack.pop()
 
 	def run(self):
 

@@ -30,7 +30,7 @@ import webbrowser
 import thot.command as command
 import thot.common as common
 import thot.doc as doc
-import thot.htmlman as htmlman
+#import thot.htmlman as htmlman
 import thot.tparser as tparser
 import thot.backs.abstract_html as ahtml
 
@@ -149,6 +149,11 @@ class Generator(ahtml.Generator):
 		header.header_level += self.base_level
 		return True
 
+	def genLinkBegin(self, url):
+		if not self.is_distant_url(url):
+			self.manager.use_resource(url)
+		ahtml.Generator.genLinkBegin(self, url)
+
 
 class DocResource(Resource, ahtml.PageHandler):
 	"""Generator for Thot document."""
@@ -224,9 +229,9 @@ class DocResource(Resource, ahtml.PageHandler):
 	def gen_icon(self, gen):
 		icon = self.node.env["ICON"]
 		if icon != "":
-			ricon = self.node.env.reduce(icon)
-			self.manager.add_resource(ricon)
-			loc = self.manager.get_resource_loc(ricon, self.node)
+			icon = self.node.env.reduce(icon)
+			icon = self.manager.use_resource(icon)
+			icon = self.manager.get_resource_link(icon, gen)
 			gen.out.write('<div class="icon"><img src="%s"/></div>' % loc)
 
 	def generate(self, out):
@@ -238,7 +243,7 @@ class DocResource(Resource, ahtml.PageHandler):
 			style_authoring = self.gen_style_authoring,
 			subtitle = self.gen_subtitle,
 			icon = self.gen_icon)
-		gen = Generator(self.node, self.man, template, self.base_level, )
+		gen = Generator(self.node, self.man, template, self.base_level)
 		self.node.pregen(gen)
 		gen.out = out
 		gen.getTemplate().apply(self, gen)
@@ -253,20 +258,20 @@ class DocResource(Resource, ahtml.PageHandler):
 		self.node.gen(gen)
 
 
-class Manager(htmlman.Manager):
+class Manager(ahtml.Manager):
 	"""Manager for thot-view."""
 
 	def __init__(self, document, verbose = False):
+		ahtml.Manager.__init__(self)
 		self.verbose = verbose
 		self.mon = common.Monitor()
 		self.mon.set_verbosity(verbose)
 
 		# prepare environment
-		self.dir = os.path.abspath(os.path.dirname(document))
 		self.env = common.Env()
 		config_path = None
 		home = os.path.expanduser('~')
-		dir = self.dir
+		dir = os.path.abspath(os.path.dirname(document))
 		while True:
 			path = os.path.join(dir, 'config.thot')
 			if os.path.exists(path):
@@ -280,7 +285,7 @@ class Manager(htmlman.Manager):
 			dir = ndir
 
 		# initialize environment
-		htmlman.Manager.__init__(self, dir)
+		self.base_dir = dir
 		self.env["THOT_BASE_DIR"] = dir
 		self.env['THOT_OUT_TYPE'] = 'html'
 
@@ -322,11 +327,11 @@ class Manager(htmlman.Manager):
 		else:
 			return FileResource(path, loc)
 
-	def add_resource(self, path, ref = None):
-		rpath = self.make_path(path, ref)
+	def use_resource(self, path):
+		rpath = os.path.abspath(path)
 		if rpath not in self.fsmap:
-			if rpath.startswith(self.dir):
-				loc = rpath[len(self.dir):]
+			if rpath.startswith(self.base_dir):
+				loc = rpath[len(self.base_dir):]
 				res = self.make_gen(rpath, loc)
 			else:
 				ext = os.path.splitext(rpath)[1]
@@ -337,23 +342,22 @@ class Manager(htmlman.Manager):
 			self.link_resource(res)
 		return rpath
 
-	def create_resource(self, ext, id = None):
+	def new_resource(self, ext, id = None):
 		if self.tmpdir == None:
-			self.tmpdir = tempfile.TemporaryDirectory(prefix = "thot")
-		name = "file-%d%s" % (self.counnter, ext)
+			self.tmpdir = os.path.abspath(tempfile.mkdtemp(prefix = "thot"))
+		name = "file-%d%s" % (self.counter, ext)
 		self.counter += 1
 		loc = "/static/%s" % name
-		path = os.path.join(self.tmpdir.name, name)
+		path = os.path.join(self.tmpdir, name)
 		res = make_gen(path)
 		self.map[loc] = res
 		self.fsmap[path] = res
 		return path
 
-	def get_resource_loc(self, path, ref = None):
-		rpath = self.make_path(path, ref)
+	def get_resource_link(self, path, gen):
+		rpath = os.path.abspath(path)
 		try:
-			loc = self.fsmap[rpath].loc
-			return loc
+			return self.fsmap[rpath].loc
 		except KeyError:
 			return "broken link"
 
@@ -363,7 +367,7 @@ class Manager(htmlman.Manager):
 	def get_anchor(self, node):
 		return None
 
-	def get_link(self, node):
+	def get_link(self, node, gen):
 		return None
 
 
