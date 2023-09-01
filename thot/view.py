@@ -73,6 +73,9 @@ class Resource:
 		"""Called to generate on the given output."""
 		pass
 
+	def __str__(self):
+		return ""
+
 
 class HeartBeatResource(Resource):
 
@@ -87,6 +90,9 @@ class HeartBeatResource(Resource):
 		self.fun()
 		out.write("\n")
 
+	def __str__(self):
+		return "<heartbeat>"
+
 
 class ActionResource(Resource):
 
@@ -100,6 +106,9 @@ class ActionResource(Resource):
 	def generate(self, out):
 		self.fun()
 		out.write("\n")
+
+	def __str__(self):
+		return "action:%s" % self.fun
 
 
 class FileResource(Resource):
@@ -135,6 +144,9 @@ class FileResource(Resource):
 					out.write_bin(b)
 			file.close()
 
+	def __str__(self):
+		return self.path
+
 
 class Generator(ahtml.Generator):
 	"""Specialized generator."""
@@ -151,7 +163,7 @@ class Generator(ahtml.Generator):
 
 	def genLinkBegin(self, url):
 		if not self.is_distant_url(url):
-			self.manager.use_resource(url)
+			url = self.manager.use_resource(url)
 		ahtml.Generator.genLinkBegin(self, url)
 
 
@@ -232,7 +244,7 @@ class DocResource(Resource, ahtml.PageHandler):
 			icon = self.node.env.reduce(icon)
 			icon = self.manager.use_resource(icon)
 			icon = self.manager.get_resource_link(icon, gen)
-			gen.out.write('<div class="icon"><img src="%s"/></div>' % loc)
+			gen.out.write('<div class="icon"><img src="%s"/></div>' % icon)
 
 	def generate(self, out):
 		if self.node == None:
@@ -256,6 +268,10 @@ class DocResource(Resource, ahtml.PageHandler):
 
 	def gen_content(self, gen):
 		self.node.gen(gen)
+
+
+	def __str__(self):
+		return "doc:%s" % self.document
 
 
 class Manager(ahtml.Manager):
@@ -301,18 +317,26 @@ class Manager(ahtml.Manager):
 				self.mon.error("error in parsing %s: %s (ignoring)",
 					config_path, e)
 
-		# prepare basic map
-		self.map = {}
-		gen = DocResource(document, self, "/index.html")
-		self.link_resource(gen)
-		self.map['/'] = gen
-		self.map['/index.htm'] = gen
-		self.map['/%s' % os.path.basename(document)] = gen
-
 		# prepare file system
 		self.fsmap = {}
 		self.counter = 0
 		self.tmpdir = None
+		self.map = {}
+
+		# prepare initial document
+		dpath = self.use_resource(document)
+		gen = self.fsmap[dpath]
+		#gen = DocResource(document, self, "/index.html")
+		#self.link_resource(gen)
+		self.alias_resource(gen, '/')
+		self.alias_resource(gen, '/index.html')
+		self.alias_resource(gen, '/index.htm')
+		#self.alias_resource(gen, '/%s' % os.path.basename(document))
+
+
+	def alias_resource(self, res, loc):
+		"""Add an aliases to a resource."""
+		self.map[loc] = res
 
 	def link_resource(self, res):
 		"""Add a resource."""
@@ -328,7 +352,7 @@ class Manager(ahtml.Manager):
 			return FileResource(path, loc)
 
 	def use_resource(self, path):
-		rpath = os.path.abspath(path)
+		rpath = os.path.normpath(os.path.abspath(path))
 		if rpath not in self.fsmap:
 			if rpath.startswith(self.base_dir):
 				loc = rpath[len(self.base_dir):]
@@ -349,9 +373,9 @@ class Manager(ahtml.Manager):
 		self.counter += 1
 		loc = "/static/%s" % name
 		path = os.path.join(self.tmpdir, name)
-		res = make_gen(path)
-		self.map[loc] = res
+		res = self.make_gen(path, loc)
 		self.fsmap[path] = res
+		self.link_resource(res)
 		return path
 
 	def get_resource_link(self, path, gen):
@@ -380,7 +404,6 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.wfile.write(text)
 
 	def do_GET(self):
-		#print("DEBUG: path=", self.path)
 		path = unquote(self.path)
 		try:
 			file = self.server.manager.map[path]

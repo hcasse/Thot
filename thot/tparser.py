@@ -395,11 +395,12 @@ class Manager:
 	def fix_path(self, path):
 		"""Fix the given path if it is not absole to be relative to the current document path."""
 		if os.path.isabs(path):
-			return path
+			rpath = path
 		elif self.file_name == '<unknown>':
-			return os.path.join(os.getcwd(), path)
+			rpath = os.path.join(os.getcwd(), path)
 		else:
-			return os.path.join(os.path.dirname(self.file_name), path)
+			rpath = os.path.join(os.path.dirname(self.file_name), path)
+		return rpath
 
 
 class BlockParser:

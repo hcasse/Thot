@@ -74,7 +74,7 @@ def handle_hrule(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, doc.HorizontalLine()))
 
 def handle_link(man, match):
-	URL = match.group('URL')
+	URL = man.fix_path(match.group('URL'))
 	text = match.group('text')
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(URL)))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(text)))
@@ -82,7 +82,7 @@ def handle_link(man, match):
 
 def handle_ref(man, match):
 	try:
-		url = man.defs[match.group("id_ref")][0]
+		url = man.fix_path(man.defs[match.group("id_ref")][0])
 		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(url)))
 		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(match.group("text_ref"))))
 		man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))		

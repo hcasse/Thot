@@ -135,7 +135,6 @@ class Manager(back.Manager):
 
 	def __init__(self):
 		self.anchor_count = 0
-		print("init abstract_html.Manager.__init__")
 
 	def relocate(self, spath, tpath):
 		try:
@@ -408,7 +407,7 @@ class Generator(back.Generator):
 
 	def is_distant_url(self, url):
 		"""Test if the URL is distant, not local."""
-		return ":" not in url
+		return ":" in url
 
 	def gen_header(self):
 		out = self.out
