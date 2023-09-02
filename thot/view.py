@@ -197,10 +197,6 @@ class DocResource(Resource, ahtml.PageHandler):
 		# build the document
 		self.node = doc.Document(env)
 		parser.reset(self.node)
-		ext = os.path.splitext(self.document)[1]
-		mod = PARSERS[ext]
-		if mod != None:
-			parser.use(mod)
 		parser.parse(self.document)
 
 		# look for the structure
@@ -326,12 +322,9 @@ class Manager(ahtml.Manager):
 		# prepare initial document
 		dpath = self.use_resource(document)
 		gen = self.fsmap[dpath]
-		#gen = DocResource(document, self, "/index.html")
-		#self.link_resource(gen)
 		self.alias_resource(gen, '/')
 		self.alias_resource(gen, '/index.html')
 		self.alias_resource(gen, '/index.htm')
-		#self.alias_resource(gen, '/%s' % os.path.basename(document))
 
 	def __del__(self):
 		if self.tmpdir != None:

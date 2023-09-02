@@ -598,7 +598,7 @@ class Generator(back.Generator):
 		if href != None:
 			self.out.write('<a href="%s">' % href)
 		if number != None:
-			self.out.write(number)
+			self.out.write(number + " ")
 		header.genTitle(self)
 		if href != None:
 			self.out.write('</a>')

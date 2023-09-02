@@ -24,6 +24,14 @@ import thot.common as common
 
 DEBUG = False
 
+PARSERS = {
+	".md": "markdown",
+	".thot": None,
+	".doku": "dokuwiki",
+	".textile": "textile"
+}
+
+
 ############### Word Parsing #####################
 
 def handleVar(man, match):
@@ -304,9 +312,18 @@ class Manager:
 				raise common.ParseException(str(e))				
 		else:
 			try:
+
+				# manage the wiki parsing
+				ext = os.path.splitext(name)[1]
+				mod = PARSERS[ext]
+				if mod != None:
+					self.use(mod)
+
+				# perform the parse
 				self.parseInternal(file, name)
 				self.send(doc.Event(doc.L_DOC, doc.ID_END))
 				self.doc.clean()
+
 			except common.ParseException as e:
 				raise common.ParseException(self.message(e))
 
