@@ -56,6 +56,18 @@ class Manager:
 		"""Get a resource path to be used in the given generator.
 		The default implementation returns an absolute path."""
 		return os.path.abspath(path)
+
+	def ensure_dir(self, dir):
+		"""Ensure that the given directory is built.
+		Raise a BackException in the reverse case."""
+		if not os.path.exists(dir):
+			try:
+				os.makedirs(dir)
+			except OSError as e:
+				raise common.BackException("cannot creare %s: %s" % (dir, e))
+		elif not os.path.isdir(dir):
+			raise common.BackException("%s is not a directory" % dir)
+
 		
 
 class LocalManager(Manager):
@@ -69,17 +81,6 @@ class LocalManager(Manager):
 		self.map = { }
 		self.tmp = 0
 		self.used = []
-
-	def ensure_dir(self, dir):
-		"""Ensure that the given directory is built.
-		Raise a BackException in the reverse case."""
-		if not os.path.exists(dir):
-			try:
-				os.makedirs(dir)
-			except OSError as e:
-				raise common.BackException("cannot creare %s: %s" % (dir, e))
-		elif not os.path.isdir(dir):
-			raise common.BackException("%s is not a directory" % dir)
 
 	def get_import(self):
 		"""Get the import directory and ensures it exists."""

@@ -21,6 +21,7 @@ import http.server
 import mimetypes
 import os
 import os.path
+import shutil
 import tempfile
 import threading
 import time
@@ -30,7 +31,6 @@ import webbrowser
 import thot.command as command
 import thot.common as common
 import thot.doc as doc
-#import thot.htmlman as htmlman
 import thot.tparser as tparser
 import thot.backs.abstract_html as ahtml
 
@@ -333,6 +333,9 @@ class Manager(ahtml.Manager):
 		self.alias_resource(gen, '/index.htm')
 		#self.alias_resource(gen, '/%s' % os.path.basename(document))
 
+	def __del__(self):
+		if self.tmpdir != None:
+			shutil.rmtree(self.tmpdir)
 
 	def alias_resource(self, res, loc):
 		"""Add an aliases to a resource."""
@@ -366,13 +369,15 @@ class Manager(ahtml.Manager):
 			self.link_resource(res)
 		return rpath
 
-	def new_resource(self, ext, id = None):
+	def new_resource(self, path = None, ext = None):
 		if self.tmpdir == None:
-			self.tmpdir = os.path.abspath(tempfile.mkdtemp(prefix = "thot"))
-		name = "file-%d%s" % (self.counter, ext)
-		self.counter += 1
-		loc = "/static/%s" % name
-		path = os.path.join(self.tmpdir, name)
+			self.tmpdir = os.path.abspath(tempfile.mkdtemp(prefix = "thot-"))
+		if path == None:
+			path = "file-%d%s" % (self.counter, ext)
+			self.counter += 1
+		loc = "/static/%s" % path
+		path = os.path.join(self.tmpdir, path)
+		self.ensure_dir(os.path.dirname(path))
 		res = self.make_gen(path, loc)
 		self.fsmap[path] = res
 		self.link_resource(res)
