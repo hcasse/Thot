@@ -90,6 +90,7 @@ This is an automatic link <http://www.google.fr>.
 
 This is an automatic email address: <me@here.somewhere>.
 
+This is a [reference link] [google].
+
 [google]: http://www.google.fr	This is Google!
 
-This is a [reference link] [google].

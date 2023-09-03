@@ -303,10 +303,10 @@ class Manager(ahtml.Manager):
 
 		# load the config
 		self.base_doc = doc.Document(self.env)
+		self.parser = tparser.Manager(self.base_doc)
 		if config_path != None:
 			self.mon.say("readind configuration from %s", config_path)
 			self.dir = dir
-			self.parser = tparser.Manager(self.base_doc)
 			try:
 				self.parser.parse(config_path, self.base_doc)
 			except common.ParseException as e:

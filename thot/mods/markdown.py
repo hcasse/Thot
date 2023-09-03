@@ -87,7 +87,7 @@ def handle_ref(man, match):
 		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(match.group("text_ref"))))
 		man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))		
 	except KeyError:
-		common.warn("reference %s is unknown!" % match.group("id_ref"))
+		common.onWarning("reference %s is unknown!" % match.group("id_ref"))
 
 def handle_id_def(man, match):
 	man.defs[match.group("id")] = (match.group("URL"), match.group("text")) 
