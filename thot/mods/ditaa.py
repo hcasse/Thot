@@ -31,16 +31,25 @@ class DitaaBlock(extern.ExternalBlock):
 		opts.append(self.get_path(gen))
 
 
-def init(man):
-	extern.ExternalModule(man, name = "ditaa",
-	ext=".png",
-	cmds=['ditaa'],
-	maker = DitaaBlock, 
-	options=[
-		extern.SwitchOption("no-antilias", "-A"),
-		extern.SwitchOption("no-separation", "-E"),
-		extern.SwitchOption("round-corners", "-r"),
-		extern.Option("scale", "-r"),
-		extern.SwitchOption("no-shadows", "-S"),
-		extern.Option("tabs", "-t")
-	])
+__short__ = """Integration of ditaa figures"""
+__description__ = \
+"""This modules makes easier the integration of figures described in
+ASCII text and converted to images by ditaa. The complete documentation
+of ditaa can be found here: https://ditaa.sourceforge.net/."""
+
+__syntaxes__ = [
+	extern.ExternalModule(
+		name = "ditaa",
+		ext=".png",
+		cmds=['ditaa'],
+		maker = DitaaBlock, 
+		options=[
+			extern.SwitchOption("no-antilias", "-A"),
+			extern.SwitchOption("no-separation", "-E"),
+			extern.SwitchOption("round-corners", "-r"),
+			extern.Option("scale", "-r"),
+			extern.SwitchOption("no-shadows", "-S"),
+			extern.Option("tabs", "-t")
+		])
+]
+

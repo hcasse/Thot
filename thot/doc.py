@@ -291,9 +291,14 @@ class Node(Info):
 		pass
 
 	def setFileLine(self, file, line):
+		"""Set file/line information corresponding to the node."""
 		if self.file == None:
 			self.file = file
 			self.line = line
+
+	def getFileLine(self):
+		"""Get formatted version of file/line (useful for message display)."""
+		return "%s:%d" % (self.file, self.line)
 
 	def onError(self, msg):
 		"""Called to display an error."""

@@ -274,7 +274,7 @@ class ExternalModule(tparser.Syntax):
 	maker = None
 	doc = None
 	
-	def __init__(self, man, name, ext="", options=[], cmds=[],
+	def __init__(self, name, ext="", options=[], cmds=[],
 		maker = ExternalBlock, doc = ""):
 		"""Build an external module with the given name
 		and given options.
@@ -293,11 +293,9 @@ class ExternalModule(tparser.Syntax):
 			self.options[option.name] = option
 		self.doc = doc
 
-		# install in Thot
+		# prepare syntax
 		self.close = re.compile("^</%s>" % name)
 		self.re = "^<%s[\s]*([^>]*)>" % name
-		if man != None:
-			man.addLine((lambda man, match: self.handle(man, match), re.compile(self.re)))
 
 	def get_doc(self):
 		return [(

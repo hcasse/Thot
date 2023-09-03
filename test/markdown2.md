@@ -36,6 +36,10 @@ Test in level 2.
 
 Test in level 2.
 
+# Lists
+
+## Unumbered
+
 Now an item list:
 * item 1
 * item 2
@@ -43,10 +47,23 @@ Now an item list:
 + item 4
 - item 5
 
+## Numbered
+
 And a numbered list:
 0. item 1
 1. number 2
 33. number 3
+
+## Embedded
+
+1. item 1
+2. item 2
+	1. sub-item 1
+	2. sub-item 2
+3. item 3
+
+
+# Bars
 
 Now, 5 horizontal rules:
 

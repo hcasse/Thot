@@ -36,7 +36,7 @@ ASCII text and converted to images by AAfig. The complete documentation
 of AAFig can be found here: https://launchpad.net/aafigure."""
 
 __syntaxes__ = [
-	extern.ExternalModule(None,
+	extern.ExternalModule(
 		name = "aafig",
 		ext = ".png",
 		cmds = ['aafigure'],

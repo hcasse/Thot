@@ -49,18 +49,25 @@ class PlantUMLBlock(extern.ExternalBlock):
 		except IOError as e:
 			common.onWarning("plantuml error: %s. Cannot generate plantuml diagram." % e)
 
-def init(man):
-	my_cmds = ["java net.sourceforge.plantuml.Run"]
-	jar = man.get_var("PLANTUML_JAR")
-	if jar:
-		my_cmds = my_cmds + ["java -jar %s" % jar]		
-	try:
-		jar = os.environ["PLANTUML_JAR"]
-	except KeyError:
-		jar = None
-	if jar:
-		my_cmds = my_cmds + ["java -jar %s" % jar]		
-	extern.ExternalModule(man,
+my_cmds = ["java net.sourceforge.plantuml.Run"]
+#jar = man.get_var("PLANTUML_JAR")
+#if jar:
+#my_cmds = my_cmds + ["java -jar %s" % jar]		
+try:
+	jar = os.environ["PLANTUML_JAR"]
+except KeyError:
+	jar = None
+if jar:
+	my_cmds = my_cmds + ["java -jar %s" % jar]		
+
+__short__ = """integration of AAFig figures"""
+__description__ = \
+"""This modules makes easier the integration of figures described in
+ASCII text and converted to images by AAfig. The complete documentation
+of AAFig can be found here: https://launchpad.net/aafigure."""
+
+__syntaxes__ = [
+	extern.ExternalModule(
 		name = "plantuml",
 		ext=".png",
 		cmds=my_cmds,
@@ -68,3 +75,4 @@ def init(man):
 		options=[
 		]
 	)
+]
