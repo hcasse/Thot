@@ -31,10 +31,10 @@ def makeRef(nums):
 class LocalManager(back.LocalManager, abstract_html.Manager):
 	"""Manager for HTML storing additional file in an import directory."""
 
-	def __init__(self, out_path):
-		abstract_html.Manager.__init__(self)
+	def __init__(self, out_path, mon = common.DEFAULT_MONITOR):
+		abstract_html.Manager.__init__(self, mon = mon)
 		back.LocalManager.__init__(self, out_path)
-	
+
 
 class PagePolicy:
 	"""A page policy allows to organize the generated document
@@ -235,14 +235,14 @@ class PerChapter(PagePolicy):
 
 		# generate first page
 		self.page.apply(self, self.gen)
-		print("generated %s" % self.gen.get_out_path())
+		self.gen.info("generated %s", self.gen.get_out_path())
 
 		# generate chapter pages
 		for (name, header) in self.todo:
 			self.current = header
 			self.gen.openPage(name)
 			self.page.apply(self, self.gen)
-			print("generated %s" % name)
+			self.gen.info("generated %s", name)
 
 
 class PerSection(PerChapter):
@@ -295,9 +295,9 @@ POLICIES = {
 class Generator(abstract_html.Generator):
 	"""Generator for HTML output."""
 
-	def __init__(self, doc):
+	def __init__(self, doc, mon):
 		abstract_html.Generator.__init__(self, doc)
-		self.manager = LocalManager(self.get_out_path())
+		self.manager = LocalManager(self.get_out_path(), mon = mon)
 
 	def getType(self):
 		return 'html'
@@ -403,15 +403,15 @@ class Generator(abstract_html.Generator):
 		try:
 			policy = POLICIES[self.struct](self, template)
 		except KeyError:
-			common.onError('one_file_per %s structure is not supported' % self.struct)
+			self.error('one_file_per %s structure is not supported', self.struct)
 
 		# generate the document
 		policy.run()
-		print("SUCCESS: result in %s" % self.get_out_path())
+		self.manager.mon.succeed("result in %s", self.get_out_path())
 
 
-def output(doc):
-	gen = Generator(doc)
+def output_ext(doc, mon):
+	gen = Generator(doc, mon = mon)
 	gen.run()
 
 __short__ = "back-end for HTML output"

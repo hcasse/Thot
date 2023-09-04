@@ -133,7 +133,8 @@ RELOCATORS = {
 class Manager(back.Manager):
 	"""Manager specialized for HTML output."""
 
-	def __init__(self):
+	def __init__(self, mon = common.DEFAULT_MONITOR):
+		back.Manager.__init__(self, mon = mon)
 		self.anchor_count = 0
 
 	def relocate(self, spath, tpath):

@@ -65,8 +65,7 @@ def list_module(document, name):
 	paths = document.getVar("THOT_USE_PATH") + ":" + os.path.join(document.env["THOT_LIB"], "backs")
 	mod = common.loadModule(name, paths)
 	if not mod:
-		common.onError("no module named %s" % options.list_mod)
-		sys.exit(1)
+		common.fatal("no module named %s" % options.list_mod)
 	short = ""
 	if "__short__" in mod.__dict__:
 		short = " (%s)" % mod.__short__
@@ -138,6 +137,7 @@ def list_used_modules(man):
 def main():
 	"""Command line entry point."""
 	env = common.Env()
+	mon = common.Monitor()
 
 	# Prepare arguments
 	oparser = optparse.OptionParser()
@@ -168,7 +168,8 @@ def main():
 
 	# Parse arguments
 	(options, args) = oparser.parse_args()
-	common.IS_VERBOSE = options.verbose
+	common.IS_VERBOSE = options.verbose		# TO REMOVE when monitors will be used throughout the application
+	mon.set_verbosity(options.verbose)
 	if options.encoding:
 		common.ENCODING = options.encoding
 	env["THOT_OUT_TYPE"] = options.out_type
@@ -184,7 +185,7 @@ def main():
 		try:
 			input = open(args[0])
 		except FileNotFoundError:
-			common.onError("cannot open file '%s'" % args[0]) 
+			mon.fatal("cannot open file '%s'" % args[0]) 
 		env["THOT_FILE"] = args[0]
 		env["THOT_DOC_DIR"] = os.path.dirname(args[0])
 		if not env["THOT_DOC_DIR"]:
@@ -193,7 +194,7 @@ def main():
 		for d in options.defines:
 			p = d.find('=')
 			if p == -1:
-				common.onError('-D' + d + ' must follow syntax -Didentifier=value')
+				mon.fatal('-D' + d + ' must follow syntax -Didentifier=value')
 			else:
 				env[d[:p]] = d[p+1:]
 
@@ -203,7 +204,7 @@ def main():
 	out_path = os.path.join(document.env["THOT_LIB"], "backs")
 	out_driver = common.loadModule(out_name,  out_path)
 	if not out_driver:
-		common.onError('cannot find %s back-end' % out_name)
+		mon.fatal('cannot find %s back-end' % out_name)
 
 	# list available modules
 	if options.list_avail:
@@ -216,7 +217,7 @@ def main():
 		sys.exit(0)
 
 	# Parse the file
-	man = tparser.Manager(document)
+	man = tparser.Manager(document, mon=mon)
 	if "init" in out_driver.__dict__:
 		out_driver.init(man)
 	if options.uses:
@@ -230,8 +231,8 @@ def main():
 
 	# list the syntax
 	elif options.list_syntax:
-		list_syntax(man)
 		print("Available syntax:")
+		list_syntax(man)
 
 	# list outputs
 	elif options.list_output:
@@ -244,9 +245,12 @@ def main():
 	# Output the result
 	else:
 		try:
-			out_driver.output(document)
+			try:
+				out_driver.output(document)
+			except AttributeError:
+				out_driver.output_ext(document, mon)
 		except common.BackException as e:
-			common.onError(str(e))
+			mon.fatal(str(e))
 
 if __name__ == "__main__":
 	main()

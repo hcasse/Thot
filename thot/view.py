@@ -273,9 +273,9 @@ class DocResource(Resource, ahtml.PageHandler):
 class Manager(ahtml.Manager):
 	"""Manager for thot-view."""
 
-	def __init__(self, document, verbose = False):
-		ahtml.Manager.__init__(self)
-		self.verbose = verbose
+	def __init__(self, document, mon = common.DEFAULT_MONITOR):
+		ahtml.Manager.__init__(self, mon = mon)
+		self.verbose = False
 		self.mon = common.Monitor()
 		self.mon.set_verbosity(verbose)
 

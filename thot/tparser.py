@@ -129,7 +129,7 @@ def handleInclude(man, match):
 		file = open(path)
 		man.parseInternal(file, path)
 	except IOError as e:
-		common.onError('%s:%d: cannot include "%s": %s' % (man.file_name, man.line_num, path, e))
+		man.error('cannot include "%s": %s',  path, e)
 
 def handleCaption(man, match):
 	par = doc.Par()
@@ -149,7 +149,7 @@ def handleLabel(man, match):
 		if item.acceptLabel():
 			man.doc.addLabel(match.group(1), item)
 			return
-	common.onWarning(man.message("label %s out of any container" % match.group(1)))
+	ma.warn('label %s out of any container', match.group(1))
 
 
 __lines__ = [
@@ -210,7 +210,7 @@ class DefaultParser:
 
 class Manager:
 
-	def __init__(self, document, factory = doc.Factory()):
+	def __init__(self, document, factory = doc.Factory(), mon = common.DEFAULT_MONITOR):
 		words_re = None
 		self.lines = INITIAL_LINES
 		self.words = INITIAL_WORDS
@@ -222,6 +222,7 @@ class Manager:
 		self.line_num = None
 		self.file_name = None
 		self.reset(document)
+		self.mon = mon
 
 	def reset(self, document):
 		"""Reset the parser to process a new document."""
@@ -327,10 +328,6 @@ class Manager:
 			except common.ParseException as e:
 				raise common.ParseException(self.message(e))
 
-	def message(self, msg):
-		"""Generate a message prefixed with error line and file."""
-		return "%s:%d: %s" % (self.file_name, self.line_num, msg)
-
 	def addLine(self, line):
 		"""A syntax working on lines. The line parameter is pair
 		(f, re) with f the function to call when the RE re is found."""
@@ -357,13 +354,21 @@ class Manager:
 		self.words.extend(words)
 		self.words_re = None
 
-	def warn(self, msg):
-		"""Display a warning with file and line."""
-		common.onWarning(self.message(msg))
+	def get_prefix(self):
+		"""Generate a message prefixed with error line and file."""
+		return "%s:%d: " % (self.file_name, self.line_num)
 
-	def error(self, msg):
+	def info(self, msg, *args):
+		"""Display an information message."""
+		self.mon.info(self.get_prefix() + msg, *args)
+
+	def warn(self, msg, *args):
+		"""Display a warning with file and line."""
+		self.mon.warn(self.get_prefix() + msg, *args)
+
+	def error(self, msg, *args):
 		"""Display an error with file and line."""
-		common.onError(self.message(msg))
+		self.mon.error(self.get_prefix() + msg, *args)
 
 	def use(self, name):
 		"""Use a module in the current parser."""
@@ -407,7 +412,7 @@ class Manager:
 						for w in s.get_words():
 							self.addWord(w)
 		else:
-			common.onError('cannot find module %s' % name)
+			self.mon.fatal('cannot find module %s' % name)
 
 	def fix_path(self, path):
 		"""Fix the given path if it is not absole to be relative to the current document path."""

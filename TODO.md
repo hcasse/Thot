@@ -2,14 +2,15 @@
 
 ## Application
 
-  [ ] Add ``thot-view`` command.
-  [ ] Add ``thot-gen`` command.  
-  [ ] Add a --clean option to clean generated filkes.
-  [ ] Add ANSI colorization.
-  [ ] Remove ``thot.py`` command.  
+	[ ] Add ``thot-view`` command.
+	[ ] Add ``thot-gen`` command.  
+	[ ] Add a --clean option to clean generated filkes.
+	[ ] Add ANSI colorization.
+	[ ] Remove ``thot.py`` command.  
 
 ## Core
 
+	[ ] Create a module `mathjax`.
 	[ ] Support for language local to a part of text.
 	[ ] Add more standard paragraph types (like blockquote, file, verse, etc).
 	[ ] Add inclusion from shell with syntax like @{command line}.

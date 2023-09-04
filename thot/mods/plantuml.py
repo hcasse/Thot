@@ -47,7 +47,7 @@ class PlantUMLBlock(extern.ExternalBlock):
 		try:
 			shutil.move(self.out_path, self.get_path(gen))
 		except IOError as e:
-			common.onWarning("plantuml error: %s. Cannot generate plantuml diagram." % e)
+			gen.warn("plantuml error: %s. Cannot generate plantuml diagram.", e)
 
 my_cmds = ["java net.sourceforge.plantuml.Run"]
 #jar = man.get_var("PLANTUML_JAR")

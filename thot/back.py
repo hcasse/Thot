@@ -34,6 +34,9 @@ STDOUT = "<stdout>"
 class Manager:
 	"""The manager is in charge of organizing where to put files invovled in the building of a document."""
 
+	def __init__(self, mon = common.DEFAULT_MONITOR):
+		self.mon = mon
+
 	def use_resource(self, path):
 		"""Inform the manager that a file path is used. It returns the path
 		of the resource as used in the building. Notice that this call
@@ -74,7 +77,8 @@ class LocalManager(Manager):
 	"""A manager that keeps local files (in the same directory as output) as is and creates new files and move non-local files in a devoted directory named import directory and derived from the output path PATH by adding suffixing it with "imports"."""
 	
 
-	def __init__(self, out_path):
+	def __init__(self, out_path, mon = common.DEFAULT_MONITOR):
+		Manager.__init__(self, mon = mon)
 		self.out_dir = os.path.dirname(out_path)
 		self.import_dir = os.path.splitext(out_path)[0] + "-imports"
 		self.import_done = False
@@ -302,3 +306,23 @@ class Generator:
 	def genRef(self, ref):
 		"""Called to generate a reference."""
 		pass
+
+	# error management
+
+	def get_prefix(self, node):
+		if node == None:
+			return ""
+		else:
+			return node.getFileLine()
+	
+	def info(self, msg, *args, node = None):
+		"""Display an information message."""
+		self.manager.mon.info(self.get_prefix(node) + msg, *args)
+
+	def warn(self, msg, *args, node = None):
+		"""Display a warning with file and line."""
+		self.manager.mon.warn(self.get_prefix(node) + msg, *args)
+
+	def error(self, msg, *args, node = None):
+		"""Display an error with file and line."""
+		self.manager.mon.error(self.get_prefix(node) + msg, *args)

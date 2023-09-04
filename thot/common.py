@@ -481,13 +481,17 @@ class Monitor:
 	ANSI = supports_ansi()
 	NORMAL = "\033[0m" if ANSI else ""
 	ERROR_STYLE = "\033[31m" if ANSI else ""
-	WARN_STYLE = "\033[32m" if ANSI else ""
+	WARN_STYLE = "\033[34m" if ANSI else ""
 	INFO_STYLE = "\033[36m" if ANSI else ""
 	VERB_STYLE = "\033[3;37m" if ANSI else ""
+	SUCCESS_STYLE = "\033[32m" if ANSI else ""
+	FAILURE_STYLE = "\033[31m" if ANSI else ""
 	ERROR_FMT = ERROR_STYLE + "ERROR: " + NORMAL + "%s\n"
 	WARN_FMT = WARN_STYLE + "WARNING: " + NORMAL + "%s\n"
 	INFO_FMT = INFO_STYLE + "INFO: " + NORMAL + "%s\n"
 	VERB_FMT = VERB_STYLE + "> %s" + NORMAL + "\n"
+	SUCCESS_FMT = SUCCESS_STYLE + "SUCCESS: " + NORMAL + "%s\n"
+	FAILURE_FMT = FAILURE_STYLE + "ERROR: " + NORMAL + "%s\n"
 
 	def __init__(self):
 		self.out = sys.stdout
@@ -497,6 +501,11 @@ class Monitor:
 	def set_verbosity(self, verbose):
 		"""Enable/disable verbose mode."""
 		self.verbose = verbose
+
+	def fatal(self, msg, *args):
+		"""Print an error and stop the application."""
+		self.err.write(Monitor.ERROR_FMT % (msg % args))
+		exit(1)
 
 	def error(self, msg, *args):
 		"""Print an error."""
@@ -510,7 +519,17 @@ class Monitor:
 		"""Print an information."""
 		self.err.write(Monitor.INFO_FMT % (msg % args))
 
+	def succeed(self, msg, *args):
+		"""Print a success message."""
+		self.err.write(Monitor.SUCCESS_FMT % (msg % args))
+
+	def fail(self, msg, *args):
+		"""Print a failure message."""
+		self.err.write(Monitor.FAILURE_FMT % (msg % args))
+
 	def say(self, msg, *args):
 		"""Print a verbose message."""
 		if self.verbose:
 			self.err.write(Monitor.VERB_FMT % (msg % args))
+
+DEFAULT_MONITOR = Monitor()
