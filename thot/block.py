@@ -21,7 +21,12 @@
 This block are enclosed between tags <ID OPTIONS>...</ID> and supports a comma-separated list of options.
 """
 
+import re
+
 from thot import common, doc, tparser
+from thot.common import ParseException
+
+ARG_RE = re.compile("[\s]*([\S]+)[\s]*=(.*)")
 
 class OptionException(Exception):
 	option = None
@@ -43,9 +48,8 @@ class Option:
 	default = None
 	opt = None
 	
-	def __init__(self, name, opt, default = None):
+	def __init__(self, name, default = None):
 		self.name = name
-		self.opt = opt
 		self.default = default
 	
 	def parse(self, value):
@@ -57,8 +61,8 @@ class Option:
 class SwitchOption(Option):
 	"""Option accepting on/off, true/false, yes, no, etc or no argument"""
 	
-	def __init__(self, name, opt, default = False):
-		Option.__init__(self, name, opt, default)
+	def __init__(self, name, default = False):
+		Option.__init__(self, name, default)
 	
 	def parse(self, value):
 		value = value.lower()
@@ -68,16 +72,30 @@ class SwitchOption(Option):
 			return False
 		else:
 			raise OptionException(self, "accepted values includes yes/no, on/off, true/false.")
-		
+
+
+class IntOption(Option):
+	"""Option returning an integer."""
+
+	def __init__(self, name, default = 10):
+		Option.__init__(self, name, default)
+
+	def parse(self, value):
+		try:
+			return int(value)
+		except ValueError:
+			raise OptionException(self, "bad integer value: %s" % value)
+
 
 class Block(doc.Block):
 	"""Abstract class for block providing custom syntax."""
 	
-	def __init__(self, syntax):
-		"""Build an external block. meta is an ExternalModule meta-descriptor."""
+	def __init__(self, syntax, man):
+		"""Build an external block. syntax is a block.Syntax instance."""
 		doc.Block.__init__(self, syntax.name)
 		self.syntax = syntax
 		self.options = {}
+		self.man = man
 
 	def new_num(self):
 		"""Return a unique number."""
@@ -93,7 +111,7 @@ class Block(doc.Block):
 			return self.options[option]
 		except KeyError:
 			try:
-				option = options[option]
+				option = self.syntax.options[option]
 				return option.default
 			except KeyError:
 				raise common.ThotException("no option %s" % option)
@@ -121,7 +139,7 @@ class Block(doc.Block):
 				arg = arg.strip()
 				if arg:
 					try:
-						option = self.meta.options[arg]
+						option = self.syntax.options[arg]
 						if isinstance(option, SwitchOption):
 							option.parse("yes")
 						else:
@@ -132,17 +150,24 @@ class Block(doc.Block):
 			# option
 			else:
 				try:
-					option = self.meta.options[match.group(1)]
+					option = self.syntax.options[match.group(1)]
 					self.options[option.name] = option.parse(match.group(2))
 				except KeyError:
 					raise common.parseException("unknown option \"%s\"" % arg)
+
+		# check arguments
+		self.check_args(self.man)
+
+	def check_args(self, man):
+		"""Called to parse arguments. Manager parameter allows to display error messages."""
+		pass
 
 
 class Syntax(tparser.Syntax):
 	"""Provides syntax to build blocks with different syntax."""
 	
 	def __init__(self,
-		name,*
+		name,
 		options=[], 
 		maker = Block,
 		doc = ""):
@@ -175,19 +200,19 @@ class Syntax(tparser.Syntax):
 		)]
 
 	def get_lines(self):
-		return [self.handle, self.re)]
+		return [(self.handle, self.re)]
 
 	def handle(self, man, match):
 		try:
-			block = self.make()
+			block = self.make(man)
 			block.parse_args(match.group(1))
 			tparser.BlockParser(man, block, self.close)
-		except ExternalException as exn:
+		except ParseException as exn:
 			man.error(exn)
 	
-	def make(self):
+	def make(self, man):
 		"""Build a block for the module."""
-		return self.maker(self)
+		return self.maker(self, man)
 	
 	def new_num(self):
 		"""Return a new unique number."""

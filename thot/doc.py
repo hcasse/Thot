@@ -781,12 +781,14 @@ class Embedded(Node):
 
 
 class Block(Embedded):
-	kind = None
-	content = None
 
 	def __init__(self, kind):
 		self.kind = kind
 		self.content = []
+
+	def get_lines(self):
+		"""Get the lines inside the block."""
+		return self.content
 
 	def add(self, line):
 		self.content.append(line)
@@ -801,6 +803,7 @@ class Block(Embedded):
 		return False
 
 	def toText(self):
+		"""Get the content as single text."""
 		text = ''
 		for line in self.content:
 			text += line + '\n'

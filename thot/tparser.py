@@ -232,6 +232,7 @@ class Manager:
 		self.parser = DefaultParser()
 
 	def get_doc(self):
+		"""Get the document currently built."""
 		return self.doc
 	
 	def get_var(self, id, deflt = ""):

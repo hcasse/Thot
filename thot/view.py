@@ -73,6 +73,15 @@ class Resource:
 		"""Called to generate on the given output."""
 		pass
 
+	def post(self, size, input):
+		"""Called to receive a post. input is a stream to read input
+		from. Return None for successn, or a pair (HTTP error code, message)."""
+		return None
+
+	def answer(self, output):
+		"""Called to generate the answer to the post. output is a stream to output answer to."""
+		pass
+
 	def __str__(self):
 		return ""
 
@@ -273,10 +282,10 @@ class DocResource(Resource, ahtml.PageHandler):
 class Manager(ahtml.Manager):
 	"""Manager for thot-view."""
 
-	def __init__(self, document, mon = common.DEFAULT_MONITOR):
+	def __init__(self, document, verbose = False, mon = common.DEFAULT_MONITOR):
 		ahtml.Manager.__init__(self, mon = mon)
-		self.verbose = False
-		self.mon = common.Monitor()
+		self.verbose = verbose
+		self.mon = mon
 		self.mon.set_verbosity(verbose)
 
 		# prepare environment
@@ -290,6 +299,7 @@ class Manager(ahtml.Manager):
 				config_path = path
 				break
 			if dir == home:
+				dir = os.path.abspath(os.path.dirname(document))
 				break
 			ndir = os.path.dirname(dir)
 			if ndir == dir:
@@ -329,6 +339,9 @@ class Manager(ahtml.Manager):
 	def __del__(self):
 		if self.tmpdir != None:
 			shutil.rmtree(self.tmpdir)
+
+	def is_interactive(self):
+		return True
 
 	def alias_resource(self, res, loc):
 		"""Add an aliases to a resource."""
@@ -419,6 +432,37 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.send_header("Content-type",  file.get_mime())
 		self.end_headers()
 		file.generate(self)
+
+	def do_POST(self):
+		path = unquote(self.path)
+
+		# find the resource
+		try:
+			file = self.server.manager.map[path]
+		except KeyError:
+			msg = "%s not found" % path
+			self.send_error(404, msg)
+			return
+
+		# process message
+		try:
+
+			# post the message
+			res = file.post(int(self.headers['content-length']), self.rfile)
+			if res != None:
+				self.send_error(res[0], res[1])
+				return				
+
+			# build answer
+			self.send_response(200)
+			self.send_header("Content-type",  file.get_mime())
+			self.end_headers()
+			file.answer(self.wfile)
+
+		except common.ThotException as e:
+			self.send_error(500)
+			self.error("error for %s: %s" % (path, e))
+			return
 
 	def error(self, msg):
 		self.server.mon.error(msg)

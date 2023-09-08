@@ -25,7 +25,6 @@ import thot.common as common
 import thot.doc as doc
 import thot.doc as tdoc
 import thot.highlight as highlight
-#import thot.htmlman as htmlman
 import thot.i18n as i18n
 
 def escape_cdata(s):
@@ -196,6 +195,7 @@ class Manager(back.Manager):
 
 
 class Script:
+	"""Use of script in a produced HTML page. After allocation, it may be customized by setting its attributes: content, src, do_async, charset, defer and type. Look https://www.w3schools.com/Tags/tag_script.asp for more setails."""
 	
 	def __init__(self):
 		self.content = None
@@ -205,24 +205,26 @@ class Script:
 		self.defer = None
 		self.type = None
 	
-	def gen(self, out):
-		out.write("\t<script")
+	def gen(self, gen):
+		write = gen.genVerbatim
+		write("\t<script")
 		if self.src != None:
-			out.write(" src=\"%s\"" % escape_attr(self.src))
+			link = gen.get_manager().get_resource_link(self.src, gen)
+			write(" src=\"%s\"" % escape_attr(link))
 		if self.do_async != None and self.do_async:
-			out.write(" async=\"async\"")
+			write(" async=\"async\"")
 		if self.defer != None and self.defer:
-			out.write(" defer=\"defer\"")
+			write(" defer=\"defer\"")
 		if self.charset != None:
-			out.write(" charset=\"%s\"" % escape_attr(self.charset))
+			write(" charset=\"%s\"" % escape_attr(self.charset))
 		if self.type != None:
-			out.write(" type=\"%s\"" % escape_attr(self.type))
-		out.write(">")
+			write(" type=\"%s\"" % escape_attr(self.type))
+		write(">")
 		if self.content != None:
-			out.write("\n")
-			out.write(self.content)
-			out.write("\n\t")
-		out.write("</script>\n")
+			write("\n")
+			write(self.content)
+			write("\n\t")
+		write("</script>\n")
 
 
 # pages
@@ -434,7 +436,7 @@ class Generator(back.Generator):
 	def genScripts(self):
 		"""Generate the script needed by the page. This functions can be called in two forms."""
 		for s in self.scripts:
-			s.gen(self.out)
+			s.gen(self)
 	
 	def importCSS(self, spath, base = ""):
 		self.manager.add_resource(spath, self.doc)

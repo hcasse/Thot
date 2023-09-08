@@ -37,6 +37,10 @@ class Manager:
 	def __init__(self, mon = common.DEFAULT_MONITOR):
 		self.mon = mon
 
+	def is_interactive(self):
+		"""Called to test if the page will be served by an HTTP server implemented by Thot. This allows to pass custom commands to Thot. Default implementation returns false."""
+		return False
+
 	def use_resource(self, path):
 		"""Inform the manager that a file path is used. It returns the path
 		of the resource as used in the building. Notice that this call
@@ -249,9 +253,11 @@ class Generator:
 		pass
 
 	def genStyleBegin(self, kind):
+		"""Generate for beginning of a style. kind is one of doc.STYLE_XXX constant."""
 		pass
 
 	def genStyleEnd(self, kind):
+		"""Generate for ending of a style. kind is one of doc.STYLE_XXX constant."""
 		pass
 
 	def genHeader(self, header):
