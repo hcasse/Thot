@@ -151,7 +151,7 @@ class PagePolicy:
 		short_icon = gen.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
 			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
-		self.gen.genScripts()
+		self.gen.gen_header_embedded()
 
 	
 class AllInOne(PagePolicy):

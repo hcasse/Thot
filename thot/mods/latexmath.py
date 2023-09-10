@@ -237,7 +237,7 @@ class MimetexBuilder(Builder):
 		if text in formulae:
 			rpath = formulae[text]
 		else:
-			rpath = gen.new_friend("latexmath/latexmath-%s.gif" % count);
+			rpath = gen.new_resource("latexmath/latexmath-%s.gif" % count);
 			count += 1
 			try:
 				proc = subprocess.Popen(
@@ -318,7 +318,7 @@ __words__ = [
 ]
 __lines__ = [
 	(handleBlock, "^\s*<eq\s*>\s*$",
-		"Insert the given formula as a stand-aline equation (ended by </eq>.")
+		"Insert the given formula as a stand-alone equation (ended by </eq>.")
 ]
 
 def init(man):

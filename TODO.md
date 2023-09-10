@@ -77,8 +77,23 @@ Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 
 ## Modules
 
+### latexmath
+
+	[ ] Use latex2mathml library directly.
+	[ ] Look for availibility of latex2mathml and make it the default.
+
+
+### PlantUML
+
+	[ ] fix the localisation of the JAR.
+
+
 ## Attic
 
 ### SCORM
 
 Obsolete standard (it seems).
+
+### Slidy
+
+Simply not working.
