@@ -6,3 +6,6 @@ include thot/data/doc-styles/images/*.gif
 include thot/data/doc-styles/images/*.jpg
 include thot/data/doc-styles/images/*.png
 include thot/data/doc-styles/images/*.ico
+include thot/data/view/*.css
+include thot/data/view/*.html
+
