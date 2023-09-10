@@ -168,11 +168,26 @@ function codeme_show_result(select, id, test) {
 		result_comp.style.display = "none";
 	}
 }
+
+function codeme_onkeydown(text, event) {
+	if(event.key == 'Tab') {
+		event.preventDefault();
+		const start = text.selectionStart;
+		const end = text.selectionEnd;
+		text.value = text.value.substring(0, start) + "\t" + text.value.substring(end);
+		text.selectionStart = text.selectionEnd = start + 1;
+	}
+}
 """
 		gen.get_manager().link_resource(RESOURCE)
 
 	def gen_header(self, gen):
 		gen.gen_style("""
+
+div.codeme {
+	width: max-content;
+}
+
 div.codeme span.success {
 	color: green;
 }
@@ -194,6 +209,15 @@ div.codeme textarea.fail {
 
 div.codeme-source {
 	padding-top: 1em;
+}
+
+div.codeme-test {
+	display: flex;
+}
+
+div.codeme-test span {
+	flex-grow: 1;
+	padding-left: 1em;
 }
 """)
 
@@ -304,7 +328,8 @@ class Block(block.Block):
 		gen.genVerbatim("""
 <div class="codeme">
 	<div class="codeme-source">
-		<textarea id="codeme-source-{num}" cols="80" rows="15">{init}</textarea>
+		<textarea id="codeme-source-{num}" cols="80" rows="15" placeholder="Type your source here." onkeydown="codeme_onkeydown(this, event)"
+		>{init}</textarea>
 	</div>
 """.format(
 	num = self.num,
@@ -315,7 +340,7 @@ class Block(block.Block):
 	<div class="output">
 		<button onclick="codeme_run({num}, 0)">Run!</button>
 		<br/>
-		<textarea id="codeme-output-{num}" cols="{cols}" rows="{rows}" readonly></textarea>
+		<textarea id="codeme-output-{num}" cols="{cols}" rows="{rows}" readonly placeholder="Output of the program."></textarea>
 	</div>
 """.format(
 		num = self.num,
@@ -335,7 +360,7 @@ class Block(block.Block):
 					rows = self.testrows					
 				)
 				gen.genVerbatim("""
-	<div>
+	<div class="codeme-test">
 		<button onclick="codeme_run({num}, {tnum})">Run test {tnum}</button>
 		<span id="codeme-lab-{num}-{tnum}"></span>""".format(**syms))
 				if test.expected != "":
@@ -349,7 +374,7 @@ class Block(block.Block):
 					gen.genVerbatim("""
 		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;" cols="{cols}" rows="{rows}" readonly>{expected}</textarea>""".format(**syms))
 				gen.genVerbatim("""
-		<textarea id="codeme-output-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly></textarea>
+		<textarea id="codeme-output-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly placeholder="Result of test {tnum}."></textarea>
 	</div>""".format(**syms))
 
 		gen.genVerbatim("</div>")
