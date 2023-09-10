@@ -69,6 +69,7 @@ def getStyle(style):
 	else:
 		raise Exception('style ' + style + ' not supported')
 
+
 class Relocator:
 	"""These objects take in charge the fact that a file has to be moved
 	to some building directory. It may be used to relocate and fix
@@ -225,6 +226,25 @@ class Script:
 			write(self.content)
 			write("\n\t")
 		write("</script>\n")
+
+
+class Style:
+	"""Class to configure style of an HTML page. Possible attributes media, type and content."""
+
+	def __init__(self, content = "", media = None, type = None):
+		self.content = content
+		self.media = media
+		self.type = type
+
+	def gen(self, gen):
+		self.genVerbatim("<style")
+		if self.media != None:
+			self.genVerbatim(' media="%s"' % self.media)
+		if self.type != None:
+			self.genVerbatim(' type="%s"' % self.type)
+		self.genVerbatim(">\n")
+		self.genVerbatim(self.content)
+		self.genVerbatim("</style>\n")
 
 
 # pages
@@ -425,18 +445,31 @@ class Generator(back.Generator):
 		short_icon = self.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
 			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
-		self.genScripts()
+		self.gen_header_embedded()
 
 	def newScript(self):
 		"""Create and record a new script for the header generation."""
 		s = Script()
 		self.scripts.append(s)
 		return s
-	
-	def genScripts(self):
-		"""Generate the script needed by the page. This functions can be called in two forms."""
-		for s in self.scripts:
-			s.gen(self)
+
+	def gen_header_embedded(self):
+		"""Generate all that needs to be embedded in the header: script, header providers."""
+		for script in self.scripts:
+			script.gen(self)
+		for feature in self.doc.get_features():
+			feature.gen_header(self)
+
+	def gen_style(self, content, media=None, type=None):
+		"""Generate a style element."""
+		self.out.write("<style")
+		if media != None:
+			self.out.write(' media="%s"' % media)
+		if type != None:
+			self.out.write(' type="%s"' % type)
+		self.out.write(">\n")
+		self.out.write(content)
+		self.out.write("</style>\n")		
 	
 	def importCSS(self, spath, base = ""):
 		self.manager.add_resource(spath, self.doc)

@@ -1,45 +1,72 @@
-# Thot V0.1
+# Thot V2.0
 
-Thot is a document generator taking as input a textual document
-expressed in a wiki-like language (currently dokuwiki syntax is
-supported but more will be added) and produces as output a nice
-displayable document (HTML, Latex, PDF, etc). The main concept is to
-make document-making as less painful as possible while unleashing
-powerful textual dialect: the basic wiki syntax may be improved by
-augmenting the syntax thanks to external modules.
+**Thot** is a document generator taking as input a textual document expressed in a wiki-like language (currently `dokuwiki`,  `markdow`, `textile` are supported but more will be added) and produces as output a nice displayable document (HTML, Latex, PDF, etc). The main concept is to make document-making as less painful as possible while unleashing powerful textual dialect: the basic wiki syntax may be improved by augmenting the syntax thanks to external modules.
 
 Thot is delivered under the license GPL v2 delivered in the [COPYING.md](file:COPYING.md) file.
 
 
 ## Installation
 
-To install Thot, unpack the archive containing it and type:
-```
+To install **Thot**, unpack the archive containing it and type:
+```sh
 	$ PYTHON ./setup.py install [--user]
 ```
+
 With `PYTHON` your command to invoke Python V3 and `--user` optional to install Thot locally.
 
 Notice that the `PYTHON` command is optional on OSes supporting script invocation in the first line.
 
 
-## Development
+## Using it
 
-For developing Thot, use instead the command below:
-```
-	$ PYTHON ./setup.py develop --user
-```
+**Thot** comes with several applications to generate documents :
+* `thot-gen` -- generates a document from a wiki document.
+* `thot-view` -- opens the document in your browser and allows to navigate along the links.
 
-To perform testing,
+Ton consult the documentation,
+```sh
+	$ ./thot-view doc/index.md
 ```
-	$ PYTHON ./test/test.py
-```
+Notice that **Thot** does not need to be installed to look to the documentation.
 
-Test items can be invoked individually. To get their list:
-```
-	$ PYTHON ./test/test.py -l
-```
+
+## Modules
+
+**Thot** comes with 3 wiki syntaxes but more will be added later:
+* [dokuwiki](https://www.dokuwiki.org/fr:wiki:syntax)
+* [markdown](https://www.markdownguide.org/)
+* [textile](https://textile-lang.com/)
+
+**Thot** comes several modules providing different extension modules to generate the document :
+* [aafig](https://pythonhosted.org/aafigure/index.html) -- AAFIG figure from text,
+* `box` -- includes various boxes in your document,
+* `codeme` -- teaching inclusion of programming and testing,
+* [ditaa](https://ditaa.sourceforge.net/) -- another figure from text extension,
+* [dot](https://graphviz.org/) -- GraphViz graph generation,
+* [gnuplot](http://www.gnuplot.info/) -- GNUPlot diagrams,
+* `latexmath` -- generate Math formula from Latex syntax,
+* `lexicon` -- provides definition to hash-prefixed words,
+* [plantuml](https://plantuml.com/fr/) -- UML diagrams from text description,
+* `unicode` -- Unicode character insertion.
+
+Finally, several back-ends are provided:
+* [HTML](https://www.w3schools.com/html/default.asp)
+* [Latex](https://fr.wikipedia.org/wiki/LaTeX)
+* [DocBook](https://docbook.org/)
+* [PDF](https://en.wikipedia.org/wiki/PDF) -- based on Latex output.
 
 
 ## Help
+
+**Thot** makes explicit the syntax and the different extension forms:
+
+	$ thot-gen --list-avail
+
+displays the list of all extensions and back-ends.
+
+	$ thot-gen DOCUMENT --list-syntax
+
+displays the syntax available in the document according to the used modules.
+
 
 For any problem, you can contact me to [hug.casse@gmail.com](mailto:hug.casse@gmail.com).

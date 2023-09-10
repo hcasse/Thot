@@ -1218,6 +1218,12 @@ class Feature:
 	Feature method are called at generation time."""
 
 	def prepare(self, gen):
+		"""Function called before the generation."""
+		pass
+
+	def gen_header(self, gen):
+		"""Function called during the generated document header is
+		produced. Notice that not all back-end uses this function."""
 		pass
 
 
@@ -1279,6 +1285,10 @@ class Document(Container):
 		"""Add a feature to the document."""
 		if feature not in self.features:
 			self.features.append(feature)
+
+	def get_features(self):
+		"""Get the features of the document."""
+		return self.features
 
 	def pregen(self, gen):
 		"""Call the prepare method of features of the document."""

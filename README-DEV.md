@@ -1,5 +1,24 @@
 # Developer README
 
+
+## Development
+
+For developing Thot, use instead the command below:
+```
+	$ PYTHON ./setup.py develop --user
+```
+
+To perform testing,
+```
+	$ PYTHON ./test/test.py
+```
+
+Test items can be invoked individually. To get their list:
+```
+	$ PYTHON ./test/test.py -l
+```
+
+
 ## Directory organization
 
   * `data` -- not installed data,

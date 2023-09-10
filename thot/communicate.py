@@ -80,7 +80,7 @@ class Message:
 
 	def set_content(self, id, content):
 		"""Change the content of a node."""
-		self.answer.append({"type": "set-content", "content": content})
+		self.answer.append({"type": "set-content", "id": id, "content": content})
 
 	def reply(self, out):
 		if self.debug:

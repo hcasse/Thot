@@ -7,16 +7,18 @@ Make `Hello World!` to be printed:
 
 
 Write a recursive function that computes recursively the sum of the 10 first integer starting from 0.
-<codeme language=ocaml,interpreter=ocaml,skip=3>
+<codeme language=ocaml,interpreter=ocaml,skip=3,skiplast=1>
 let f n =
 ;;
 @@test:
 f 0;;
 @@expected:
-- : int = 0
+# - : int = 0
 @@test:
 f 2;;
 @@expected:
-- : int = 3
+# - : int = 3
+@@test:
+f (-1);;
 </codeme>
 

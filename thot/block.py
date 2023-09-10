@@ -119,6 +119,7 @@ class Block(doc.Block):
 	def gen(self, gen):
 		"""Must be implemenetd to generate the content.
 		Default implementation does nothing."""
+		pass
 
 	def numbering(self):
 		return "figure"
@@ -153,10 +154,7 @@ class Block(doc.Block):
 					option = self.syntax.options[match.group(1)]
 					self.options[option.name] = option.parse(match.group(2))
 				except KeyError:
-					raise common.parseException("unknown option \"%s\"" % arg)
-
-		# check arguments
-		self.check_args(self.man)
+					raise common.ParseException("unknown option \"%s\"" % arg)
 
 	def check_args(self, man):
 		"""Called to parse arguments. Manager parameter allows to display error messages."""
@@ -203,12 +201,16 @@ class Syntax(tparser.Syntax):
 		return [(self.handle, self.re)]
 
 	def handle(self, man, match):
+		block = self.make(man)
 		try:
-			block = self.make(man)
 			block.parse_args(match.group(1))
+		except ParseException as exn:
+			man.error(str(exn))
+		block.check_args(man)
+		try:
 			tparser.BlockParser(man, block, self.close)
 		except ParseException as exn:
-			man.error(exn)
+			man.error(str(exn))
 	
 	def make(self, man):
 		"""Build a block for the module."""

@@ -77,6 +77,20 @@ class Resource(view.Resource):
 					break
 			out = out[p:]
 
+		# skip last if needed
+		skip = self.block.skiplast
+		if skip > 0:
+			p = len(out)
+			while skip > 0:
+				try:
+					p = out.index('\n', 0, p)
+					p = p - 1
+					skip = skip - 1
+				except ValueError:
+					out = ""
+					break
+			out = out[:p+1]
+
 		return out
 
 	def output(self, msg, test = None):
@@ -100,7 +114,23 @@ class Resource(view.Resource):
 		else:
 			test = self.block.tests[self.test - 1]
 			sources = sources + [test.code, self.block.epilog]
-			self.output(self.run(sources), self.test)
+			result = self.run(sources)
+			self.output(result, self.test)
+			if test.expected != "":
+				add_cls = "success"
+				rem_cls = "fail"
+				if test.expected.strip() == result.strip():
+					lab = "success!"
+				else:
+					lab = "failed."
+					add_cls, rem_cls = rem_cls, add_cls
+				id = "codeme-lab-%s-%s" % (self.block.num, test.num)
+				self.msg.set_content(id, lab)
+				self.msg.add_class(id, add_cls)
+				self.msg.remove_class(id, rem_cls)
+				id = "codeme-output-%s-%s" % (self.block.num, test.num)
+				self.msg.add_class(id, add_cls)
+				self.msg.remove_class(id, rem_cls)
 
 		# reply in the end
 		self.msg.reply(output)
@@ -124,9 +154,48 @@ function codeme_run(id, test) {
 		test: test
 	});
 }
+
+function codeme_show_result(select, id, test) {
+	console.log("select=" + select);
+	const test_comp = document.getElementById("codeme-test-" + id + "-" + test);
+	const result_comp = document.getElementById("codeme-result-" + id + "-" + test);
+	if(select) {
+		test_comp.style.display = "none";
+		result_comp.style.display = "inline";
+	}
+	else {
+		test_comp.style.display = "inline";
+		result_comp.style.display = "none";
+	}
+}
 """
-		print("DEBUG:", RESOURCE.loc)
 		gen.get_manager().link_resource(RESOURCE)
+
+	def gen_header(self, gen):
+		gen.gen_style("""
+div.codeme span.success {
+	color: green;
+}
+div.codeme span.fail {
+	color: red;
+}
+
+div.codeme textarea.result {
+	background: lightblue;
+}
+
+div.codeme textarea.success {
+	background: lightgreen;
+}
+
+div.codeme textarea.fail {
+	background: lightpink;
+}
+
+div.codeme-source {
+	padding-top: 1em;
+}
+""")
 
 FEATURE = Feature()
 
@@ -137,6 +206,7 @@ class Test:
 		self.num = num
 		self.code = ""
 		self.expected = ""
+
 
 class Block(block.Block):
 
@@ -160,7 +230,7 @@ class Block(block.Block):
 		self.epilog = ""
 		self.init = ""
 		self.tests = []
-		self.state = self.add_init 
+		self.state = self.add_init
 
 	def check_args(self, man):
 		self.interpreter = self.get_option("interpreter")
@@ -169,6 +239,10 @@ class Block(block.Block):
 		self.language = self.get_option("language")
 		self.timeout = self.get_option("timeout")
 		self.skip = self.get_option("skip")
+		self.skiplast = self.get_option("skiplast")
+		self.cols = self.get_option("cols")
+		self.rows = self.get_option("rows")
+		self.testrows = self.get_option("testrows")
 
 	def add_content(self, content, line):
 		if content == "":
@@ -202,7 +276,6 @@ class Block(block.Block):
 		self.epilog = self.add_content(self.epilog, line)
 
 	def add(self, line):
-		print("DEBUG: [%s]" % line)
 		if not line.startswith("@@"):
 			self.state(line)
 		else:
@@ -228,34 +301,59 @@ class Block(block.Block):
 
 		# interactive
 		MAP[self.num] = self
-		print("DEBUG: ", self.num, " -> ", self)
 		gen.genVerbatim("""
 <div class="codeme">
-	<textarea id="codeme-source-{num}" cols="80" rows="15">{init}</textarea>
+	<div class="codeme-source">
+		<textarea id="codeme-source-{num}" cols="80" rows="15">{init}</textarea>
+	</div>
 """.format(
 	num = self.num,
 	init = self.init
 ))
 		if self.tests == []:
 			gen.genVerbatim("""
-	<br/>
-	<button onclick="codeme_run({num}, 0)">Run!</button>
-	<br/>
-	<textarea id="codeme-output-{num}" cols="80" rows="10" readonly></textarea>
-""".format(num = self.num))
+	<div class="output">
+		<button onclick="codeme_run({num}, 0)">Run!</button>
+		<br/>
+		<textarea id="codeme-output-{num}" cols="{cols}" rows="{rows}" readonly></textarea>
+	</div>
+""".format(
+		num = self.num,
+		cols = self.cols,
+		rows = self.rows
+	))
 
 		else:
+			
 			for test in self.tests:
+				syms = dict(
+					num = self.num,
+					tnum = test.num,
+					code = test.code,
+					expected = test.expected,
+					cols = self.cols/2,
+					rows = self.testrows					
+				)
 				gen.genVerbatim("""
-	<br/>
-	<button onclick="codeme_run({num}, {tnum})">Run test {tnum}</button>
-	<br/>
-	<textarea cols="40" rows="4" readonly>{code}</textarea>
-	<textarea id="codeme-output-{num}-{tnum}" cols="40" rows="4" readonly></textarea>
-""".format(num = self.num, tnum = test.num, code = test.code))
+	<div>
+		<button onclick="codeme_run({num}, {tnum})">Run test {tnum}</button>
+		<span id="codeme-lab-{num}-{tnum}"></span>""".format(**syms))
+				if test.expected != "":
+					gen.genVerbatim("""
+		<input onchange="codeme_show_result(this.checked, {num}, {tnum});" type="checkbox">show expected</input>""".format(**syms))
+				gen.genVerbatim("""
+	</div>
+	<div>
+		<textarea id="codeme-test-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly>{code}</textarea>""".format(**syms))
+				if test.expected != "":
+					gen.genVerbatim("""
+		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;" cols="{cols}" rows="{rows}" readonly>{expected}</textarea>""".format(**syms))
+				gen.genVerbatim("""
+		<textarea id="codeme-output-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly></textarea>
+	</div>""".format(**syms))
 
 		gen.genVerbatim("</div>")
-
+			
 
 __short__ = """Interactive documentation and conding."""
 __description__ = \
@@ -269,7 +367,11 @@ __syntaxes__ = [
 			block.Option("language"),
 			block.Option("interpreter"),
 			block.IntOption("timeout", 4),
-			block.IntOption("skip", 0)
+			block.IntOption("skip", 0),
+			block.IntOption("skiplast", 0),
+			block.IntOption("cols", 80),
+			block.IntOption("rows", 10),
+			block.IntOption("testrows", 4)
 		])
 ]
 
