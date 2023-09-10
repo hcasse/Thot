@@ -6,7 +6,7 @@ import glob
 def files(m, p):
 	d = os.path.dirname(p)
 
-packs = ["thot." + p for p in setuptools.find_namespace_packages("thot")]
+packs = ["thot"] + ["thot." + p for p in setuptools.find_namespace_packages("thot")]
 
 setuptools.setup(
 	name="thot",
@@ -19,7 +19,6 @@ setuptools.setup(
 	packages = packs,
 	entry_points = {
 		'console_scripts': [
-			'thot=thot.command:main',
 			'thot-gen=thot.command:main',
 			'thot-view=thot.view:main'
 		]
@@ -27,3 +26,5 @@ setuptools.setup(
 
 	include_package_data = True,
 )
+
+print("DEBUG:", packs)
