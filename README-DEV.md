@@ -110,3 +110,20 @@ The life cycle described concerns used and new resources. The first step only ap
 2. A used resource or a new resource has to be declared to the generator or to the generator system and is returned as a special path called a _build_path_. This is usually an absolute path but symbolic paths may also be used. This is performed in the generator or by any generation module. _build_path_ allows to share the same resource accross different generated documents.
 
 3. When the document is generated, the _build_paths_ has to be turned in _output_paths_ that depends on the output format or in the strategy of generation of the manager.
+
+
+## HTML Templating
+
+`<thot:title/>`
+`<thot:authors/>`
+`<thot:header>`
+`<thot:icon>`
+`<thot:subtitle>`
+`<thot:content>`
+`<thot:footnotes>`
+`<thot:style_authoring>`
+
+`<thot:text>`...`</thot:text>` with @ variables inside.
+
+
+
