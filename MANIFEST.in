@@ -8,4 +8,6 @@ include thot/data/doc-styles/images/*.png
 include thot/data/doc-styles/images/*.ico
 include thot/data/view/*.css
 include thot/data/view/*.html
+include thot/data/js/*.js
+
 

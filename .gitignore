@@ -16,6 +16,7 @@ test/simple.toc
 test/headers/*.html
 test/embed/*.html
 test/embed/*-imports
+test/errors/*.html
 
 build
 dist

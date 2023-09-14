@@ -94,7 +94,11 @@ class Block(doc.Block):
 		"""Build an external block. syntax is a block.Syntax instance."""
 		doc.Block.__init__(self, syntax.name)
 		self.syntax = syntax
-		self.options = {}
+		self.options = man.get_info(syntax.name)
+		if self.options == None:
+			self.options = {}
+		else:
+			self.options = dict(self.options)
 		self.man = man
 
 	def new_num(self):
@@ -127,7 +131,7 @@ class Block(doc.Block):
 	def parse_free(self, arg):
 		"""Called to parse a free argument (not formatetd as id=value).
 		As a default, return an error."""
-		raise Common.ParseException("unsupported free argument: \"%s\"" % arg)
+		raise ParseException("unsupported free argument: \"%s\"" % arg)
 
 	def parse_args(self, argl):
 		"""Called to parse argument of the block."""
@@ -144,7 +148,7 @@ class Block(doc.Block):
 						if isinstance(option, SwitchOption):
 							option.parse("yes")
 						else:
-							raise common.parseException("argument missing for \"%s\"" % arg)
+							raise ParseException("argument missing for \"%s\"" % arg)
 					except KeyError:
 						self.parse_free(arg)
 
@@ -154,7 +158,7 @@ class Block(doc.Block):
 					option = self.syntax.options[match.group(1)]
 					self.options[option.name] = option.parse(match.group(2))
 				except KeyError:
-					raise common.ParseException("unknown option \"%s\"" % arg)
+					raise ParseException("unknown option \"%s\"" % arg)
 
 	def check_args(self, man):
 		"""Called to parse arguments. Manager parameter allows to display error messages."""
@@ -168,7 +172,8 @@ class Syntax(tparser.Syntax):
 		name,
 		options=[], 
 		maker = Block,
-		doc = ""):
+		doc = "",
+		set = False):
 		"""Build a custom syntax block of the form:
 			<name OPTIONS> content </name>
 		
@@ -176,6 +181,7 @@ class Syntax(tparser.Syntax):
 		* options: options supported by the block,
 		* maker: block class or callable maker for the block,
 		* doc: block documentation.
+		* set: generate a command <name-set OPTIONS> to record default option values.
 		"""
 
 		# initialize attributes
@@ -188,7 +194,11 @@ class Syntax(tparser.Syntax):
 
 		# prepare internals
 		self.close = re.compile("^</%s>" % name)
-		self.re = "^<%s[\s]*([^>]*)>" % name
+		self.re = "^<%s([\s]+([^>]*))?>" % name
+		if set:
+			self.set_re = "^<%s-set[\s]*([^>]*)>" % name
+		else:
+			self.set_re = None
 		self.count = 0
 
 	def get_doc(self):
@@ -198,12 +208,31 @@ class Syntax(tparser.Syntax):
 		)]
 
 	def get_lines(self):
-		return [(self.handle, self.re)]
+		lines = []
+		if self.set_re:
+			lines.append((self.handle_set, self.set_re))
+		lines.append((self.handle, self.re))
+		return lines
+
+	def handle_set(self, man, match):
+		block = self.make(man)
+		options = man.get_info(self.name, None)
+		if options == None:
+			options = block.options
+			man.set_info(self.name, options)
+		else:
+			block.options = options
+		try:
+			block.parse_args(match.group(1))
+		except ParseException as exn:
+			man.error(str(exn))
 
 	def handle(self, man, match):
 		block = self.make(man)
 		try:
-			block.parse_args(match.group(1))
+			args = match.group(2)
+			if args != None:
+				block.parse_args(args)
 		except ParseException as exn:
 			man.error(str(exn))
 		block.check_args(man)

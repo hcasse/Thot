@@ -47,11 +47,14 @@ class Resource(view.Resource):
 	def run(self, sources):
 
 		# launch the process
-		proc = subprocess.Popen(self.block.interpreter,
-				stdin = subprocess.PIPE,
-				stdout = subprocess.PIPE,
-				stderr = subprocess.STDOUT
-			)
+		try:
+			proc = subprocess.Popen(self.block.interpreter,
+					stdin = subprocess.PIPE,
+					stdout = subprocess.PIPE,
+					stderr = subprocess.STDOUT
+				)
+		except FileNotFoundError:
+			return "Bad interpreter!"
 
 		# perform communication
 		try:
@@ -83,8 +86,7 @@ class Resource(view.Resource):
 			p = len(out)
 			while skip > 0:
 				try:
-					p = out.index('\n', 0, p)
-					p = p - 1
+					p = out.rindex('\n', 0, p)
 					skip = skip - 1
 				except ValueError:
 					out = ""
@@ -270,7 +272,10 @@ class Block(block.Block):
 
 	def add_content(self, content, line):
 		if content == "":
-			return line
+			if line == "":
+				return "\n"
+			else:
+				return line
 		else:
 			return content + "\n" + line
 
@@ -315,67 +320,68 @@ class Block(block.Block):
 
 		# non-interactive
 		if not gen.get_manager().is_interactive() or self.interpreter == None:
-			if init != "":
-				gen.genQuoteBegin()
+			if self.init != "":
+				gen.genQuoteBegin(1)
 				gen.genStyleBegin(doc.STYLE_CODE)
 				gen.genText(self.init)
 				gen.genStyleEnd(doc.STYLE_CODE)
-				gen.genQuoteEnd()
+				gen.genQuoteEnd(1)
 			return
 
 		# interactive
 		MAP[self.num] = self
+		map = dict(
+			num = self.num,
+			cols = self.cols,
+			tcols = self.cols/2,
+			rows = self.rows,
+			trows = self.testrows,
+			init = self.init
+		)
+
+		# interactive
 		gen.genVerbatim("""
 <div class="codeme">
 	<div class="codeme-source">
-		<textarea id="codeme-source-{num}" cols="80" rows="15" placeholder="Type your source here." onkeydown="codeme_onkeydown(this, event)"
+		<textarea id="codeme-source-{num}" cols="{cols}" rows="{rows}" placeholder="Type your source here." onkeydown="codeme_onkeydown(this, event)"
 		>{init}</textarea>
-	</div>
-""".format(
-	num = self.num,
-	init = self.init
-))
+	</div>""".format(**map))
+
 		if self.tests == []:
 			gen.genVerbatim("""
 	<div class="output">
 		<button onclick="codeme_run({num}, 0)">Run!</button>
 		<br/>
-		<textarea id="codeme-output-{num}" cols="{cols}" rows="{rows}" readonly placeholder="Output of the program."></textarea>
-	</div>
-""".format(
-		num = self.num,
-		cols = self.cols,
-		rows = self.rows
-	))
+		<textarea id="codeme-output-{num}" cols="{cols}" rows="{trows}" readonly placeholder="Output of the program."></textarea>
+	</div>""".format(**map))
 
 		else:
 			
 			for test in self.tests:
-				syms = dict(
-					num = self.num,
-					tnum = test.num,
-					code = test.code,
-					expected = test.expected,
-					cols = self.cols/2,
-					rows = self.testrows					
-				)
+				map["tnum"] = test.num
+				map["code"] = test.code
+				map["expected"] = test.expected
 				gen.genVerbatim("""
 	<div class="codeme-test">
 		<button onclick="codeme_run({num}, {tnum})">Run test {tnum}</button>
-		<span id="codeme-lab-{num}-{tnum}"></span>""".format(**syms))
+		<span id="codeme-lab-{num}-{tnum}"></span>""".format(**map))
+
 				if test.expected != "":
 					gen.genVerbatim("""
-		<input onchange="codeme_show_result(this.checked, {num}, {tnum});" type="checkbox">show expected</input>""".format(**syms))
+		<input onchange="codeme_show_result(this.checked, {num}, {tnum});" type="checkbox">show expected</input>""".format(**map))
+
 				gen.genVerbatim("""
 	</div>
 	<div>
-		<textarea id="codeme-test-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly>{code}</textarea>""".format(**syms))
+		<textarea id="codeme-test-{num}-{tnum}" cols="{tcols}" rows="{trows}" readonly>{code}</textarea>""".format(**map))
+
 				if test.expected != "":
 					gen.genVerbatim("""
-		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;" cols="{cols}" rows="{rows}" readonly>{expected}</textarea>""".format(**syms))
+		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;" cols="{tcols}" rows="{trows}" readonly>{expected}</textarea>""".format(**map))
+
 				gen.genVerbatim("""
-		<textarea id="codeme-output-{num}-{tnum}" cols="{cols}" rows="{rows}" readonly placeholder="Result of test {tnum}."></textarea>
-	</div>""".format(**syms))
+		<textarea id="codeme-output-{num}-{tnum}" cols="{tcols}" rows="{trows}" readonly placeholder="Result of test {tnum}."></textarea>
+	</div>""".format(**map))
 
 		gen.genVerbatim("</div>")
 			
@@ -387,7 +393,8 @@ __description__ = \
 __syntaxes__ = [
 	block.Syntax(
 		name = "codeme",
-		maker = Block, 
+		maker = Block,
+		set = True,
 		options=[
 			block.Option("language"),
 			block.Option("interpreter"),

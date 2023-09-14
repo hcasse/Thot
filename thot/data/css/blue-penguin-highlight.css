@@ -1,0 +1,39 @@
+
+/* Solarized Dark 
+
+For use with highlight
+
+http://ethanschoonover.com/solarized
+
+SOLARIZED HEX      ROLE
+--------- -------- ------------------------------------------
+base03    #002b36  background
+base01    #586e75  comments / secondary content
+base1     #93a1a1  body text / default code / primary content
+orange    #cb4b16  constants
+red       #dc322f  regex, special keywords
+blue      #268bd2  reserved keywords
+cyan      #2aa198  strings, numbers
+green     #859900  operators, other keywords
+*/
+
+.listing {
+	background-color: #002b36; color: #93a1a1;
+	padding: 8px;
+	color: #93a1a1;
+}
+
+.listing .num { color: #2aa198 } /* Literal.Number.Integer */
+.lsiting .esc { color: #cb4b16 } /* Literal.String.Escape */
+.listing .str { color: #2aa198 } /* Literal.String.Single */
+.listing .pps { color: #93a1a1 } /* Literal.String.Heredoc */
+.listing .slc { color: #586e75 } /* Comment.Single */
+.listing .com { color: #586e75 } /* Comment */
+.listing .ppc { color: #859900 } /* Comment.Preproc */
+.listing .opt { color: #93a1a1 } /* Generic.Output */
+.lsiting .lin { color: #2aa198 } /* Literal.Number */
+.listing .ipl { color: #2aa198 } /* Literal.String.Interpol */
+.lsiting .kwa { color: #859900 } /* Keyword */
+.listing .kwb { color: #dc322f } /* Keyword.Type */
+.listing .kwc { color: #268bd2 } /* Keyword.Declaration */
+.listing .kwd { color: #268bd2 } /* Name.Variable */

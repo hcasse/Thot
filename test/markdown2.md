@@ -94,3 +94,44 @@ This is a [reference link] [google].
 
 [google]: http://www.google.fr	This is Google!
 
+# Code colorization
+
+```c++
+/* my first code */
+
+// single line
+
+#include <stdio.h>
+
+#define A 0
+#ifdef A
+#	define B 1
+#endif
+
+#ifdef C
+int coucou;
+#endif
+
+class C {
+	C() {}
+	~C() {};
+	int operator*() { return 0; }
+};
+
+static int y;
+
+/**
+ * my main
+ * @param x
+ */
+int main(int x) {
+	int t[10];
+	int x = 0;
+	printf("Hello, World!\n");
+	if(x < 3)
+		x = 0;
+	while(x != 0.1)
+		x--;
+	x = 'a';
+}
+```

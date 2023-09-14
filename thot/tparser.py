@@ -223,6 +223,18 @@ class Manager:
 		self.file_name = None
 		self.reset(document)
 		self.mon = mon
+		self.info = {}
+
+	def set_info(self, id, info):
+		"""Store parsing information for third-party contributor."""
+		self.info[id] = info
+
+	def get_info(self, id, default = None):
+		"""Get parsing information."""
+		try:
+			return self.info[id]
+		except KeyError:
+			return default
 
 	def reset(self, document):
 		"""Reset the parser to process a new document."""

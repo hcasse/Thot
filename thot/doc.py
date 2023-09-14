@@ -786,6 +786,10 @@ class Block(Embedded):
 		self.kind = kind
 		self.content = []
 
+	def get_kind(self):
+		"""Get the kind of the block."""
+		return self.kind
+
 	def get_lines(self):
 		"""Get the lines inside the block."""
 		return self.content
