@@ -170,10 +170,10 @@ class Generator(ahtml.Generator):
 		header.header_level += self.base_level
 		return True
 
-	def genLinkBegin(self, url):
+	def genLinkBegin(self, url, title):
 		if not self.is_distant_url(url):
 			url = self.manager.use_resource(url)
-		ahtml.Generator.genLinkBegin(self, url)
+		ahtml.Generator.genLinkBegin(self, url, title)
 
 
 class DocResource(Resource, ahtml.PageHandler):

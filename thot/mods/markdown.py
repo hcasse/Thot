@@ -21,6 +21,55 @@ import thot.doc as doc
 import thot.highlight as highlight
 import thot.tparser as tparser
 
+
+def get_ref_map(man):
+	"""Get the reference map."""
+	map = man.get_info("markdown-map")
+	if map == None:
+		map = {}
+		man.set_info("markdown-map", map)
+		man.add_completer(complete_ref_map)
+	return map
+
+
+def complete_ref_map(man):
+	"""Completer that will be called to check wether all ref have been resolved."""
+	map = get_ref_map(man)
+	for (label, url) in map.items():
+		if isinstance(url, list):
+			man.warn("reference %s is not resolved!", label)
+			for patch in url:
+				patch.ref = "???"
+
+
+def define_ref_link(man, label, url, title = None):
+	"""Define a new link"""
+	map = get_ref_map(man)
+	try:
+		patches = map[label]
+		for patch in patches:
+			patch.ref = url
+			patch.title = title
+	except KeyError:
+		pass
+	map[label] = (url, title)
+
+
+def set_ref_link(man, node, label):
+	"""Set the reference link and title if they exists.
+	Record node for patch else."""
+	map = get_ref_map(man)
+	try:
+		x = map[label]
+		if isinstance(x, list):
+			x.append(node)
+		else:
+			node.ref = x[0]
+			node.title = x[1]
+	except KeyError:
+		map[label] = [node]
+
+
 def handle_blockquote(man, match):
 	# TODO
 	# SYNTAX: > .* (can embed other paragraph / headers)
@@ -74,26 +123,44 @@ def handle_hrule(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, doc.HorizontalLine()))
 
 def handle_link(man, match):
-	URL = man.fix_path(match.group('URL'))
+	URL = match.group('URL')
+	if ":" not in URL:
+		URL = man.fix_path(match.group('URL'))
 	text = match.group('text')
-	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(URL)))
+	title = match.group("title1")
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(URL, title)))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(text)))
 	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
 
 def handle_ref(man, match):
-	try:
-		url = man.fix_path(man.defs[match.group("id_ref")][0])
-		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(url)))
-		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(match.group("text_ref"))))
-		man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))		
-	except KeyError:
-		common.onWarning("reference %s is unknown!" % match.group("id_ref"))
+	label = match.group("id_ref")
+	link = doc.Link(None)
+	set_ref_link(man, link, label)
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, link))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(match.group("text_ref"))))
+	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))		
 
 def handle_id_def(man, match):
-	man.defs[match.group("id")] = (match.group("URL"), match.group("text")) 
+	url = match.group("URL")
+	if url.startswith('<'):
+		url = url[1:]
+	if url.endswith('>'):
+		url = url[:-1]
+	if ":" not in url:
+		url = max.fix_path(url)
+	define_ref_link(man, match.group("id"), url, match.group('text'))
 
 def handle_style(man, style):
 	man.send(doc.StyleEvent(style))
+
+def handle_quote(man, match):
+	depth = len(match.group(1))
+	text = match.group(2)
+	if text.strip() == "":
+		man.send(doc.QuoteEvent(depth, False))
+	else:
+		man.send(doc.QuoteEvent(len(match.group(1))))
+		tparser.handleText(man, text)
 
 def handle_word(man, word):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(word)))
@@ -146,12 +213,16 @@ __syntax__ = True
 
 __words__ = [
 	(handle_link,
-		"\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)]*)\)",
+		'\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)\s]*)(\s+"(?P<title1>[^"]*)")?\)',
 		"""the text is marked with a link to the URL."""
 	),
 	(lambda man, match: handle_word(man, match.group("char")),
 		"\\\\(?P<char>.)",
 		"""protect a character from interpretation."""
+	),
+	(lambda man, match: handle_style(man, doc.STYLE_STRONG_EMPH),
+		"\\*\\*\\*|___",
+		"""open and close strong/emphasis style"""
 	),
 	(lambda man, match: handle_style(man, doc.STYLE_STRONG),
 		"\\*\\*|__",
@@ -220,11 +291,14 @@ __lines__ = [
 		"""start of numbered list or item (number is not meaningful)."""
 	),
 	(handle_id_def,
-		"^\[(?P<id>[^\]]+)\]:\s*(?P<URL>\S+)(?P<text>\s+.*)$",
+		"^\[(?P<id>[^\]]+)\]:\s*(?P<URL>\S+)(\s+[\"'\(](?P<text>[^\)'\"]*)[\)'\"])?\s*$",
 		"""define a link with an identifier that can be referenced later."""
 	),
 	(handle_code_block,
 		"^\s*```(?P<lang>\S*)\s*$",
 		"""Code with the given language."""
 	),
+	(handle_quote,
+		"^(>+)(.*)$",
+		"""quoted text."""),
 ]

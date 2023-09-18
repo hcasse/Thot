@@ -224,6 +224,11 @@ class Manager:
 		self.reset(document)
 		self.mon = mon
 		self.info = {}
+		self.completers = []
+
+	def add_completer(self, completer):
+		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""
+		self.completers.append(completer)
 
 	def set_info(self, id, info):
 		"""Store parsing information for third-party contributor."""
@@ -251,6 +256,7 @@ class Manager:
 		return self.doc.getVar(id, deflt)
 
 	def get(self):
+		"""Get the current node."""
 		return self.item
 
 	def debug(self, msg):
@@ -258,6 +264,7 @@ class Manager:
 		print("DEBUG: %s" % msg)
 
 	def send(self, event):
+		"""Send an event along the node stack."""
 		if DEBUG:
 			self.debug("send(%s)" % event) 
 		self.item.onEvent(self, event)
@@ -293,9 +300,11 @@ class Manager:
 		self.send(event)
 
 	def setParser(self, parser):
+		"""Change the parser."""
 		self.parser = parser
 
 	def getParser(self):
+		"""Get the current parser."""
 		return self.parser
 
 	def parseInternal(self, file, name):
@@ -337,6 +346,8 @@ class Manager:
 				self.parseInternal(file, name)
 				self.send(doc.Event(doc.L_DOC, doc.ID_END))
 				self.doc.clean()
+				for completer in self.completers:
+					completer(self)
 
 			except common.ParseException as e:
 				raise common.ParseException(self.message(e))
@@ -353,6 +364,8 @@ class Manager:
 		self.words_re = None
 
 	def setSyntax(self, lines, words):
+		"""Change the main syntax with the given list of line patterns
+		and the given list of word patterns."""
 
 		# process lines
 		self.lines = []
@@ -369,7 +382,10 @@ class Manager:
 
 	def get_prefix(self):
 		"""Generate a message prefixed with error line and file."""
-		return "%s:%d: " % (self.file_name, self.line_num)
+		if self.line_num != None:
+			return "%s:%d: " % (self.file_name, self.line_num)
+		else:
+			return ""
 
 	def info(self, msg, *args):
 		"""Display an information message."""
@@ -428,7 +444,7 @@ class Manager:
 			self.mon.fatal('cannot find module %s' % name)
 
 	def fix_path(self, path):
-		"""Fix the given path if it is not absole to be relative to the current document path."""
+		"""Fix the given path if it is not absolute to be relative to the current document path."""
 		if os.path.isabs(path):
 			rpath = path
 		elif self.file_name == '<unknown>':

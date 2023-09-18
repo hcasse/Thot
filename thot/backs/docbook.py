@@ -243,7 +243,7 @@ class Generator(back.Generator):
 		else:
 			self.out.write('</section>\n')
 
-	def genLinkBegin(self, url):
+	def genLinkBegin(self, url, title = None):
 		self.out.write('<link xlink:href="%s">' % escape_attr(url))
 	
 	def genLinkEnd(self, url):

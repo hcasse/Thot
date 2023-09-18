@@ -95,6 +95,7 @@ STYLE_SMALLER = "smaller"
 STYLE_CITE = "cite"
 STYLE_CODE = "code"
 STYLE_FOOTNOTE = "footnote"
+STYLE_STRONG_EMPH = "strong-emph"
 
 # standard footnote
 FOOTNOTE_EMBED = "embed"
@@ -231,8 +232,9 @@ class QuoteEvent(Event):
 	"""An event designing a quoted text."""
 	depth = None
 
-	def __init__(self, depth):
-		Event.__init__(self, L_PAR, ID_NEW_QUOTE)
+	def __init__(self, depth, begin = True):
+		Event.__init__(self, L_PAR,
+			ID_NEW_QUOTE if begin else ID_END_QUOTE)
 		self.depth = depth
 
 	def make(self):
@@ -676,9 +678,10 @@ class Link(Container):
 	"""A link in a text."""
 	ref = None
 
-	def __init__(self, ref):
+	def __init__(self, ref, title = None):
 		Container.__init__(self)
 		self.ref = ref
+		self.title = title
 
 	def onEvent(self, man, event):
 		if event.level is not L_WORD:
@@ -689,10 +692,10 @@ class Link(Container):
 			self.add(man, event.make())
 
 	def dumpHead(self, tab):
-		print(tab + "link(" + self.ref + ",")
+		print("%slink(\"%s\"," % (tab, self.ref))
 
 	def gen(self, gen):
-		gen.genLinkBegin(self.ref)
+		gen.genLinkBegin(self.ref, self.title)
 		Container.gen(self, gen)
 		gen.genLinkEnd(self.ref)
 
@@ -728,17 +731,16 @@ class Par(Container):
 
 class Quote(Par):
 	"""A quoted paragraph."""
-	level = None
 
-	def __init__(self, level):
+	def __init__(self, depth):
 		Par.__init__(self)
-		self.level = level
+		self.depth = depth
 
 	def onEvent(self, man, event):
 		if event.id is ID_END_QUOTE:
 			man.pop()
 		elif event.id is ID_NEW_QUOTE:
-			if event.level == self.level:
+			if event.depth == self.depth:
 				pass
 			else:
 				man.forward(event)
@@ -746,12 +748,12 @@ class Quote(Par):
 			Par.onEvent(self, man, event)
 
 	def dumpHead(self, tab):
-		print(tab + "quote(")
+		print(tab + "quote:%d(" % self.depth)
 
 	def gen(self, gen):
-		gen.genQuoteBegin(self.level)
+		gen.genQuoteBegin(self.depth)
 		Container.gen(self, gen)
-		gen.genQuoteEnd(self.level)
+		gen.genQuoteEnd(self.depth)
 
 	def visit(self, visitor):
 		visitor.onQuote(self)

@@ -60,7 +60,8 @@ STYLES = {
 	doc.STYLE_BIGGER:		('<big>', '</big>'),
 	doc.STYLE_SMALLER:		('<small>', '</small>'),
 	doc.STYLE_CITE:			('<cite>', '</cite>'),
-	doc.STYLE_CODE:			('<code>', '</code>')
+	doc.STYLE_CODE:			('<code>', '</code>'),
+	doc.STYLE_STRONG_EMPH:	('<strong><em>', "</em></strong>")
 }
 
 def getStyle(style):
@@ -646,7 +647,7 @@ class Generator(back.Generator):
 		header.genBody(self)
 		return True
 
-	def genLinkBegin(self, url):
+	def genLinkBegin(self, url, title = None):
 
 		# process the URL
 		if self.is_distant_url(url):
@@ -656,7 +657,10 @@ class Generator(back.Generator):
 			url = self.manager.get_resource_link(url, self)
 
 		# generate the code
-		self.out.write('<a href="%s">' % url)
+		self.out.write('<a href="%s"' % url)
+		if title != None:
+			self.out.write(' title="%s"' % title)
+		self.out.write('>')
 
 	def genLinkEnd(self, url):
 		self.out.write('</a>')

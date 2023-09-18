@@ -281,10 +281,12 @@ class Generator:
 	def genHeaderEnd(self, level):
 		pass
 
-	def genLinkBegin(self, url):
+	def genLinkBegin(self, url, title = None):
+		"""Called to generate the entry tag for a link."""
 		pass
 
 	def genLinkEnd(self, url):
+		"""Called to generate the exit tag for a link."""
 		pass
 
 	def genImage(self, url, node, caption):

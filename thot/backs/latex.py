@@ -476,7 +476,7 @@ class Generator(back.Generator):
 		header.genBody(self)
 		return True
 
-	def genLinkBegin(self, url):
+	def genLinkBegin(self, url, title = None):
 		self.out.write('\href{%s}{' % self.escape(url))
 
 	def genLinkEnd(self, url):

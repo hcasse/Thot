@@ -2,11 +2,11 @@
 
 ## Application
 
-	[ ] Add ``thot-view`` command.
-	[ ] Add ``thot-gen`` command.  
+	[x] Add ``thot-view`` command.
+	[x] Add ``thot-gen`` command.  
 	[ ] Add a --clean option to clean generated filkes.
-	[ ] Add ANSI colorization.
-	[ ] Remove ``thot.py`` command.  
+	[x] Add ANSI colorization.
+	[o] Remove ``thot.py`` command.  
 
 ## Core
 
@@ -35,14 +35,14 @@
 
 Basic : [Source](https://www.markdownguide.org/basic-syntax/)
 	[ ] `" "{2,}` for linbe break
-	[ ] `***|___` bold and italic
-	[ ] `>` blockquote
+	[x] `***|___` bold and italic
+	[x] `>` blockquote
 	[ ] `>` blockquote with other content
 	[ ] indented sub-content to list (4 space = 1 tab)
-	[ ] `[...](URL "comment")` link with tooltip
-	[ ] `<URL>` quick link
-	[ ] `<email>` fast email link
-	[ ] Automatic link support the different forms.
+	[x] `[...](URL "comment")` link with tooltip
+	[x] `<URL>` quick link
+	[x] `<email>` fast email link
+	[x] Automatic link support the different forms.
 
 Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 	[ ] Support image link.

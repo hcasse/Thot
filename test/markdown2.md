@@ -82,9 +82,14 @@ This is *emphasis* and _emphasis_.
 
 And **strong** and __strong__.
 
+And ***strong emphasis*** here.
+
 Protected \* and \_.
 
 This is `code`. And with ``back`trick``.
+
+
+# Links
 
 This is an automatic link <http://www.google.fr>.
 
@@ -92,7 +97,39 @@ This is an automatic email address: <me@here.somewhere>.
 
 This is a [reference link] [google].
 
-[google]: http://www.google.fr	This is Google!
+[google]: http://www.google.fr	'This is Google!'
+
+[a link](http://www.gnu.com)
+
+[1]: http://gcc.gnu.org
+
+A [backward link][1] here !
+
+A [forward link][2] now.
+
+[2]: http://www.irit.fr
+
+An [unknown][3] link.
+
+A [link](https://www.gnu.org/ "This is GNU!") with title.
+
+
+[h1]: https://en.wikipedia.org/wiki/Hobbit#Lifestyle
+[h2]: https://en.wikipedia.org/wiki/Hobbit#Lifestyle "Hobbit lifestyles"
+[h3]: https://en.wikipedia.org/wiki/Hobbit#Lifestyle 'Hobbit lifestyles'
+[h4]: https://en.wikipedia.org/wiki/Hobbit#Lifestyle (Hobbit lifestyles)
+[h5]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"
+[h6]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> 'Hobbit lifestyles'
+[h7]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> (Hobbit lifestyles)
+
+Combinations of links with titles:
+1. [hobbit][h1]
+1. [hobbit][h2]
+1. [hobbit][h3]
+1. [hobbit][h4]
+1. [hobbit][h5]
+1. [hobbit][h6]
+
 
 # Code colorization
 
@@ -135,3 +172,17 @@ int main(int x) {
 	x = 'a';
 }
 ```
+
+
+# Special paragraph
+
+> Single quote.
+> Next line
+>
+> Another quote paragraph.
+
+> level 1
+>> level 2
+>>> level 3
+> level 1
+
