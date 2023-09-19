@@ -146,7 +146,7 @@ class Block(doc.Block):
 					try:
 						option = self.syntax.options[arg]
 						if isinstance(option, SwitchOption):
-							option.parse("yes")
+							self.options[option.name] = option.parse("yes")
 						else:
 							raise ParseException("argument missing for \"%s\"" % arg)
 					except KeyError:

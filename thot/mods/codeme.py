@@ -20,8 +20,11 @@
 	<codeme OPTIONS>...</codem>
 that displays a box where the user can type a program and launch it."""
 
+import re
 import subprocess
 from thot import doc, block, communicate, view
+
+SPACE_RE = re.compile("\s{2,}")
 
 # Maps of used blocks
 MAP = {}
@@ -92,6 +95,13 @@ class Resource(view.Resource):
 					out = ""
 					break
 			out = out[:p+1]
+
+		# normalize spaces
+		if self.block.norm_spaces:
+			res = []
+			for line in out.split('\n'):
+				res.append(SPACE_RE.sub(' ', line.strip()))
+			out = "\n".join(res)
 
 		return out
 
@@ -269,6 +279,7 @@ class Block(block.Block):
 		self.cols = self.get_option("cols")
 		self.rows = self.get_option("rows")
 		self.testrows = self.get_option("testrows")
+		self.norm_spaces = self.get_option("norm-spaces")
 
 	def add_content(self, content, line):
 		if content == "":
@@ -398,6 +409,7 @@ __syntaxes__ = [
 		options=[
 			block.Option("language"),
 			block.Option("interpreter"),
+			block.SwitchOption("norm-spaces"),
 			block.IntOption("timeout", 4),
 			block.IntOption("skip", 0),
 			block.IntOption("skiplast", 0),
