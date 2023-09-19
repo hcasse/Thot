@@ -147,7 +147,7 @@ def handle_id_def(man, match):
 	if url.endswith('>'):
 		url = url[:-1]
 	if ":" not in url:
-		url = max.fix_path(url)
+		url = man.fix_path(url)
 	define_ref_link(man, match.group("id"), url, match.group('text'))
 
 def handle_style(man, style):
@@ -177,7 +177,7 @@ def handle_backtrick(man, match):
 
 def handle_image(man, match):
 	alttext = match.group("alttext_img")
-	id = match.group("id_img")
+	id = man.fix_path(match.group("id_img"))
 	caption = doc.Par()
 	caption.append(doc.Word(alttext))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,

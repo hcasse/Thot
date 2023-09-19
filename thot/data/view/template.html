@@ -21,9 +21,14 @@
 			sleep(500);
 		}
 
+		function heartbeat() {
+			send("/heartbeat");
+		}
+		setInterval(heartbeat, 1000);
+
 	</script>
 
-<body onbeforeunload="quit();">
+<body> <!--/body> onbeforeunload="quit();"-->
 
 <header>
 	<thot:icon/>

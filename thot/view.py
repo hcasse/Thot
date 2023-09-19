@@ -36,7 +36,7 @@ import thot.backs.abstract_html as ahtml
 
 
 """Heartbeat time-out in seconds."""
-HEARTBEAT_TIMEOUT = 1.1		
+HEARTBEAT_TIMEOUT = 1.5
 
 PARSERS = {
 	".md": "markdown",
@@ -356,6 +356,7 @@ class Manager(ahtml.Manager):
 		"""Build a generator for the given path."""
 		ext = os.path.splitext(path)[1]
 		if ext in PARSERS:
+			loc = os.path.splitext(loc)[0] + ".html"
 			return DocResource(path, self, loc)
 		else:
 			return FileResource(path, loc)
@@ -365,12 +366,11 @@ class Manager(ahtml.Manager):
 		if rpath not in self.fsmap:
 			if rpath.startswith(self.base_dir):
 				loc = rpath[len(self.base_dir):]
-				res = self.make_gen(rpath, loc)
 			else:
 				ext = os.path.splitext(rpath)[1]
 				loc = "/static/file-%d%s" % (self.counter, ext)
 				self.counter += 1
-				res = self.make_gen(rpath, loc)
+			res = self.make_gen(rpath, loc)
 			self.fsmap[rpath] = res
 			self.link_resource(res)
 		return rpath
@@ -416,6 +416,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 	def do_GET(self):
 		path = unquote(self.path)
+		self.server.mon.say("GET " + path)
 		try:
 			file = self.server.manager.map[path]
 			file.prepare()
@@ -483,6 +484,8 @@ class MyServer(http.server.HTTPServer):
 		self.manager = manager
 		self.mon = manager.mon
 		manager.link_resource(ActionResource("/quit", self.quit))
+		manager.link_resource(ActionResource("/heartbeat", self.record_heartbeat))
+		self.heartbeat_started = False
 
 	def get_address(self):
 		return self.socket.getsockname()
@@ -503,6 +506,20 @@ class MyServer(http.server.HTTPServer):
 		except KeyboardInterrupt:
 			self.shutdown()
 
+	def check_heartbeat(self):
+		while True:
+			time.sleep(HEARTBEAT_TIMEOUT)
+			delay = time.time() - self.last_heartbeat
+			if delay > HEARTBEAT_TIMEOUT:
+				self.quit()
+				break
+
+	def record_heartbeat(self):
+		self.last_heartbeat = time.time()
+		if not self.heartbeat_started:
+			self.heartbeat_started = True
+			threading.Thread(target = self.check_heartbeat).start()
+		
 
 def main():
 
