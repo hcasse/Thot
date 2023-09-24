@@ -34,7 +34,7 @@
 ### Markdown
 
 Basic : [Source](https://www.markdownguide.org/basic-syntax/)
-	[ ] `" "{2,}` for linbe break
+	[x] `" "{2,}` for linbe break
 	[x] `***|___` bold and italic
 	[x] `>` blockquote
 	[ ] `>` blockquote with other content
@@ -47,17 +47,17 @@ Basic : [Source](https://www.markdownguide.org/basic-syntax/)
 Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 	[ ] Support image link.
 	[ ] Support tables.
-	[ ] Support code with language.
+	[x] Support code with language.
 	[ ] Support for footnotes.
 	[ ] Support for header label.
 	[ ] Support for header reference.
 	[ ] Support for definition list.
-	[ ] `~~...~~` Support for strike-through.
+	[x] `~~...~~` Support for strike-through.
 	[ ] Support for task list.
-	[ ] Emoji support.
-	[ ] Support for ==highlight==.
-	[ ] Support for ~subscript~.
-	[ ] Support for ^superscript^.
+	[x] Emoji support.
+	[x] Support for ==highlight==.
+	[x] Support for ~subscript~.
+	[x] Support for ^superscript^.
 
 
 ### DokuWiki

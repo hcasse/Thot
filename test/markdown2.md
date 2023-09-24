@@ -88,6 +88,14 @@ Protected \* and \_.
 
 This is `code`. And with ``back`trick``.
 
+This is ~~~strike-through~~~.
+
+This is ==highlight==.
+
+Subscript: H~2~O water !
+
+Superscript: x^2^
+
 
 # Links
 
@@ -186,3 +194,11 @@ int main(int x) {
 >>> level 3
 > level 1
 
+
+# Emoji's
+
+This is a smile :smile:!
+
+And a skull :skull:.
+
+And a non-existing emoji :coucou:.

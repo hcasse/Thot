@@ -563,6 +563,20 @@ class Glyph(Node):
 	def visit(self, visitor):
 		visitor.onGlyph(self)
 
+
+class LineBreak(Node):
+	"""Represents a line-break in the paragraph flow."""
+	
+	def __init__(self):
+		Node.__init__(self)
+
+	def dump(self, tab):
+		print("%sline-break" % tab)
+
+	def gen(self, gen):
+		gen.gen_line_break()
+
+
 class LineBreak(Node):
 
 	def __init__(self):

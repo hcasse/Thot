@@ -749,6 +749,9 @@ class Generator(back.Generator):
 			r = self.refs[node]
 			self.out.write("<a href=\"%s\">%s</a>" % (r[0], r[1]))
 
+	def gen_line_break(self):
+		self.out.write("<br/>")
+
 	def add_ref(self, node, anchor, number = ""):
 		"""Add a new reference to the given node represented by
 		the given anchor, possibly a number."""

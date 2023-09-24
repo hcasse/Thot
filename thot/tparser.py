@@ -193,7 +193,17 @@ class Syntax:
 		return []
 
 
-class DefaultParser:
+class LineParser:
+	"""Abstract class of line parser."""
+
+	def parse(self, manager, line):
+		"""Parse the given line using the given manager."""
+		pass
+
+
+class DefaultParser(LineParser):
+	"""Default parser that tries to parser the line with the manager
+	recorded lines. Else scan the text with the manager recorded words."""
 
 	def parse(self, handler, line):
 		line = handler.doc.reduceVars(line)
@@ -382,8 +392,9 @@ class Manager:
 
 	def get_prefix(self):
 		"""Generate a message prefixed with error line and file."""
-		if self.line_num != None:
-			return "%s:%d: " % (self.file_name, self.line_num)
+		if self.file_name != None and self.line_num != None:
+			file_name = os.path.relpath(self.file_name, os.curdir)
+			return "%s:%d: " % (file_name, self.line_num)
 		else:
 			return ""
 
@@ -454,7 +465,7 @@ class Manager:
 		return rpath
 
 
-class BlockParser:
+class BlockParser(LineParser):
 	old = None
 	block = None
 	re = None

@@ -16,11 +16,7 @@
 
 import re
 
-import thot.common as common
-import thot.doc as doc
-import thot.highlight as highlight
-import thot.tparser as tparser
-
+from thot import common, doc, emoji, highlight, tparser
 
 def get_ref_map(man):
 	"""Get the reference map."""
@@ -47,6 +43,10 @@ def define_ref_link(man, label, url, title = None):
 	map = get_ref_map(man)
 	try:
 		patches = map[label]
+		if not isinstance(patches, list):
+			man.warn("%s defined twice!", label)
+			return
+		print("DEBUG:", patches)
 		for patch in patches:
 			patch.ref = url
 			patch.title = title
@@ -165,6 +165,12 @@ def handle_quote(man, match):
 def handle_word(man, word):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(word)))
 
+def handle_emoji(man, match):
+	text = emoji.get(match.group("emoji"))
+	if text.startswith(":") and text.endswith(":"):
+		man.error("unknown emoji %s", match.group("emoji"))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(text)))
+
 def handle_code_word(man, match):
 	man.send(doc.StyleEvent(doc.STYLE_CODE))
 
@@ -195,6 +201,10 @@ def handle_mailto_link(man, match):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(url)))
 	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
 
+def handle_line_break(man, match):
+	man.reparse(match.group(1))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.LineBreak()))
+	
 
 def init(man):
 	man.defs = { }
@@ -228,9 +238,25 @@ __words__ = [
 		"\\*\\*|__",
 		"""open and close emphasis style"""
 	),
+	(lambda man, match: handle_style(man, doc.STYLE_STRIKE),
+		"~~~",
+		"""open and close strike-through style"""
+	),
+	(lambda man, match: handle_style(man, doc.STYLE_UNDERLINE),
+		"==",
+		"""open and close highlight style"""
+	),
 	(lambda man, match: handle_style(man, doc.STYLE_EMPHASIZED),
 		"[*_]",
 		"""open and close emphasis style"""
+	),
+	(lambda man, match: handle_style(man, doc.STYLE_SUBSCRIPT),
+		"~",
+		"""open and close subscript style"""
+	),
+	(lambda man, match: handle_style(man, doc.STYLE_SUPERSCRIPT),
+		"\\^",
+		"""open and close supersript style"""
 	),
 	(handle_backtrick,
 		"``(?P<text_backtrick>(`[^`]|[^`])*)``",
@@ -259,6 +285,10 @@ __words__ = [
 	(handle_ref,
 		"\[(?P<text_ref>[^\]]*)\]\s*\[(?P<id_ref>[^\]]*)\]",
 		"""the text is marked with a link to reference id."""
+	),
+	(handle_emoji,
+		"(?P<emoji>:[a-z_]+:)",
+		"""insert the corresponding emoji."""
 	)
 ]
 
@@ -266,6 +296,10 @@ __lines__ = [
 	(handle_new_par,
 		"^$",
 		"""ends the current paragraph and starts a new one."""
+	),
+	(handle_line_break,
+		"^(.*\S)\s+$",
+		"""insert a line-break."""
 	),
 	(lambda man, match: handle_head_under(man, match, 1, False),
 		"^=+$",

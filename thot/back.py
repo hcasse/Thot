@@ -315,6 +315,10 @@ class Generator:
 		"""Called to generate a reference."""
 		pass
 
+	def gen_line_break(self):
+		"""Generate a line break."""
+		pass
+
 	# error management
 
 	def get_prefix(self, node):
