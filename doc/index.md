@@ -1,4 +1,11 @@
 
 # Thot Documentation
 
-[tool/view](tool/view.md)
+
+## Modules
+
+* [mods/codeme](mods/codeme.md)
+
+## Tools
+
+* [tool/view](tool/view.md)

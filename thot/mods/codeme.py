@@ -51,10 +51,12 @@ class Resource(view.Resource):
 
 		# launch the process
 		try:
+			print("DEBUG: interpreter=", self.block.interpreter)
 			proc = subprocess.Popen(self.block.interpreter,
 					stdin = subprocess.PIPE,
 					stdout = subprocess.PIPE,
-					stderr = subprocess.STDOUT
+					stderr = subprocess.STDOUT,
+					shell = True
 				)
 		except FileNotFoundError:
 			return "Bad interpreter!"
