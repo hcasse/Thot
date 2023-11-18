@@ -102,11 +102,12 @@ ul {
 	list-style: outside disc;	
 }
 
-table {
-	width: 100%;
+table, th, td {
 	margin: 1em 0;	
 	border-collapse: collapse;
 	border-spacing: 0;
+	border: 1px solid #15A9DB;
+	padding: 4px;
 }
 
 thead {

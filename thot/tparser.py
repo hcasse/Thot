@@ -298,6 +298,8 @@ class Manager:
 			self.debug("stack = %s" % self.items)
 
 	def pop(self):
+		if self.item.on_complete is not None:
+			self.item.on_complete()
 		self.item = self.items.pop()
 		if DEBUG:
 			self.debug("pop(): %s" % self.item)

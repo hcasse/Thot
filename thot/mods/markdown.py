@@ -46,7 +46,6 @@ def define_ref_link(man, label, url, title = None):
 		if not isinstance(patches, list):
 			man.warn("%s defined twice!", label)
 			return
-		print("DEBUG:", patches)
 		for patch in patches:
 			patch.ref = url
 			patch.title = title
@@ -204,7 +203,65 @@ def handle_mailto_link(man, match):
 def handle_line_break(man, match):
 	man.reparse(match.group(1))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.LineBreak()))
+
+
+class HeaderRowEvent(doc.CustomizeEvent):
+
+	def __init__(self, aligns = None):
+		doc.CustomizeEvent.__init__(self, doc.Table, doc.L_PAR)
+		self.aligns = aligns
+
+	def process(self, table):
+		if self.aligns is not None:
+			self.table = table
+			table.on_complete = self.on_complete
+		for row in table.content:
+			row.kind = doc.TAB_HEADER
+			for cell in row.content:
+				cell.kind = doc.TAB_HEADER 
+
+	def on_complete(self):
+		for row in self.table.content:
+			for i in range(0, min(len(row.content), len(self.aligns))):
+				cell = row.content[i]
+				align = self.aligns[i]
+				if cell.kind != doc.TAB_HEADER and align is not None:
+					cell.set_align(align)
+		
+
+def handle_table_header(man, match):
+	aligns = []
+	for bar in [s.strip() for s in match.group(1).split('|')]:
+		if bar.startswith(':'):
+			if bar.endswith(':'):
+				align = doc.TAB_CENTER
+			else:
+				align = doc.TAB_LEFT
+		elif bar.endswith(':'):
+			align = doc.TAB_RIGHT
+		else:
+			align = None
+		aligns.append(align)
+	man.send(HeaderRowEvent(aligns))
 	
+
+def handle_row(man, match):
+	table = doc.Table()
+	row = doc.Row(doc.TAB_NORMAL)
+	table.content.append(row)
+	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_ROW, table))
+	content = match.group(1).split('|')
+	i = 0
+	while i < len(content):
+		if content[i].endswith('\\') and i + 1 < len(content):
+			content[i] = content[i] + content[i+1]
+			del content[i+1]
+		else:
+			i = i + 1
+	for item in content:
+		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_CELL, doc.Cell(doc.TAB_NORMAL)))
+		tparser.handleText(man, item)
+
 
 def init(man):
 	man.defs = { }
@@ -335,4 +392,13 @@ __lines__ = [
 	(handle_quote,
 		"^(>+)(.*)$",
 		"""quoted text."""),
+
+	(handle_table_header,
+		"^\s*\|((\s*:?-*:?\s*\|)+)\s*$",
+		"""table header separator"""
+	),
+
+	(handle_row,
+		"^\s*\|(([^\\\\]|(\\\\.))*)\|\s*$",
+		"""table definition""")
 ]

@@ -64,6 +64,8 @@ ID_EMBED_CODE = "code"
 ID_EMBED_DOT = "dot"
 ID_EMBED_GNUPLOT = "gnuplot"
 
+ID_CUSTOMIZE = "customize"
+
 
 # variable reduction
 VAR_RE = "@\((?P<varid>[a-zA-Z_0-9]+)\)"
@@ -241,6 +243,26 @@ class QuoteEvent(Event):
 		return Quote(self.depth)
 
 
+class CustomizeEvent(Event):
+	"""Event to customize some already created object. Its function
+	is applied to the first found object of the given type if the
+	match function returns true."""
+
+	def __init__(self, cls, level, id = ID_CUSTOMIZE):
+		Event.__init__(self, level, id)
+		self.cls = cls
+
+	def matches(self, object):
+		"""Called to check if the given object matches.
+		Default implementation returns true."""
+		return True
+
+	def process(self, object):
+		"""Called to let the event process the current object."""
+		pass
+	
+	
+
 class Info:
 	info = None
 
@@ -285,12 +307,16 @@ class Info:
 
 # nodes
 class Node(Info):
-	"""Base definition of document nodes."""
+	"""Base definition of document nodes.
+
+	Each time an event is passed to the Node tree, the function onEvent()
+	is called. In addition, the attribute on_complete may be defined as
+	a function that is called the node is popped from the parser."""
 	file = None
 	line = None
 	
 	def __init__(self):
-		pass
+		self.on_complete = None
 
 	def setFileLine(self, file, line):
 		"""Set file/line information corresponding to the node."""
@@ -318,7 +344,12 @@ class Node(Info):
 		"""Called each time a new word is found.
 		man -- current parser manager
 		event -- current event."""
-		man.forward(event)
+		if isinstance(event, CustomizeEvent) \
+		and isinstance(man.top(), event.cls) \
+		and event.matches(man.top()):
+			event.process(man.top())
+		else:
+			man.forward(event)
 
 	def isEmpty(self):
 		"""Test if the node is empty (and can be removed)."""
@@ -799,6 +830,7 @@ class Embedded(Node):
 class Block(Embedded):
 
 	def __init__(self, kind):
+		Embedded.__init__(self)
 		self.kind = kind
 		self.content = []
 
@@ -1015,6 +1047,10 @@ class Cell(Par):
 		if vspan:
 			self.setInfo(INFO_VSPAN, vspan)
 
+	def set_align(self, align):
+		"""Set the alignment of the cell."""
+		self.set_info(INFO_ALIGN, align)
+
 	def get_align(self):
 		return self.get_info(INFO_ALIGN, TAB_CENTER)
 
@@ -1094,7 +1130,7 @@ class Table(Container):
 		elif event.id is ID_NEW_ROW:
 			self.add(man, event.make().content[0])
 		else:
-			man.forward(event)
+			Container.onEvent(self, man, event)
 
 	def gen(self, gen):
 		gen.genTable(self)

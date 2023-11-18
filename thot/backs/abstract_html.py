@@ -530,12 +530,13 @@ class Generator(back.Generator):
 				else:
 					self.out.write('<td')
 				align = cell.getInfo(doc.INFO_ALIGN)
-				if not align or align == doc.TAB_LEFT:
-					pass
-				elif align == doc.TAB_RIGHT:
-					self.out.write(' align="right"')
-				else:
-					self.out.write(' align="center"')
+				if align is not None:
+					if align == doc.TAB_LEFT:
+						self.out.write(' align="left"')
+					elif align == doc.TAB_RIGHT:
+						self.out.write(' align="right"')
+					elif align == doc.TAB_CENTER:
+						self.out.write(' align="center"')
 				hspan = cell.getInfo(doc.INFO_HSPAN)
 				if hspan:
 					self.out.write(' colspan="' + str(hspan) + '"')

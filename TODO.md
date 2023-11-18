@@ -46,7 +46,7 @@ Basic : [Source](https://www.markdownguide.org/basic-syntax/)
 
 Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 	[ ] Support image link.
-	[ ] Support tables.
+	[x] Support tables.
 	[x] Support code with language.
 	[ ] Support for footnotes.
 	[ ] Support for header label.
