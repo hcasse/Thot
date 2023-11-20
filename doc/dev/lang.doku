@@ -1,0 +1,40 @@
+====== How to write a language ? ======
+
+A language provides support for internationalization when text need to be generated.
+For now, only the ''i18n.ID_CONTENT'', for naming a content section, is used
+but more will be added after.
+
+The module to support a language are stored in the ''langs/'' directory.
+Basically, it provides a unique function, ''getTranslator'', that returns
+a translator, an object with the following functions:
+
+  ? ''get''(//text//) : the //text// is the english text whose translation
+in the current language must be returned.
+
+The //text// is one of the **i18n.ID_**//XXX// constants among:
+
+  ? **ID_CONTENT** : name of the content section
+
+A simple way to build the dictionary is to use the class ''i18n.DicTranslator''
+that takes as parameter an associative table indexed by the ID constants
+and whose value is the translation.
+
+The example below shows the translation module for french:
+<code py>
+import i18n
+
+dict = {
+	i18n.CONTENT : "Sommaire"
+}
+
+def getTranslator(doc, lang):
+	return i18n.DictTranslator(dict)
+</code>
+
+To retrieve the module, the @(THOT) system looks at the language defined
+in the document or, if none is provided, to the locale of the system.
+The language identifiers are structured as a string of the form //MAJOR//_//MINOR//.
+The //MINOR// is an option. Whatever, first a modules named ''langs/''//MAJOR//_//MINOR//''.py''
+is first searched (this is the more precise case). If no matching module is found, then
+a module named ''langs/''//MAJOR//''.py'' is tested. In turn, if not found,
+an identity dictionary is used, causing the generated text to be in english.

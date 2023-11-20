@@ -2,14 +2,16 @@
 
 ## Application
 
+	[ ] Add a --clean option to clean generated filkes.
+	[ ] Allow thot-view to automatically open `index.EXT`.
 	[x] Add ``thot-view`` command.
 	[x] Add ``thot-gen`` command.  
-	[ ] Add a --clean option to clean generated filkes.
 	[x] Add ANSI colorization.
 	[o] Remove ``thot.py`` command.  
 
 ## Core
 
+	[ ] Replace use of TT by CODE.
 	[ ] Create a module `mathjax`.
 	[ ] Support for language local to a part of text.
 	[ ] Add more standard paragraph types (like blockquote, file, verse, etc).

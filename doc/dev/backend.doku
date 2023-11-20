@@ -1,0 +1,33 @@
+
+====== How to write a back-end ? ======
+
+@(THOT) is already delivered with several common back-ends (HTML,
+Latex, DocBook) but it may be useful to target other documentation
+formats. To achieve, you have basically to create a Python module
+in the ''backs'' directory and to generate an object inheriting
+from ''back.Generator'' class. 
+
+===== back.Generator class =====
+
+The ''back.Generator'' class provide several basic facilities to perform
+generation.
+
+First, basic attributes for generation are available.
+  ? doc : current document (object ''doc.Document'')
+  ? out : output stream to generate to (automatically opened according to the user configuration)
+
+According to the output language, several files may have to be generated
+or kept with the generated files. In @(THOT), these files are called
+friends files and, to ensure that the generated file could  be moved,
+must be relative to the main generated document. In addition, some
+friend files have to be copied in the target directory of the generation.
+
+The following methods allows to handle these friend files:
+  ? relocateFriendFile(path) : translate a friend path (relative to the main document)
+into a current-working directory path (useful to launch third-party commands)
+  ? getFriendFile(path) : if exists, get the friend path matching any file path
+
+
+===== List of customization methods =====
+
+===== Writing the back-end =====

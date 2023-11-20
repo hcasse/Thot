@@ -1,0 +1,166 @@
+====== Architecture ======
+
+@(THOT) is implemented in Python and, therefore, provides an object-based structure to describe the document. The module ''doc'' contains the classes
+of this description.
+
+The object are organised in four levels of objects:
+^ Identifier ^ Description ^
+| ''L_DOC'' | top-level object representing the document |
+| ''L_HEAD'' | level representing chapter, sections and so on (part of the plan) |
+| ''L_PAR'' | objects of this level includes paragraph and lists |
+| ''L_WORD'' | this level represents single words and also word-level formatting |
+
+The following sections will describe each interesting class.
+
+===== Basic Classes =====
+
+The ''Node'' class is the parent of any class representing a document part.
+
+It provides basic methods to support document building.
+
+  * ''setFileLine(file, line)'' -- records  file position of the current element
+(accessible by ''file'' and ''line'' attributes)
+  * ''onError(message)'' -- called when an error is found
+  * ''onWarning(message)'' -- called when a warning need to be displayed
+  * ''onInfo(message)'' -- displays an informative message to the user
+  * ''onEvent(event)'' -- document construction proceeds by raising events as the text is parsed (see Events section)
+  * ''isEmpty()'' -- return True if the item may be ignored or removed
+  * ''dump()'' -- produces an output of the node for debugging purpose
+  * ''clean()'' -- called to clean up the document (removing empty nodes for example)
+  * ''getHeaderLevel()'' -- if the node is an header, get the level (-1 else)
+  * ''genTitle(generator)'' -- generates the title plan part of the node
+  * ''gen(generator)'' -- generates the document content of the node
+  * ''setLabel(labl)'' -- associated a label with the node (if it supports it)
+
+The ''Container'' class is the base class of nodes that may contains a set of sub-nodes.
+
+The set of nodes is stored in an attribute called ''content''.
+
+The following methods are also defined:
+  * ''add(manager, item)'' -- add the item to the content and possibly fix the parser manager
+  * ''last()'' -- return the last item of the content
+  * ''dumpHead()'' -- called before dumping content (for debugging purpose only)
+  * ''getContent()'' -- return the content
+
+===== Word Level Classes =====
+
+A ''Word'' object represents raw text in the document:
+  * ''text'' -- attribute containing the text
+  * ''Word(text)'' -- creates a word with the given text
+
+An ''Image'' object allows to embed an image in the document:
+  * ''Image(path, [width], [height], [caption])'' -- create an image found
+at the given path that may be fixed according to the width and/or the height.
+
+The ''Glyph'' class allows to embed character not supported by the current
+charset encoding:
+  * ''Glyph(code)'' -- embeds a character whose Unicode encoding is passed
+
+A ''LineBreak'' object allows to include a forced line-break in the text.
+
+''Style'' class inherits from ''Container'' and may embeds other words
+where the style is applied to. The style is given as a string character
+(and may be subject to extensions) passed to its constructor:
+  * ''Style(style)'' -- constructor
+  
+Usual style strings includes 'bold', 'italic', 'underline', 'subscript',
+'superscript', 'monospace', 'deleted'.
+
+The container class ''FootNote'' allows to insert foot-note in the text
+that contains a paragraph content.
+
+A ''Link'' is also a word container that associates an URL reference
+to the contained words:
+  * ''Link(reference)''
+
+===== Paragraph Levels Classes =====
+
+All these classes are derivative of the ''Container'' as they may
+contain word-level objects.
+
+A paragraph is represented by a ''Par'' object that may only contains
+words.
+
+''Quote'' class represents a special kind quoted paragraphe and contains
+also only words. Quoted paragraph are indented according the level passed
+to its constructor (starting to 1).
+
+''Embedded'' class is the base class of extensions defined at the paragraph
+level. This is the case of dot including.
+
+A ''Block'' paragraph contains words that must be displayed as-is,
+without considering it contains formatting.
+
+''List'' objects allows to represent lists. It is defined by its depth
+(starting at 0)
+and its kind that may be one of ''ul'' (unordered list) or 'ol'
+(ordered list). ''List'' objects can only contains ''ListItem'' object that, in turns,
+may contain other paragraphs.
+  * ''List(kind, depth)'' -- constructor
+  * ''getItems()'' -- get list of items of the list.
+
+Table are represented by the ''Table'' class that is composed of
+''Row'' object that, in turn, contains ''Cell'' object (which are
+composed of words).
+  * ''Table.getRows()'' -- get the list of rows
+  * ''Rows(kind)'' -- row constructor
+  * ''Row.getCells()'' -- get list of cells
+  * ''Cell(kind, align span) -- cell constructor
+
+The ''Row'' and ''Cell'' kind may either ''TAB_NORMAL'', or ''TAB_HEADER''.
+The align gives alignment for the cell (''TAB_CENTER'', ''TAB_LEFT'' or ''TAB_RIGHT'')
+and the span informs about how many cell positions this cell is spanning.
+
+Finally, the ''HorizontalLine()'' display a full-width horizontal line
+(mainly for compatibility with dokuwiki front-end).
+
+===== Header Level Classes =====
+
+A ''Header'' object allows to represents a document section. They takes
+as constructor the header level (starting at 0). Lower is the level
+upper is the section in the document structure:
+  * ''Header(level)'' -- constructor
+  * ''getTitle()'' -- get the title words of the header
+  * ''genTitle()'' -- called to generate the section title
+  * ''genBody(generator)'' -- called to generate the body of the section
+  * ''getHeaderLevel()'' -- get the header level
+
+
+===== Document Level Classes =====
+
+The document is represented by an object of type ''Doc'' that contains
+header-level object as paragraph levels. Paragraph level objects
+found before the first header object are considered as part of the
+preamble of the text and displayed before the first header.
+
+Use of module may require special processing on the document before
+generation. This is done by providing to the document object whose
+base class is ''Feature'':
+  * ''prepare(generator)'' -- method called just before performing
+the generation.
+
+To add a feature, used the ''addFeature(feature)'' method of ''Doc''.
+
+
+===== Event Classes =====
+
+As the initial text document is parsed, found token raises events
+on the document object structure. Usually, the parser maintain a reference
+on the current object where events are passed primarily. This one use
+the event to create new objects, to pass them to its ancestor in
+the document tree or change the current object in the parser manager.
+
+The base class of events is ''Event'':
+  * ''Event(level, id)'' -- constructor with the level (one of ''L_XXX'' constant) and an identifier
+  * ''level'' -- current attribute level
+  * ''id'' -- current event identifier
+  * 'make()'' -- method called to generate the object tied to the event
+
+The following event classes exists:
+  * ''ObjectEvent(level, id, object)'' -- simple event to insert an object in the document tree,
+  * ''TypedEvent(level, id, type)'' -- used for object with a starting tag (whose type is the tag),
+  * ''CloseEvent(level, id, type)'' -- used for object with a closing tag (whose type is the tag),
+  * ''OpenStyleEvent(type)'' -- event for opening a style,
+  * ''CloseStyleEvent(type)'' -- event for closing a style,
+  * ''ItemEvent(type, level)'' -- event for a new item in a list,
+  * ''QuoteEvent(depth)'' -- event for finding a new quoted text.

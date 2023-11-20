@@ -1,0 +1,107 @@
+====== How to write a front-end module ? ======
+
+Front-end modules are very to usual modules and indeed, they are stored
+in the same directory. Yet, the difference stems in the fact that
+a front-end does not extend the current syntax with new tags but
+replaces the whole base syntax This enables switches from one front-end
+to another front-end without merging in an inconsistant way the tags
+of both languages.
+
+
+===== @(THOT) Parser Work =====
+
+As shown in the previous section, @(THOT) implements a two-level parser.
+When a text line is read, it is first tested with line matchers
+(to let work tag notation at line level like ''@use'' or ''@include''
+commands or as inclusion of external generator). Then, it is considered
+as usual text that may contain inside lightweight tags. Therefore, the
+line is looked for lightweight tags that will structure the line
+in plain text, special words, glyphs and opening-closing styles.
+
+That is why, to replace a front-end syntax by another one, we need
+to provide the full set of line and words matchers using the ''setSyntax()''
+method of manager. A front-end initialisation code will look like
+the following:
+
+<code python>
+__words__ = [
+	(process_word, WORD_RE),
+	...
+]
+
+__lindes__ = [
+	(process_Line, LINE_RE),
+	...
+]
+
+__syntax__ = True
+</code>
+
+Where //WORD_RE// and //LINE_RE// are regular expression to recognise, respectively, a word and a full line. //process_word// and //process_line// are functions to process, respectively, a word and a line. They must implements the following interface:
+<code python>
+def process(man, match):
+	...
+</code>
+
+''man'' is the parser manager and ''match'' the match object obtained
+by applying //WORD_RE// and //LINE_RE// to the processed text. The goal
+of thes functions is to record in the manager ''man'' the effect of
+the recognized text.
+
+In the case of //WORD_RE//, it is advised to use named sub-group if any
+using syntax ''(?<ID>...)''. To speed up the processing of words in a line,
+the word regular expression are combined together so that a group numbered
+//n// in the original regular expression will not match the group //n//
+of the match object. In the opposite, a group named //ID// can be retrieved
+whatever is the combination of regulare expressions.
+
+The ''__syntax__'' is used to inform @(THOT) that the module is not a simple module but a front-end module that will replace the previously used front-end syntax by the current one.
+
+
+===== Using Event to Generate the Document =====
+
+In @(THOT), the document is represented as a tree of its different
+parts from the top-level header through the paragraph words and style
+passing by lists, etc. During the analysis the @(THOT) parser maintains
+the root node of the document and the current processing node. Yet,
+the document tree building depends on text and tags found in the read file.
+They acts as event saying "ok, now, we start a new paragraph" or 
+"we are starting a new list item" while the manager current node is
+a word or is inside a styling area.
+
+It would have been too complex, useless or even have degraded the versatilty
+of @(THOT) to let the tag implementer modify the document tree. Instead,
+@(THOT) implements a system based on events letting the node organizing
+themselves. For example, if the current node of the manager is a word
+and a new paragraph tag is found: a paragraph node is created and passed
+back to the word node; as the word node does not know how to handle
+a paragraph, the event is passed upper until a node is found to handle
+it like a header. After this, the new current node of the manager becomes
+the new paragraph.
+
+The processor and the behaviour of the nodes depends on the passed message
+and on their current state. Some nodes are containers (class ''Container'')
+and will accept sub-nodes and some oher are not. When a node is a container,
+it may accept some sub-nodes depending on the level of the container
+and on the level of the added node. Current level are listed below
+in reverse importance order:
+  * ''L_DOC'' -- document level,
+  * ''L_HEAD'' -- header level (each ''Header'' has also an header level),
+  * ''L_PAR'' -- paragraph level,
+  * ''L_WORD'' -- word level.
+
+For each element of the document (plain text, lightweight tag for line
+or word), an event is issued on the manager to place it in the document
+tree. The event is passed to the manager with ''send'' method.
+
+The most common event is the one that creates a new object in the document,
+''doc.ObjectEvent'' that takes as parameter the level of the created object,
+an identifier and the created object itself. The identifier ''doc.NEW_ITEM''
+is often used in this case.
+
+To handle the switching effect of text style, the event ''doc.StyleEvent''
+may be used: if the style is already active, it will be closed. For
+styles with open and close tags, events ''doc.OpenStyleEvent'' and
+''doc.CloseStyleEvent'' are often used. ''doc.ItemEvent'' is used to
+insert a new list event (ordered or not) and ''doc.DefEvent'' is used
+for definition lists.
