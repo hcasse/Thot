@@ -70,7 +70,7 @@ Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
   [ ] Support for "wiki:" protocol.
   [ ] ``<html>`` ... ``</html>`` -- HTML embedding (``<php>`` ... ``</ph>`` -- currently, no meaning).
 
-## HTML Bakcend
+## HTML Backend
 
 	[ ] Provide standard HTML generator (jinja, mako).
 	[ ] Provide static website generator solution.

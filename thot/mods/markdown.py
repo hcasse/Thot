@@ -215,8 +215,8 @@ class TableHeaderEvent(doc.Event):
 
 class Row(doc.Row):
 
-	def __init__(self):
-		doc.Row.__init__(self, doc.TAB_NORMAL)
+	def __init__(self, kind):
+		doc.Row.__init__(self, kind)
 		self.table = None
 
 	def onEvent(self, man, event):
@@ -229,7 +229,7 @@ class Table(doc.Table):
 	def __init__(self):
 		doc.Table.__init__(self)
 		self.aligns = []
-		self.content.append(Row())
+		self.content.append(Row(doc.TAB_NORMAL))
 		self.content[-1].table = self
 
 	def onEvent(self, man, event):
@@ -307,6 +307,18 @@ def init(man):
 	man.defs = { }
 
 
+class Factory(doc.Factory):
+
+	def makePar(self):
+		return Par()
+
+	def makeTable(self):
+		return Table()
+
+	def makeRow(self, kind):
+		return Row(kind)
+
+
 __short__ = "syntax for MarkDown format"
 
 __description__ = \
@@ -318,8 +330,7 @@ A summary of the supported syntax is described below:
 
 __syntax__ = True
 
-def __make_par__():
-	return Par()
+__factory__ = Factory()
 
 __words__ = [
 	(handle_link,

@@ -175,11 +175,6 @@ __lines__ = [
 INITIAL_LINES = [(f, re.compile(e)) for (f, e, _) in __lines__]
 
 
-def default_par():
-	"""Default implementation to build a paragraph. Returns doc.Par()."""
-	return doc.Par()
-
-
 class LineParser:
 	"""Abstract class of line parser."""
 
@@ -226,7 +221,7 @@ class Syntax:
 
 class Manager:
 
-	def __init__(self, document, factory = doc.Factory(), mon = common.DEFAULT_MONITOR):
+	def __init__(self, document, mon = common.DEFAULT_MONITOR):
 		words_re = None
 		self.lines = INITIAL_LINES
 		self.words = INITIAL_WORDS
@@ -234,18 +229,21 @@ class Manager:
 		self.added_lines = []
 		self.added_words = []
 		self.used_mods = []
-		self.factory = factory
+		self.factory = doc.Factory()
 		self.line_num = None
 		self.file_name = None
 		self.reset(document)
 		self.mon = mon
 		self.info = {}
 		self.completers = []
-		self.make_par = default_par
 
 	def add_completer(self, completer):
 		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""
 		self.completers.append(completer)
+
+	def make_par(self):
+		"""Build a paragraph to be used in the document."""
+		return self.factory.makePar()
 
 	def set_info(self, id, info):
 		"""Store parsing information for third-party contributor."""
@@ -380,10 +378,9 @@ class Manager:
 		self.words.append(word)
 		self.words_re = None
 
-	def setSyntax(self, lines, words, make_par):
+	def setSyntax(self, lines, words):
 		"""Change the main syntax with the given list of line patterns
 		and the given list of word patterns."""
-		self.make_par = make_par
 
 		# process lines
 		self.lines = []
@@ -441,13 +438,13 @@ class Manager:
 					for s in mod.__syntaxes__:
 						lines = lines + s.get_lines()
 						words = words + s.get_words()
-				make_par = default_par
-				if "__make_par__" in mod.__dict__:
-					make_par = mod.__make_par__
+				try:
+					self.factory = mod.__factory__
+				except KeyError:
+					pass
 				self.setSyntax(
 					[(l[0], re.compile(l[1])) for l in lines],
-					[(w[0], w[1]) for w in words],
-					make_par)
+					[(w[0], w[1]) for w in words])
 			
 			# simple extension
 			else:
