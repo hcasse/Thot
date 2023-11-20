@@ -36,8 +36,8 @@ class DotBlock(doc.Block):
 		else:
 			self.kind = kind
 
-	def dumpHead(self, tab):
-		print("%sblock.dot(" % tab)
+	def dumpHead(self, out, tab):
+		out.write("%sblock.dot(\n" % tab)
 
 	def gen(self, gen):
 		global count

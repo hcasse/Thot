@@ -330,8 +330,8 @@ class CodeBlock(doc.Block):
 		self.line_number = line
 		man.doc.addFeature(FEATURE)
 
-	def dumpHead(self, tab):
-		print(tab + "code(" + self.lang + ",")
+	def dumpHead(self, out, tab):
+		out.write(tab + "code(" + self.lang + ",\n")
 
 	def gen(self, gen):
 

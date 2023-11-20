@@ -104,8 +104,8 @@ class FileBlock(doc.Block):
 	def __init__(self):
 		doc.Block.__init__(self, "file")
 
-	def dumpHead(self, tab):
-		print("%sblock.file(" % tab)
+	def dumpHead(self, out, tab):
+		out.write("%sblock.file(\n" % tab)
 
 	def gen(self, gen):
 		gen.genEmbeddedBegin(self)
@@ -135,8 +135,8 @@ class NonParsedBlock(doc.Block):
 	def __init__(self):
 		doc.Block.__init__(self, "raw")
 
-	def dumpHead(self, tab):
-		print("%sblock.nonparsed(" % tab)
+	def dumpHead(self, out, tab):
+		out.write("%sblock.nonparsed(\n" % tab)
 
 	def gen(self, gen):
 		gen.genEmbeddedBegin(self)

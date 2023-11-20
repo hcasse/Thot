@@ -10,7 +10,6 @@
 
 ## Core
 
-	[ ] Rewrite the dump system to support streams.
 	[ ] Create a module `mathjax`.
 	[ ] Support for language local to a part of text.
 	[ ] Add more standard paragraph types (like blockquote, file, verse, etc).
@@ -21,6 +20,7 @@
 	[ ] Highlight Python native solution if available (https://pygments.org/).
 	[ ] Use console throughout the code.
 	[ ] Make code non-interruptive except if very fatal case.
+	[x] Rewrite the dump system to support streams.
 	[x] Add option ``-u``/``--use`` __module__ -- to select externaly a module (like a front-end).
 
 
@@ -35,7 +35,7 @@
 ### Markdown
 
 Basic : [Source](https://www.markdownguide.org/basic-syntax/)
-	[x] `" "{2,}` for linbe break
+	[x] `" "{2,}` for line break
 	[x] `***|___` bold and italic
 	[x] `>` blockquote
 	[ ] `>` blockquote with other content
@@ -52,7 +52,8 @@ Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 	[ ] Support for footnotes.
 	[ ] Support for header label.
 	[ ] Support for header reference.
-	[ ] Support for definition list.
+	[x] Support for definition list.
+	[ ] Support multiple definitions for definition list.
 	[x] `~~...~~` Support for strike-through.
 	[ ] Support for task list.
 	[x] Emoji support.

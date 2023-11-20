@@ -227,7 +227,7 @@ def main():
 
 	# dump the parsed document
 	if options.dump:
-		document.dump("")
+		document.dump()
 
 	# list the syntax
 	elif options.list_syntax:

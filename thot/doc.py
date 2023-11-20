@@ -15,8 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import sys
 
 import thot.common as common
+
+INDENT = "  "
 
 # levels
 L_DOC=0
@@ -358,8 +361,8 @@ class Node(Info):
 		"""Test if the node is empty (and can be removed)."""
 		return False
 
-	def dump(self, tab = ""):
-		"""Provided a textual output of the node."""
+	def dump(self, out=sys.stdout, tab=""):
+		"""Output the given node to the output stream with tab indentation."""
 		pass
 
 	def clean(self):
@@ -465,14 +468,14 @@ class Container(Node):
 		for item in toremove:
 			self.content.remove(item)
 
-	def dumpHead(self, tab):
+	def dumpHead(self, out, tab):
 		pass
 
-	def dump(self, tab):
-		self.dumpHead(tab)
+	def dump(self, out=sys.stdout, tab=""):
+		self.dumpHead(out, tab)
 		for item in self.content:
-			item.dump(tab + "  ")
-		print(tab + ")")
+			item.dump(out, tab + INDENT)
+		out.write(tab + ")\n")
 
 	def getContent(self):
 		return self.content
@@ -505,8 +508,8 @@ class Word(Node):
 		Node.__init__(self)
 		self.text = text
 
-	def dump(self, tab):
-		print("%s%s" % (tab, self))
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("%s%s\n" % (tab, self))
 
 	def gen(self, gen):
 		gen.genText(self.text)
@@ -520,6 +523,7 @@ class Word(Node):
 	def toText(self):
 		return self.text
 
+
 class Ref(Node):
 	label = None
 	
@@ -527,8 +531,8 @@ class Ref(Node):
 		Node.__init__(self)
 		self.label = label
 	
-	def dump(self, tab):
-		print("%sref(%s)" % (tab, self.label))
+	def dump(self, out=sys.stdout, tab=""):
+		sys.write("%sref(%s)\n" % (tab, self.label))
 
 	def gen(self, gen):
 		gen.genRef(self)
@@ -538,6 +542,7 @@ class Ref(Node):
 
 	def visit(self, visitor):
 		visitor.onRef(self)
+
 
 class Tag(Node):
 	
@@ -553,8 +558,8 @@ class Tag(Node):
 		else:
 			gen.genText(self.tag)
 	
-	def dump(self, tab):
-		print("%stag(%s)" % (tab, self.tag))
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("%stag(%s)\n" % (tab, self.tag))
 	
 	def __str__(self):
 		return "tag(%d)" % self.tag
@@ -576,8 +581,8 @@ class Image(Node):
 		if caption:
 			self.set_caption(caption)
 
-	def dump(self, tab):
-		print("%simage(%s, %s, %s, %s)" % \
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("%simage(%s, %s, %s, %s)\n" % \
 			(tab, self.path, self.get_width(), self.get_height(), self.get_caption()))
 
 	def gen(self, gen):
@@ -597,8 +602,8 @@ class Glyph(Node):
 		Node.__init__(self)
 		self.code = code
 
-	def dump(self, tab):
-		print("%sglyph(%x)" % (tab, self.code))
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("%sglyph(%x)\n" % (tab, self.code))
 
 	def gen(self, gen):
 		gen.genGlyph(self.code)
@@ -613,8 +618,8 @@ class LineBreak(Node):
 	def __init__(self):
 		Node.__init__(self)
 
-	def dump(self, tab):
-		print("%sline-break" % tab)
+	def dump(self, out=sys.stdout, tab=""):
+		print("%sline-break\n" % tab)
 
 	def gen(self, gen):
 		gen.gen_line_break()
@@ -625,8 +630,8 @@ class LineBreak(Node):
 	def __init__(self):
 		Node.__init__(self)
 
-	def dump(self, tab):
-		print(tab + "linebreak")
+	def dump(self, out=sys.stdout, tab=""):
+		out.write(tab + "linebreak")
 
 	def gen(self, gen):
 		gen.genLineBreak()
@@ -653,8 +658,8 @@ class Style(Container):
 		else:
 			self.add(man, event.make_ext(man))
 
-	def dumpHead(self, tab):
-		print(tab + "style(" + self.style + ",")
+	def dumpHead(self, out, tab):
+		out.write(tab + "style(" + self.style + ",\n")
 
 	def gen(self, gen):
 		gen.genStyleBegin(self.style)
@@ -682,8 +687,8 @@ class OpenStyle(Container):
 		else:
 			raise Exception("closing style without opening")
 
-	def dumpHead(self, tab):
-		print(tab + "style(" + self.style + ",")
+	def dumpHead(self, out, tab):
+		out.write(tab + "style(" + self.style + ",\n")
 
 	def gen(self, gen):
 		gen.genStyleBegin(self.style)
@@ -712,11 +717,11 @@ class FootNote(OpenStyle):
 		self.ref = ref
 		self.id = id
 
-	def dumpHead(self, tab):
+	def dumpHead(self, out, tab):
 		if self.kind == FOOTNOTE_EMBED:
-			print('%sfootnote(' % tab)
+			out.write('%sfootnote(\n' % tab)
 		else:
-			print('%sfootnote#%s(' % (tab, self.ref))
+			out.write('%sfootnote#%s(\n' % (tab, self.ref))
 
 	def isEmpty(self):
 		return False
@@ -748,8 +753,8 @@ class Link(Container):
 		else:
 			self.add(man, event.make_ext(man))
 
-	def dumpHead(self, tab):
-		print("%slink(\"%s\"," % (tab, self.ref))
+	def dumpHead(self, out, tab):
+		out.write("%slink(\"%s\",\n" % (tab, self.ref))
 
 	def gen(self, gen):
 		gen.genLinkBegin(self.ref, self.title)
@@ -772,8 +777,8 @@ class Par(Container):
 		else:
 			man.forward(event)
 
-	def dumpHead(self, tab):
-		print(tab + "par(")
+	def dumpHead(self, out, tab):
+		out.write(tab + "par(\n")
 
 	def gen(self, gen):
 		gen.genParBegin()
@@ -802,8 +807,8 @@ class Quote(Par):
 		else:
 			Par.onEvent(self, man, event)
 
-	def dumpHead(self, tab):
-		print(tab + "quote:%d(" % self.depth)
+	def dumpHead(self, out, tab):
+		out.write(tab + "quote:%d(\n" % self.depth)
 
 	def gen(self, gen):
 		gen.genQuoteBegin(self.depth)
@@ -855,11 +860,11 @@ class Block(Embedded):
 	def add(self, line):
 		self.content.append(line)
 
-	def dump(self, tab):
-		self.dumpHead(tab)
+	def dump(self, out=sys.stdout, tab=""):
+		self.dumpHead(out, tab)
 		for line in self.content:
-			print(tab + "  " + line)
-		print(tab + ")")
+			out.write(tab + "  " + line + "\n")
+		out.write(tab + ")\n")
 
 	def isEmpty(self):
 		return False
@@ -890,11 +895,11 @@ class Figure(Block):
 		if caption:
 			self.set_caption(caption)
 
-	def dump(self, tab):
+	def dump(self, out=sys.stdout, tab=""):
 		caption = ""
 		if self.get_caption() is not None:
 			caption = self.get_caption().toText()
-		print("%sfigure(%s, %s)" % (tab, self.path, caption))
+		out.write("%sfigure(%s, %s)\n" % (tab, self.path, caption))
 
 	def gen(self, gen):
 		gen.genFigure(self.path, self, self.get_caption())
@@ -920,8 +925,8 @@ class ListItem(Container):
 		Container.__init__(self)
 		self.content.append(Par())
 
-	def dumpHead(self, tab):
-		print(tab + "item(")
+	def dumpHead(self,out,  tab):
+		out.write(tab + "item(\n")
 
 	def visit(self, visitor):
 		visitor.onListItem(self)
@@ -957,8 +962,8 @@ class List(Container):
 		else:
 			man.forward(event)
 
-	def dumpHead(self, tab):
-		print(tab + "list(" + self.kind + "," + str(self.depth) + ", ")
+	def dumpHead(self, out, tab):
+		out.write(tab + "list(" + self.kind + "," + str(self.depth) + ",\n")
 
 	def getItems(self):
 		"""Get the list of items in the list."""
@@ -987,10 +992,10 @@ class DefItem(Container):
 		"""Get the definition as a container of paragraph-level items."""
 		return self
 
-	def dumpHead(self, tab):
-		print(tab + "item(")
-		self.term.dump(tab + '  ')
-		print(tab + ',')
+	def dumpHead(self, out, tab):
+		out.write(tab + "item(\n")
+		self.term.dump(out, tab + INDENT)
+		out.write(tab + ',\n')
 
 	def visit(self, visitor):
 		visitor.onDefItem(self)
@@ -1026,8 +1031,8 @@ class DefList(Container):
 		"""Add a DefItem to the list."""
 		self.content.append(item)
 
-	def dumpHead(self, tab):
-		print(tab + "deflist(" + str(self.depth) + ", ")
+	def dumpHead(self, out, tab):
+		out.write(tab + "deflist(" + str(self.depth) + ",\n")
 
 	def getItems(self):
 		"""Get the list of items in the list."""
@@ -1080,7 +1085,7 @@ class Cell(Par):
 	def isEmpty(self):
 		return False
 
-	def dumpHead(self, tab):
+	def dumpHead(self, out, tab):
 		s = tab + 'cell(' + TABLE_KINDS[self.kind]
 		align = self.getInfo(INFO_ALIGN)
 		if align is not None:
@@ -1091,6 +1096,7 @@ class Cell(Par):
 		vspan = self.getInfo(INFO_VSPAN)
 		if vspan is not None:
 			s += ", vspan=%d" % vspan
+		out.write(s + "\n")
 
 	def gen(self, gen):
 		Container.gen(self, gen)
@@ -1125,8 +1131,8 @@ class Row(Container):
 	def isEmpty(self):
 		return False
 
-	def dumpHead(self, tab):
-		print(tab + 'row(')
+	def dumpHead(self, out, tab):
+		out.write(tab + 'row(\n')
 
 	def getCells(self):
 		"""Get the list of cells."""
@@ -1168,8 +1174,8 @@ class Table(Container):
 		"""Get the list of rows."""
 		return self.content
 
-	def dumpHead(self, tab):
-		print(tab + 'table(')
+	def dumpHead(self, out, tab):
+		out.write(tab + 'table(\n')
 
 	def visit(self, visitor):
 		visitor.onTable(self)
@@ -1191,8 +1197,8 @@ class HorizontalLine(Node):
 	def __init__(self):
 		Node.__init__(self)
 
-	def dump(self, tab):
-		print("%shorizontal-line()" % tab)
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("%shorizontal-line()\n" % tab)
 
 	def gen(self, gen):
 		gen.genHorizontalLine()
@@ -1232,11 +1238,11 @@ class Header(Container):
 		else:
 			self.add(man, event.make_ext(man))
 
-	def dumpHead(self, tab):
-		print(tab + "header" + str(self.header_level) + "(")
-		print(tab + "  title(")
-		self.title.dump(tab + "    ")
-		print(tab + "  )")
+	def dumpHead(self, out, tab):
+		out.write(tab + "header" + str(self.header_level) + "(\n")
+		out.write(tab + "  title(\n")
+		self.title.dump(out, tab + INDENT)
+		out.write(tab + "  )\n")
 
 	def isEmpty(self):
 		return False
@@ -1358,10 +1364,10 @@ class Document(Container):
 	def setVar(self, name, val):
 		self.env.set(name, val)
 
-	def dumpHead(self, tab = ""):
+	def dumpHead(self, out, tab):
 		for k in iter(self.env):
-			print(k + "=" + self.env[k])
-		print(tab + "document(")
+			out.write(k + "=" + self.env[k] + "\n")
+		out.write(tab + "document(\n")
 
 	def addFeature(self, feature):
 		"""Add a feature to the document."""

@@ -272,8 +272,8 @@ class BlockQuote(doc.Par):
 	def __init__(self):
 		doc.Par.__init__(self)
 
-	def dumpHead(self, tab):
-		print("%stextile.blockquote(" % tab)
+	def dumpHead(self, out, tab):
+		out.write("%stextile.blockquote(\n" % tab)
 
 	def gen(self, gen):
 		gen.genEmbeddedBegin(self)

@@ -440,7 +440,7 @@ class Manager:
 						words = words + s.get_words()
 				try:
 					self.factory = mod.__factory__
-				except KeyError:
+				except AttributeError:
 					pass
 				self.setSyntax(
 					[(l[0], re.compile(l[1])) for l in lines],

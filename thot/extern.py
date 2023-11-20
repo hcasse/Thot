@@ -124,8 +124,8 @@ class ExternalBlock(doc.Block):
 			self.path = gen.new_resource('extern/%s-%s%s' % (self.meta.name, self.new_num(), self.meta.ext))
 		return self.path
 
-	def dumpHead(self, tab):
-		print("%sblock.%s(" % (tab, self.meta.name))
+	def dumpHead(self, out, tab):
+		out.write("%sblock.%s(\n" % (tab, self.meta.name))
 
 	def make_options(self, opts, input):
 		"""Prepare the options: must return a string sequence."""

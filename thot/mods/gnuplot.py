@@ -36,8 +36,8 @@ class GnuPlotBlock(doc.Block):
 		self.w = w
 		self.h = h
 
-	def dumpHead(self, tab):
-		print("%sblock.gnuplot(" % tab)
+	def dumpHead(self, out, tab):
+		out.write("%sblock.gnuplot(\n" % tab)
 
 	def gen(self, gen):
 		

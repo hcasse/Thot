@@ -218,7 +218,6 @@ class DocResource(Resource, ahtml.PageHandler):
 			self.title = doc.Par([doc.Word(title)])
 
 		# find base level
-		#self.node.dump('')
 		self.base_level = 10;
 		for c in self.node.content:
 			if isinstance(c, doc.Header):

@@ -72,8 +72,8 @@ class MathWord(doc.Word):
 		doc.Word.__init__(self, text)
 		self.builder = builder
 
-	def dump(self, tab = ""):
-		print("%slatexmath(%s)" % (tab, self.text))
+	def dump(self, out=sys.stdout, tab = ""):
+		out.write("%slatexmath(%s)\n" % (tab, self.text))
 
 	def gen(self, gen):
 		if gen.getType() == "latex":
@@ -90,8 +90,8 @@ class MathBlock(doc.Block):
 		self.builder = builder
 		#man.doc.addFeature(FEATURE)
 
-	def dumpHead(self, tab):
-		print(tab + "eq(" + self.lang + ",")
+	def dumpHead(self, out, tab):
+		out.write(tab + "eq(" + self.lang + ",\n")
 	
 	def kind(self):
 		return "equation"
