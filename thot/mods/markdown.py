@@ -78,7 +78,7 @@ def handle_html(man, match):
 	man.warn("Markdown  HTML inclusion is not supported.")
 
 def handle_new_par(man, match):
-	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_END, doc.Par()))
+	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_END, Par()))
 
 def handle_head_under(man, match, level, hrule):
 	while man.top().getHeaderLevel() < 0:
@@ -183,7 +183,7 @@ def handle_backtrick(man, match):
 def handle_image(man, match):
 	alttext = match.group("alttext_img")
 	id = man.fix_path(match.group("id_img"))
-	caption = doc.Par()
+	caption = Par()
 	caption.append(doc.Word(alttext))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
 		doc.Image(id, None, None, caption)))
@@ -205,29 +205,53 @@ def handle_line_break(man, match):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.LineBreak()))
 
 
-class HeaderRowEvent(doc.CustomizeEvent):
+ID_TABLE_HEADER = "table-header"
 
-	def __init__(self, aligns = None):
-		doc.CustomizeEvent.__init__(self, doc.Table, doc.L_PAR)
+class TableHeaderEvent(doc.Event):
+
+	def __init__(self, aligns):
+		doc.Event.__init__(self, doc.L_PAR, ID_TABLE_HEADER)
 		self.aligns = aligns
 
-	def process(self, table):
-		if self.aligns is not None:
-			self.table = table
-			table.on_complete = self.on_complete
-		for row in table.content:
-			row.kind = doc.TAB_HEADER
-			for cell in row.content:
-				cell.kind = doc.TAB_HEADER 
+class Row(doc.Row):
 
-	def on_complete(self):
-		for row in self.table.content:
-			for i in range(0, min(len(row.content), len(self.aligns))):
-				cell = row.content[i]
-				align = self.aligns[i]
-				if cell.kind != doc.TAB_HEADER and align is not None:
-					cell.set_align(align)
+	def __init__(self):
+		doc.Row.__init__(self, doc.TAB_NORMAL)
+		self.table = None
+
+	def onEvent(self, man, event):
+		doc.Row.onEvent(self, man, event)
+		if event.id is doc.ID_NEW_CELL:
+			self.table.set_align(len(self.content) - 1, self.content[-1])
 		
+class Table(doc.Table):
+
+	def __init__(self):
+		doc.Table.__init__(self)
+		self.aligns = []
+		self.content.append(Row())
+		self.content[-1].table = self
+
+	def onEvent(self, man, event):
+		if event.id is ID_TABLE_HEADER:
+			self.aligns = event.aligns
+			self.update_headers()
+		else:
+			doc.Table.onEvent(self, man, event)
+			if event.id is doc.ID_NEW_ROW:
+				self.content[-1].table = self
+
+	def update_headers(self):
+		for row in self.content:
+			row.kind = doc.TAB_HEADER
+			for i in range(0, len(row.content)):
+				row.content[i].kind = doc.TAB_HEADER
+				self.set_align(i, row.content[i])
+
+	def set_align(self, i, cell):
+		if i < len(self.aligns) and self.aligns[i] != None:
+			cell.set_align(self.aligns[i])
+			
 
 def handle_table_header(man, match):
 	aligns = []
@@ -242,13 +266,11 @@ def handle_table_header(man, match):
 		else:
 			align = None
 		aligns.append(align)
-	man.send(HeaderRowEvent(aligns))
-	
+	man.send(TableHeaderEvent(aligns))
+
 
 def handle_row(man, match):
-	table = doc.Table()
-	row = doc.Row(doc.TAB_NORMAL)
-	table.content.append(row)
+	table = Table()
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_ROW, table))
 	content = match.group(1).split('|')
 	i = 0
@@ -262,6 +284,24 @@ def handle_row(man, match):
 		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_CELL, doc.Cell(doc.TAB_NORMAL)))
 		tparser.handleText(man, item)
 
+ID_MAKE_DEF = "make-event"
+
+class Par(doc.Par):
+
+	def __init__(self):
+		doc.Par.__init__(self)
+
+	def onEvent(self, man, event):
+		if event.id == ID_MAKE_DEF:
+			man.send(doc.DefEvent(doc.ID_NEW_DEF))
+			self.move_content(man.top().last().term)
+			man.send(doc.DefEvent(doc.ID_END_TERM))
+		else:
+			doc.Par.onEvent(self, man, event)
+
+def handle_def(man, match):
+	man.send(doc.Event(doc.L_PAR, ID_MAKE_DEF))
+	man.parse_text(match.group(1))
 
 def init(man):
 	man.defs = { }
@@ -277,6 +317,9 @@ A summary of the supported syntax is described below:
 """
 
 __syntax__ = True
+
+def __make_par__():
+	return Par()
 
 __words__ = [
 	(handle_link,
@@ -400,5 +443,9 @@ __lines__ = [
 
 	(handle_row,
 		"^\s*\|(([^\\\\]|(\\\\.))*)\|\s*$",
-		"""table definition""")
+		"""table definition"""),
+
+	(handle_def,
+		"^:(.*)$",
+		"list of definitions")
 ]

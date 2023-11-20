@@ -142,6 +142,11 @@ class Event:
 		"""Make an object matching the event."""
 		return None
 
+	def make_ext(self, man):
+		"""Extended version of make() to support manager as argument.
+		Default implemtation call simply make()."""
+		return self.make()
+
 	def __str__(self):
 		return "event(" + LEVELS[self.level] + ", " + self.id + ")"
 
@@ -226,8 +231,10 @@ class DefEvent(Event):
 		Event.__init__(self, L_PAR, id)
 		self.depth = depth
 	
-	def make(self):
-		return DefList(self.depth)
+	def make_ext(self, man):
+		list = DefList(self.depth)
+		list.content.append(DefItem(man.make_par(), man.make_par()))
+		return list
 
 
 class QuoteEvent(Event):
@@ -248,9 +255,8 @@ class CustomizeEvent(Event):
 	is applied to the first found object of the given type if the
 	match function returns true."""
 
-	def __init__(self, cls, level, id = ID_CUSTOMIZE):
+	def __init__(self, level, id = ID_CUSTOMIZE):
 		Event.__init__(self, level, id)
-		self.cls = cls
 
 	def matches(self, object):
 		"""Called to check if the given object matches.
@@ -310,13 +316,12 @@ class Node(Info):
 	"""Base definition of document nodes.
 
 	Each time an event is passed to the Node tree, the function onEvent()
-	is called. In addition, the attribute on_complete may be defined as
-	a function that is called the node is popped from the parser."""
+	is called."""
 	file = None
 	line = None
 	
 	def __init__(self):
-		self.on_complete = None
+		pass
 
 	def setFileLine(self, file, line):
 		"""Set file/line information corresponding to the node."""
@@ -344,9 +349,7 @@ class Node(Info):
 		"""Called each time a new word is found.
 		man -- current parser manager
 		event -- current event."""
-		if isinstance(event, CustomizeEvent) \
-		and isinstance(man.top(), event.cls) \
-		and event.matches(man.top()):
+		if isinstance(event, CustomizeEvent) and event.matches(man.top()):
 			event.process(man.top())
 		else:
 			man.forward(event)
@@ -435,7 +438,7 @@ class Container(Node):
 			self.content = []
 
 	def add(self, man, item):
-		if item:
+		if item is not None:
 			self.content.append(item)
 			man.push(item)
 
@@ -483,6 +486,15 @@ class Container(Node):
 		for item in self.content:
 			r = r + item.toText()
 		return r
+
+	def clear(self):
+		"""Clear all items of the container."""
+		self.content = []
+
+	def move_content(self, target):
+		"""Move target from on container to target container."""
+		target.content = self.content
+		self.content = []
 
 
 # Word family
@@ -635,11 +647,11 @@ class Style(Container):
 		if event.level is not L_WORD:
 			man.forward(event)
 		elif event.id is not ID_NEW_STYLE:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 		elif event.type == self.style:
 			man.pop()
 		else:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 
 	def dumpHead(self, tab):
 		print(tab + "style(" + self.style + ",")
@@ -664,7 +676,7 @@ class OpenStyle(Container):
 		if event.level is not L_WORD:
 			man.forward(event)
 		elif event.id is not ID_END_STYLE:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 		elif event.type == self.style:
 			man.pop()
 		else:
@@ -734,7 +746,7 @@ class Link(Container):
 		elif event.id is ID_END_LINK:
 			man.pop()
 		else:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 
 	def dumpHead(self, tab):
 		print("%slink(\"%s\"," % (tab, self.ref))
@@ -756,9 +768,7 @@ class Par(Container):
 
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
-			self.add(man, event.make())
-		#elif event.level is L_PAR and event.id is ID_END:
-		#	man.pop()
+			self.add(man, event.make_ext(man))
 		else:
 			man.forward(event)
 
@@ -881,8 +891,10 @@ class Figure(Block):
 			self.set_caption(caption)
 
 	def dump(self, tab):
-		print("%figure(%s, %s)" % \
-			(tab, self.path, self.get_caption().toText()))
+		caption = ""
+		if self.get_caption() is not None:
+			caption = self.get_caption().toText()
+		print("%sfigure(%s, %s)" % (tab, self.path, caption))
 
 	def gen(self, gen):
 		gen.genFigure(self.path, self, self.get_caption())
@@ -929,13 +941,13 @@ class List(Container):
 		if event.level is L_WORD:
 			if self.isEmpty():
 				self.content.append(ListItem())
-				self.last().content.append(Par())
-			self.last().last().add(man, event.make())
+				self.last().content.append(man.make_par())
+			self.last().last().add(man, event.make_ext(man))
 		elif event.id is ID_NEW_ITEM:
 			if event.depth < self.depth:
 				man.forward(event)
 			elif event.depth > self.depth:
-				self.last().add(man, event.make())
+				self.last().add(man, event.make_ext(man))
 			elif self.kind == event.type:
 				self.content.append(ListItem())
 			else:
@@ -962,10 +974,10 @@ class List(Container):
 class DefItem(Container):
 	"""Description of a definition list item."""
 
-	def __init__(self):
+	def __init__(self, term, content):
 		Container.__init__(self)
-		self.term = Par()
-		self.content.append(Par())
+		self.term = term
+		self.content.append(content)
 
 	def get_term(self):
 		"""Get the defined term as a container of text-level items."""
@@ -976,7 +988,9 @@ class DefItem(Container):
 		return self
 
 	def dumpHead(self, tab):
-		print(tab + "item(" + self.term + ", ")
+		print(tab + "item(")
+		self.term.dump(tab + '  ')
+		print(tab + ',')
 
 	def visit(self, visitor):
 		visitor.onDefItem(self)
@@ -989,7 +1003,6 @@ class DefList(Container):
 	def __init__(self, depth):
 		Container.__init__(self)
 		self.depth = depth
-		self.content.append(DefItem())
 
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
@@ -1001,13 +1014,17 @@ class DefList(Container):
 			if event.depth < self.depth:
 				man.forward(event)
 			elif event.depth > self.depth:
-				self.last().add(man, event.make())
+				self.last().add(man, event.make_ext(man))
 			else:
-				self.content.append(DefItem())
+				self.add_item(DefItem(man.make_par(), man.make_par()))
 		elif event.id is ID_END_DEF:
 			man.pop()
 		else:
 			man.forward(event)
+
+	def add_item(self, item):
+		"""Add a DefItem to the list."""
+		self.content.append(item)
 
 	def dumpHead(self, tab):
 		print(tab + "deflist(" + str(self.depth) + ", ")
@@ -1064,7 +1081,16 @@ class Cell(Par):
 		return False
 
 	def dumpHead(self, tab):
-		print(tab + 'cell(' + TABLE_KINDS[self.kind] + ', ' + TABLE_ALIGNS[self.align + 1] + ', ' + str(self.span) + ',')
+		s = tab + 'cell(' + TABLE_KINDS[self.kind]
+		align = self.getInfo(INFO_ALIGN)
+		if align is not None:
+			s += ", align=%s" % TABLE_ALIGNS[align + 1]
+		hspan = self.getInfo(INFO_HSPAN)
+		if hspan is not None:
+			s += ", hspan=%d" % hspan
+		vspan = self.getInfo(INFO_VSPAN)
+		if vspan is not None:
+			s += ", vspan=%d" % vspan
 
 	def gen(self, gen):
 		Container.gen(self, gen)
@@ -1082,7 +1108,7 @@ class Row(Container):
 
 	def onEvent(self, man, event):
 		if event.id is ID_NEW_CELL:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 		elif event.id is ID_END_CELL:
 			pass
 		elif event.id is ID_END_ROW:
@@ -1128,7 +1154,7 @@ class Table(Container):
 			man.push(self.content[0])
 			man.send(event)
 		elif event.id is ID_NEW_ROW:
-			self.add(man, event.make().content[0])
+			self.add(man, event.make_ext(man).content[0])
 		else:
 			Container.onEvent(self, man, event)
 
@@ -1191,12 +1217,12 @@ class Header(Container):
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
 			if self.do_title:
-				self.title.add(man, event.make())
+				self.title.add(man, event.make_ext(man))
 			else:
-				self.add(man, Par())
+				self.add(man, man.make_par())
 				man.send(event)
 		elif event.level is L_PAR:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 		elif event.level is not L_HEAD:
 			man.forward(event)
 		elif event.id is ID_TITLE:
@@ -1204,7 +1230,7 @@ class Header(Container):
 		elif event.object.header_level <= self.header_level:
 			man.forward(event)
 		else:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 
 	def dumpHead(self, tab):
 		print(tab + "header" + str(self.header_level) + "(")
@@ -1312,12 +1338,12 @@ class Document(Container):
 	
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
-			self.add(man, Par())
+			self.add(man, man.make_par())
 			man.send(event)
 		elif event.level is L_DOC and event.id is ID_END:
 			pass
 		else:
-			self.add(man, event.make())
+			self.add(man, event.make_ext(man))
 
 	def reduceVars(self, text):
 		"""Reduce variables in the given text.

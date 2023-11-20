@@ -132,7 +132,7 @@ def handleInclude(man, match):
 		man.error('cannot include "%s": %s',  path, e)
 
 def handleCaption(man, match):
-	par = doc.Par()
+	par = man.make_par()
 	man.push(par)
 	man.getParser().parse(man, match.group(1))
 	while par != man.get():
@@ -174,23 +174,10 @@ __lines__ = [
 ]
 INITIAL_LINES = [(f, re.compile(e)) for (f, e, _) in __lines__]
 
-class Syntax:
-	"""Base class of all syntaxes added to the parser."""
-	
-	def get_doc(self):
-		"""Get the documentation for the syntax, a sequence of pairs
-		(RE, description) where RE is a pseudo-regular expression
-		describing the syntax and description is the descritpion of the
-		syntax (possibly multi-line)."""
-		return [("", "")]
 
-	def get_lines(self):
-		"""Get the pairs (function, RE) to parse lines."""
-		return []
-	
-	def get_words(self):
-		"""Get the pairs (function, RE) to parse words."""
-		return []
+def default_par():
+	"""Default implementation to build a paragraph. Returns doc.Par()."""
+	return doc.Par()
 
 
 class LineParser:
@@ -218,6 +205,25 @@ class DefaultParser(LineParser):
 			handleText(handler, line)
 
 
+class Syntax:
+	"""Base class of all syntaxes added to the parser."""
+
+	def get_doc(self):
+		"""Get the documentation for the syntax, a sequence of pairs
+		(RE, description) where RE is a pseudo-regular expression
+		describing the syntax and description is the descritpion of the
+		syntax (possibly multi-line)."""
+		return [("", "")]
+
+	def get_lines(self):
+		"""Get the pairs (function, RE) to parse lines."""
+		return []
+
+	def get_words(self):
+		"""Get the pairs (function, RE) to parse words."""
+		return []
+
+
 class Manager:
 
 	def __init__(self, document, factory = doc.Factory(), mon = common.DEFAULT_MONITOR):
@@ -235,6 +241,7 @@ class Manager:
 		self.mon = mon
 		self.info = {}
 		self.completers = []
+		self.make_par = default_par
 
 	def add_completer(self, completer):
 		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""
@@ -298,8 +305,6 @@ class Manager:
 			self.debug("stack = %s" % self.items)
 
 	def pop(self):
-		if self.item.on_complete is not None:
-			self.item.on_complete()
 		self.item = self.items.pop()
 		if DEBUG:
 			self.debug("pop(): %s" % self.item)
@@ -375,9 +380,10 @@ class Manager:
 		self.words.append(word)
 		self.words_re = None
 
-	def setSyntax(self, lines, words):
+	def setSyntax(self, lines, words, make_par):
 		"""Change the main syntax with the given list of line patterns
 		and the given list of word patterns."""
+		self.make_par = make_par
 
 		# process lines
 		self.lines = []
@@ -435,9 +441,13 @@ class Manager:
 					for s in mod.__syntaxes__:
 						lines = lines + s.get_lines()
 						words = words + s.get_words()
+				make_par = default_par
+				if "__make_par__" in mod.__dict__:
+					make_par = mod.__make_par__
 				self.setSyntax(
 					[(l[0], re.compile(l[1])) for l in lines],
-					[(w[0], w[1]) for w in words])
+					[(w[0], w[1]) for w in words],
+					make_par)
 			
 			# simple extension
 			else:
@@ -465,6 +475,15 @@ class Manager:
 		else:
 			rpath = os.path.join(os.path.dirname(self.file_name), path)
 		return rpath
+
+	def parse_text(self, text):
+		"""Perform parsing of the given text without considering to match
+		them with lines."""
+		handleText(self, text)
+
+	def parse_line(self, line):
+		"""Parse the given line as usual text line."""
+		self.parser.parse(self, line)
 
 
 class BlockParser(LineParser):

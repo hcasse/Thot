@@ -220,6 +220,12 @@ And a non-existing emoji :coucou:.
 | Paragraph   | Text        | And more      |
 
 
+# Definitions
 
+First Term
+: This is the definition of the first term.
 
+Second Term
+: This is one definition of the second term.
+DEBUG: : This is another definition of the second term.
 

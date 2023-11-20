@@ -10,6 +10,7 @@
 
 ## Core
 
+	[ ] Rewrite the dump system to support streams.
 	[ ] Create a module `mathjax`.
 	[ ] Support for language local to a part of text.
 	[ ] Add more standard paragraph types (like blockquote, file, verse, etc).
