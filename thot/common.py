@@ -538,3 +538,5 @@ DEFAULT_MONITOR = Monitor()
 def get_data():
 	"""Return data directory for Thot application."""
 	return os.path.join(os.path.dirname(__file__), "data")
+
+

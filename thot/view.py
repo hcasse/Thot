@@ -414,6 +414,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		self.wfile.write(text)
 
 	def do_GET(self):
+		self.server.record_heartbeat()
 		path = unquote(self.path)
 		self.server.mon.say("GET " + path)
 		try:
@@ -434,6 +435,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		file.generate(self)
 
 	def do_POST(self):
+		self.server.record_heartbeat()
 		path = unquote(self.path)
 
 		# find the resource

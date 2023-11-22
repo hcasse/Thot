@@ -18,10 +18,10 @@
 	[ ] Add inclusion from shell with syntax like @{command line}.
 	[ ] Proposes alternatives to ``highlight``.
  	[ ] Use monitor every to produce errors.
-	[ ] Share the parser extension list ( `thot.view` ) with other modules in `thot.tparser`.
 	[ ] Highlight Python native solution if available (https://pygments.org/).
 	[ ] Use console throughout the code.
 	[ ] Make code non-interruptive except if very fatal case.
+	[x] Share the parser extension list ( `thot.view` ) with other modules in `thot.tparser`.
 	[x] Rewrite the dump system to support streams.
 	[x] Add option ``-u``/``--use`` __module__ -- to select externaly a module (like a front-end).
 

@@ -2,7 +2,6 @@
 @AUTHORS=H. Cassé <hugues.casse@laposte.net>
 @VERSION=0.1
 @LANG=en_EN
-@use markdown
 
 First paragraph.
 

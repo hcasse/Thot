@@ -55,7 +55,7 @@ STYLES = {
 	doc.STYLE_UNDERLINE: 	('<u>', '</u>'),
 	doc.STYLE_SUBSCRIPT: 	('<sub>', '</sub>'),
 	doc.STYLE_SUPERSCRIPT: 	('<sup>', '</sup>'),
-	doc.STYLE_MONOSPACE: 	('<tt>', '</tt>'),
+	doc.STYLE_MONOSPACE: 	('<code>', '</code>'),
 	doc.STYLE_STRIKE: 		('<strike>', '</strike>'),
 	doc.STYLE_BIGGER:		('<big>', '</big>'),
 	doc.STYLE_SMALLER:		('<small>', '</small>'),
