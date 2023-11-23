@@ -235,8 +235,8 @@ class DefEvent(Event):
 		self.depth = depth
 	
 	def make_ext(self, man):
-		list = DefList(self.depth)
-		list.content.append(DefItem(man.make_par(), man.make_par()))
+		list = man.factory.makeDefList(self.depth)
+		list.add_item(man.factory.makeDefItem())
 		return list
 
 
@@ -365,10 +365,6 @@ class Node(Info):
 		"""Output the given node to the output stream with tab indentation."""
 		pass
 
-	def clean(self):
-		"""Cleanup the node: remove all nodes an dsub-nodes not required."""
-		pass
-
 	def getHeaderLevel(self):
 		"""For a header node, get the level."""
 		return -1
@@ -428,6 +424,17 @@ class Node(Info):
 		"""Test if the node accepts caption (default return False)."""
 		return False
 
+	def complete(self):
+		"""Called when the node is popped from the document stack."""
+		pass
+
+	def aggregate(self, man, node):
+		"""Called by the container when it adds a new node after the
+		current one to let, for example, lists to aggregates.
+		Must return True is aggregation arises. This function is
+		allowed to update the stack."""
+		return False
+
 
 class Container(Node):
 	"""A container is an item containing other items."""
@@ -440,10 +447,21 @@ class Container(Node):
 		else:
 			self.content = []
 
+	def check_last(self):
+		if self.content != [] and self.content[-1].isEmpty():
+			del self.content[-1]		
+
 	def add(self, man, item):
+		self.check_last()
+		if self.content != []:
+			if self.content[-1].aggregate(man, item):
+				return
 		if item is not None:
 			self.content.append(item)
 			man.push(item)
+
+	def complete(self):
+		self.check_last()
 
 	def remove(self, item):
 		"""Remove an item from the container."""
@@ -458,15 +476,6 @@ class Container(Node):
 
 	def isEmpty(self):
 		return self.content == []
-
-	def clean(self):
-		toremove = []
-		for item in self.content:
-			item.clean()
-			if item.isEmpty():
-				toremove.append(item)
-		for item in toremove:
-			self.content.remove(item)
 
 	def dumpHead(self, out, tab):
 		pass
@@ -976,29 +985,48 @@ class List(Container):
 		visitor.onList(self)
 
 
-class DefItem(Container):
+class DefItem(Node):
 	"""Description of a definition list item."""
 
-	def __init__(self, term, content):
+	def __init__(self, term, body):
 		Container.__init__(self)
 		self.term = term
-		self.content.append(content)
+		self.body = body
 
 	def get_term(self):
 		"""Get the defined term as a container of text-level items."""
 		return self.term
-		
-	def get_def(self):
-		"""Get the definition as a container of paragraph-level items."""
-		return self
 
-	def dumpHead(self, out, tab):
+	def get_body(self):
+		"""Get the body of the definition."""
+		return self.body
+
+	def get_def(self):
+		"""Deprecated."""
+		return self.get_body()
+		
+	def dump(self, out=sys.stdout, tab=""):
 		out.write(tab + "item(\n")
 		self.term.dump(out, tab + INDENT)
 		out.write(tab + ',\n')
+		self.body.dump(out, tab + INDENT)
+		out.write(tab + ')\n')		
 
 	def visit(self, visitor):
 		visitor.onDefItem(self)
+
+	def isEmpty(self):
+		return False
+
+	def gen_term(self, gen):
+		"""Generate the definition term content."""
+		for item in self.term.getContent():
+			item.gen(gen)
+
+	def gen_body(self, gen):
+		"""Generate the definition body content."""
+		for item in self.body.getContent():
+			item.gen(gen)
 
 
 class DefList(Container):
@@ -1014,14 +1042,16 @@ class DefList(Container):
 			man.push(self.last().get_term())
 			man.send(event)
 		elif event.id is ID_END_TERM:
-			man.push(self.last().last())
+			man.push(self.last().get_body())
 		elif event.id is ID_NEW_DEF:
 			if event.depth < self.depth:
 				man.forward(event)
 			elif event.depth > self.depth:
 				self.last().add(man, event.make_ext(man))
 			else:
-				self.add_item(DefItem(man.make_par(), man.make_par()))
+				item = man.factory.makeDefItem()
+				self.add_item(item)
+				man.push(item.get_term())
 		elif event.id is ID_END_DEF:
 			man.pop()
 		else:
@@ -1497,9 +1527,13 @@ class Factory:
 		"""Build a new definition list."""
 		return DefList(depth)
 
-	def makeDefItem(self):
+	def makeDefItem(self, term = None, body = None):
 		"""Build a definition list item."""
-		return DefItem()
+		if term == None:
+			term = self.makePar()
+		if body == None:
+			body = self.makePar()
+		return DefItem(term, body)
 	
 	def makeTable(self):
 		"""Build a new table."""

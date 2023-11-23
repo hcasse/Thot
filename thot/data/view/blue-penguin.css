@@ -110,6 +110,16 @@ table, th, td {
 	padding: 4px;
 }
 
+dd {
+	padding-left: 1em;
+	border-left: 2px solid #15A9DB;
+}
+
+th {
+	background-color: #15A9DB;
+	color: white;
+}
+
 thead {
 	border-bottom: 1px solid black;
 }

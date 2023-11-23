@@ -270,6 +270,17 @@ class Generator(back.Generator):
 	def genLineBreak(self):
 		pass
 
+	def genDefList(self, defs):
+		self.out.write("<variablelist>")
+		for item in defs.getContent():
+			self.out.write("<varlistentry><term>")
+			item.gen_term(self)
+			self.out.write("</term><listitem>")
+			item.get_body().gen(self)
+			self.out.write("</listitem></varlistentry>")
+		self.out.write("</variablelist>")
+		
+
 def output(doc):
 	gen = Generator(doc)
 	gen.run()

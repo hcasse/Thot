@@ -303,6 +303,7 @@ class Manager:
 			self.debug("stack = %s" % self.items)
 
 	def pop(self):
+		self.item.complete()
 		self.item = self.items.pop()
 		if DEBUG:
 			self.debug("pop(): %s" % self.item)
@@ -360,7 +361,6 @@ class Manager:
 				# perform the parse
 				self.parseInternal(file, name)
 				self.send(doc.Event(doc.L_DOC, doc.ID_END))
-				self.doc.clean()
 				for completer in self.completers:
 					completer(self)
 
@@ -472,6 +472,13 @@ class Manager:
 		else:
 			rpath = os.path.join(os.path.dirname(self.file_name), path)
 		return rpath
+
+	def fix_url(self, url):
+		"""Fix given URL into a valid absolute path if relative."""
+		if ":" in url:
+			return url
+		else:
+			return self.fix_path(url)
 
 	def parse_text(self, text):
 		"""Perform parsing of the given text without considering to match

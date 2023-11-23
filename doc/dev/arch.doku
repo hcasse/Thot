@@ -3,12 +3,14 @@
 @(THOT) is implemented in Python and, therefore, provides an object-based structure to describe the document. The module ''doc'' contains the classes
 of this description.
 
-The object are organised in four levels of objects:
+The classes are organised in four levels:
 ^ Identifier ^ Description ^
 | ''L_DOC'' | top-level object representing the document |
-| ''L_HEAD'' | level representing chapter, sections and so on (part of the plan) |
+| ''L_HEAD'' | level representing chapter, sections and so on (documented in the table of content) |
 | ''L_PAR'' | objects of this level includes paragraph and lists |
 | ''L_WORD'' | this level represents single words and also word-level formatting |
+
+Each level is able to contain object of level below.
 
 The following sections will describe each interesting class.
 
@@ -146,7 +148,7 @@ To add a feature, used the ''addFeature(feature)'' method of ''Doc''.
 
 As the initial text document is parsed, found token raises events
 on the document object structure. Usually, the parser maintain a reference
-on the current object where events are passed primarily. This one use
+on the current object where events are passed primarily. This one uses
 the event to create new objects, to pass them to its ancestor in
 the document tree or change the current object in the parser manager.
 

@@ -228,3 +228,10 @@ Second Term
 : This is one definition of the second term.
 DEBUG: : This is another definition of the second term.
 
+
+# Images
+
+![Thot](thot5.png)
+
+[![Thot](thot5.png)](http://hcasse.github.io/Thot/)
+

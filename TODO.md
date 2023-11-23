@@ -2,12 +2,13 @@
 
 ## Application
 
-	[ ] Add a --clean option to clean generated filkes.
-	[ ] Allow thot-view to automatically open `index.EXT`.
+	[ ] Add a --clean option to clean generated files.
+	[x] Allow thot-view to automatically open `index.EXT`.
 	[x] Add ``thot-view`` command.
 	[x] Add ``thot-gen`` command.  
 	[x] Add ANSI colorization.
 	[o] Remove ``thot.py`` command.  
+
 
 ## Core
 
@@ -48,7 +49,7 @@ Basic : [Source](https://www.markdownguide.org/basic-syntax/)
 	[x] Automatic link support the different forms.
 
 Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
-	[ ] Support image link.
+	[x] Support image link.
 	[x] Support tables.
 	[x] Support code with language.
 	[ ] Support for footnotes.

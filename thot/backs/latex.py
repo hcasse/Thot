@@ -456,7 +456,7 @@ class Generator(back.Generator):
 			for text in item.get_term().getContent():
 				text.gen(self)
 			self.out.write("] ")
-			item.get_def().gen(self)
+			item.gen_body(self)
 		self.out.write("\\end{itemize}\n")
 
 

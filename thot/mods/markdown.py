@@ -120,16 +120,26 @@ def handle_code_block(man, match):
 
 def handle_hrule(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, doc.HorizontalLine()))
-
+	
 def handle_link(man, match):
-	URL = match.group('URL')
-	if ":" not in URL:
-		URL = man.fix_path(match.group('URL'))
+	URL = man.fix_url(match.group('URL'))
 	text = match.group('text')
 	title = match.group("title1")
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(URL, title)))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(text)))
 	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
+
+def handle_image_link(man, match):
+	link = man.fix_url(match.group('link_imgl'))
+	alt = match.group('alt_imgl')
+	img = man.fix_url(match.group('image_imgl'))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(link, alt)))
+	caption = Par()
+	caption.append(doc.Word(alt))
+	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
+		doc.Image(img, None, None, caption)))
+	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
+	
 
 def handle_ref(man, match):
 	label = match.group("id_ref")
@@ -182,7 +192,7 @@ def handle_backtrick(man, match):
 
 def handle_image(man, match):
 	alttext = match.group("alttext_img")
-	id = man.fix_path(match.group("id_img"))
+	id = man.fix_url(match.group("id_img"))
 	caption = Par()
 	caption.append(doc.Word(alttext))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
@@ -284,6 +294,34 @@ def handle_row(man, match):
 		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_CELL, doc.Cell(doc.TAB_NORMAL)))
 		tparser.handleText(man, item)
 
+
+class DefEvent(doc.DefEvent):
+
+	def __init__(self, term):
+		doc.DefEvent.__init__(self, doc.ID_NEW_DEF, 0)
+		self.term = term
+
+	def make_ext(self, man):
+		list = DefList(0)
+		list.add_item(man.factory.makeDefItem(self.term))
+		return list
+
+
+class DefList(doc.DefList):
+
+	def __init__(self, depth):
+		doc.DefList.__init__(self, depth)
+
+	def aggregate(self, man, node):
+		if isinstance(node, DefList):
+			self.add_item(node.content[0])
+			man.push(self)
+			man.push(self.last().get_term())
+			return True
+		else:
+			return False
+	
+
 ID_MAKE_DEF = "make-event"
 
 class Par(doc.Par):
@@ -293,8 +331,9 @@ class Par(doc.Par):
 
 	def onEvent(self, man, event):
 		if event.id == ID_MAKE_DEF:
-			man.send(doc.DefEvent(doc.ID_NEW_DEF))
-			self.move_content(man.top().last().term)
+			term = Par()
+			self.move_content(term)
+			man.send(DefEvent(term))
 			man.send(doc.DefEvent(doc.ID_END_TERM))
 		else:
 			doc.Par.onEvent(self, man, event)
@@ -302,6 +341,7 @@ class Par(doc.Par):
 def handle_def(man, match):
 	man.send(doc.Event(doc.L_PAR, ID_MAKE_DEF))
 	man.parse_text(match.group(1))
+
 
 def init(man):
 	man.defs = { }
@@ -318,6 +358,9 @@ class Factory(doc.Factory):
 	def makeRow(self, kind):
 		return Row(kind)
 
+	def makeDefList(self, depth):
+		return DefList(depth)
+
 
 __short__ = "syntax for MarkDown format"
 
@@ -333,10 +376,6 @@ __syntax__ = True
 __factory__ = Factory()
 
 __words__ = [
-	(handle_link,
-		'\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)\s]*)(\s+"(?P<title1>[^"]*)")?\)',
-		"""the text is marked with a link to the URL."""
-	),
 	(lambda man, match: handle_word(man, match.group("char")),
 		"\\\\(?P<char>.)",
 		"""protect a character from interpretation."""
@@ -377,8 +416,16 @@ __words__ = [
 		"`",
 		"""open and close code text."""
 	),
+	(handle_image_link,
+		r"\[!\[(?P<alt_imgl>[^\]]*)\]\s*\((?P<image_imgl>[^\)]*)\)\]\((?P<link_imgl>[^)]*)\)",
+		"""insert image corresponding to id with alternate text alttext and with the given link"""
+	),
+	(handle_link,
+		'\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)\s]*)(\s+"(?P<title1>[^"]*)")?\)',
+		"""the text is marked with a link to the URL."""
+	),
 	(handle_image,
-		r"!\[(?P<alttext_img>[^\]]*)\]\s*\((?P<id_img>[^\]]*)\)",
+		r"!\[(?P<alttext_img>[^\]]*)\]\s*\((?P<id_img>[^\)]*)\)",
 		"""insert image corresponding to id with alternate text alttext"""
 	),
 	(handle_auto_link,

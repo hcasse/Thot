@@ -13,6 +13,7 @@
 ## Development
 
 * [architecture](dev/arch.doku)
+* [document parsing](dev/parsing.md)
 * [how to write a module?](dev/mod.doku)
 * [how to write a front-end module?](dev/frontend.doku)
 * [how to write a back-end module?](dev/backend.doku)

@@ -22,6 +22,7 @@ import mimetypes
 import os
 import os.path
 import shutil
+import sys
 import tempfile
 import threading
 import time
@@ -523,24 +524,38 @@ class MyServer(http.server.HTTPServer):
 		
 
 def main():
+	mon = common.DEFAULT_MONITOR
 
-	# entry point
+	# process arguments
 	parser = argparse.ArgumentParser(
 			prog = "thow-view",
 			description = "Fast viewer for wiki-like documentation."
 		)
-	parser.add_argument('document', nargs=1)
+	parser.add_argument('document', nargs='?')
 	parser.add_argument('-v', '--verbose', action='store_true',
 		help="Enable verbose mode.")
 	
 	args = parser.parse_args()
 
+	# find the file to open
+	path = args.document
+	if path is None:
+		path = os.getcwd()
+	if os.path.isdir(path):
+		found = False
+		for ext in tparser.PARSERS.keys():
+			fpath = os.path.join(path, "index" + ext)
+			if os.path.isfile(fpath):
+				path = fpath
+				found = True
+				break
+		if not found:
+			mon.fatal("no document to open")
+
 	# run the server
-	manager = Manager(args.document[0], args.verbose)
+	manager = Manager(path, args.verbose, mon=mon)
 	MyServer(manager).serve_forever()
 	
 
 if __name__ == "__main__":
 	main()
-
-	

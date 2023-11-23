@@ -612,9 +612,9 @@ class Generator(back.Generator):
 		self.out.write("<dl>\n")
 		for item in deflist.getItems():
 			self.out.write("<dt>")
-			item.get_term().gen(self)
+			item.gen_term(self)
 			self.out.write("</dt><dd>")
-			item.get_def().gen(self)
+			item.gen_body(self)
 			self.out.write("</dd>")
 		self.out.write("</dl>\n")
 
