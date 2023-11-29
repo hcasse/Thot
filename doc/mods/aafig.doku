@@ -1,0 +1,42 @@
+====== aafig Module ======
+
+//aafig// is tool generating figures from textual description. To use it
+in @(THOT), import the module in your text:
+<code>
+@use aafig
+</code>
+and ensure that the [[https://launchpad.net/aafigure|aafigure]] is available on your system.
+
+And insert your figure between ''<aafig>'' tags:
+<code>
+<aafig>
++------+    +-----+
+| here |--->|there|
++------+    +-----+
+</aafig>
+</code>
+
+For details on //aafig// format, look at https://launchpadlibrarian.net/41870218/aafigure.pdf .
+
+As other figures, //aafig// blocks supports labelling and several
+options:
+^ Option ^ Argument ^
+| wide-chars | yes/no |
+| textual | yes/no |
+| scale | real |
+| aspect | ... |
+| linewidth | real |
+| proportional | yes/no |
+| foreground | ##RRGGBB |
+| fill | ##RRGGBB |
+| background | ##RRGGBB |
+| option | ... |
+
+If ''aafigure'' command is available, the example above will give:
+
+@use aafig
+<aafig>
++------+    +-----+
+| here |--->|there|
++------+    +-----+
+</aafig>

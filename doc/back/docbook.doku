@@ -1,0 +1,8 @@
+==== DocBook Back-end ====
+
+This back-end generates [[http://www.docbook.org/|DockBook]] XML format.
+
+The following variables may be used to control the generation process:
+
+^ Variable ^ Description ^
+| DOCBOOK_BACKEND | one of ''openjade'' (default) or ''dblatex''((This may depends on the software installed on your OS))|

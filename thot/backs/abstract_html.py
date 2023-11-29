@@ -229,27 +229,9 @@ class Script:
 		write("</script>\n")
 
 
-class Style:
-	"""Class to configure style of an HTML page. Possible attributes media, type and content."""
+# templates
 
-	def __init__(self, content = "", media = None, type = None):
-		self.content = content
-		self.media = media
-		self.type = type
-
-	def gen(self, gen):
-		self.genVerbatim("<style")
-		if self.media != None:
-			self.genVerbatim(' media="%s"' % self.media)
-		if self.type != None:
-			self.genVerbatim(' type="%s"' % self.type)
-		self.genVerbatim(">\n")
-		self.genVerbatim(self.content)
-		self.genVerbatim("</style>\n")
-
-
-# pages
-class PageHandler:
+class TemplateHandler:
 	"""Provide support for generating pages."""
 
 	def gen_header(self, gen):
@@ -273,17 +255,23 @@ class PageHandler:
 		pass
 
 
-class Page:
-	"""Abstract class for page generation."""
+class Template:
+	"""Abstract template class for the page generation."""
 
 	def apply(self, handler, gen):
 		"""Called to generate a page."""
 		pass
 
+	def use_listing(self, type):
+		"""Inform the template that a listing has to be used and
+		it will be generated according type that may be 'pygment' or
+		'highligh'. The function returns True if the listing is taken
+		in charge by the template, False else."""
+		return False
 
-# PlainPage class
-class PlainPage(Page):
-	"""Simple plain page."""
+
+class PlainTemplate(Template):
+	"""Simple plain template."""
 	
 	def apply(self, handle, gen):
 		out = gen.out
@@ -324,11 +312,8 @@ class PlainPage(Page):
 		out.write("</div>\n</body>\n</html>\n")
 
 
-
-# TemplatePage class
-
-class TemplatePage(Page):
-	"""Page supporting template in HTML. The template may contain
+class FileTemplate(Template):
+	"""Template supporting a file in HTML. The template may contain
 	the following special elements:
 	* <thot:title> -- document title,
 	* <thot:authors> -- list of authors,
@@ -367,7 +352,7 @@ class TemplatePage(Page):
 			for line in tpl.readlines():
 				n = n + 1
 				f = 0
-				for m in TemplatePage.RE.finditer(line):
+				for m in FileTemplate.RE.finditer(line):
 					gen.out.write(line[f:m.start()])
 					f = m.end()
 					kw = m.group(1)
@@ -424,9 +409,9 @@ class Generator(back.Generator):
 		if self.template == None:
 			self.template = self.doc.getVar('HTML_TEMPLATE')
 			if self.template:
-				self.template = TemplatePage(self.template)
+				self.template = FileTemplate(self.template)
 			else:
-				self.template = PlainPage()
+				self.template = PlainTemplate()
 		return self.template
 
 	def is_distant_url(self, url):
@@ -461,17 +446,6 @@ class Generator(back.Generator):
 		for feature in self.doc.get_features():
 			feature.gen_header(self)
 
-	def gen_style(self, content, media=None, type=None):
-		"""Generate a style element."""
-		self.out.write("<style")
-		if media != None:
-			self.out.write(' media="%s"' % media)
-		if type != None:
-			self.out.write(' type="%s"' % type)
-		self.out.write(">\n")
-		self.out.write(content)
-		self.out.write("</style>\n")		
-	
 	def importCSS(self, spath, base = ""):
 		self.manager.add_resource(spath, self.doc)
 		return self.man.get_resource_loc(spath, self.doc)

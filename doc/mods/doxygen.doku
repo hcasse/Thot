@@ -1,0 +1,62 @@
+====== Doxygen Module ======
+
+[[http://www.doxygen.org/|Doxygen]] is utility to generate automatic
+documentation for several programming languages like C, C++, etc. In
+technical documentation, it may handy to provide access to this automatic
+documentation and in an easy way. This module provides such a reference
+using the hashed words.
+
+If you provide (with the syntax below), a
+[[http://www.stack.nl/~dimitri/doxygen/manual/config.html#config_external|Doxygen tag file]]
+containing references to programming languages entities, you can use
+an term with the name of the entity.
+<code>
+@doxy-use(OPTIONS) TAGFILE
+</code>
+Where //TAGFILE// is the file containing the Doxygen references and
+//OPTIONS// is a comma-separated list containing:
+  * ''sep=''//TEXT//: Doxygen does not provide any information about the language
+and this option allow to specif the separator between programming language
+entities and their members.
+  * ''ref=''//REF//: as the Doxygen documentation may be at a different place
+than the directory containing the //TAGFILE//, this parameter will be prepended
+to the relative references of the entities.
+
+After this command, a reference to the documentation is easily obtained with:
+<code>
+#ENTITY
+</code>
+Or
+<code>
+#(ENTITY)
+</code>
+
+With the STL library, the following command can be written:
+<code>
+Character strings are supported using #(std::string) class.
+</code>
+
+With some languages like C++ or Java that support the concept of namespace
+or package, it may be boring to specify the full pathto an entity. To prevent
+this, the ''@prefix'' command allow to add a new prefix looked up to found
+a Doxygen entity:
+<code>
+@doxy-prefix PREFIX
+</code>
+
+The example above can be rewritten with:
+<code>
+@doxy-prefix std::
+
+Character strings are supported using #string class.
+</code>
+
+Several prefixes can be specified but at some point of the program,
+some may be removed:
+<code>
+@doxy-remove PREFIX
+</code>
+
+If the same entity is found with different prefixes, this module will
+complain and a random entity will be used. The faulty term can easily
+be replaced by a full path name.

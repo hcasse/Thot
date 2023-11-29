@@ -1,0 +1,55 @@
+
+====== Command ======
+
+===== Generator =====
+
+The ''thot-gen'' command supports the syntax below:
+<code sh>
+> thot MAIN_FILE OPTIONS
+</code>
+
+The //MAIN_FILE// is @(THOT) file matching the syntax described in
+this chapter. The //OPTIONS// are described below:
+  * ''-D'', ''--define'' //NAME//''=''//VALUE'': defines a variable with its value.
+  * ''--dump'': dump the internal data structure of the document (only for debugging purpose).
+  * ''-h'', ''--help'': display the help of the command.
+  * ''--list-avail'': list available module in the current installation of @(THOT).
+  * ''--list-mod'' //MODULE//: list the content of a module (description and syntax).
+  * ''--list-mods'': list the module used in the current document.
+  * ''--list-output'': list the available back-ends.
+  * ''--list-syntax'': list the syntax of the document (useful as a reminder).
+  * ''-o'', ''--out'' //FILE//: select the output file.
+  * ''-t'', ''--type'' //TYPE//: define the type of chosen back-end.
+(default value ''html'', or one of ''docbook'' and ''latex'').
+  * ''-u'', ''--use'' //MODULE//: load the given module before generation.
+  * ''-v'', ''--verbose'': displays details about the document generation.
+
+A very frequent way to invoke @(THOT) is:
+<code bash>
+thot.py -o TYPE FILE.thot
+</code>
+where //TYPE// is the type of ouput (one of ''html'', ''latex'' or ''docbook'')
+and //FILE//''.thot'' is the file containing the text.
+
+To recall the syntax, it may be also useful to use the command:
+<code bash>
+thot.py FILE.thot --list-syntax
+</code>
+that will display the list of available special syntaxes supported in the
+document.
+
+
+===== View =====
+
+''thow-view '' command allows to view document at run-time (without generating files). Its use is very simple :
+
+<code sh>
+thot-view DOCUMENT
+</code>
+
+It opens a browser window/tab to display the //DOCUMENT// in HTML. If the document contains links to local files, they will be also generated on-the-fly when you click.
+
+//DOCUMENT// may be a file but also a directory. In this case, ''thot-view'' will look for a file named ''index.''//SUFFIX// and open it. //SUFFIX// depends on the type of file. Usual suffixes encompasses ''.md'', ''.thot'', ''.doku'', etc. If you do not provide any //DOCUMENT//, the current directory will be looked.
+
+
+

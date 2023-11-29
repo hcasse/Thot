@@ -1,0 +1,71 @@
+====== Dokuwiki Front-end ======
+
+The dokuwiki module is a basic front-end providing the dokuwiki syntax.
+Please refer [[http://www.dokuwiki.org/syntax|Dokuwiki Syntax]] for more details.
+
+Usually, this module must be included at the head of the file
+containing dokuwiki syntax:
+<code>
+@use dokuwiki
+</code>
+
+In addition, the dokuwiki module provides a syntax for definition list
+(notice the two spaces before the question mark):
+<code>
+  ? term 1 : definition 1
+  ? term 2 : definition 2
+  ? term 3 : multiline definition
+And there ?
+And here !
+</code>
+
+That gives:
+----
+  ? term 1 : definition 1
+  ? term 2 : definition 2
+  ? term 3 : multiline definition
+And there ?
+And here !
+----
+
+This module extents a bit the ''<code>'' tag of Dokuwiki. Basically,
+this tag supports as argument the name of the language to display but
+in this extension, line numbering can be asked:
+<code>
+<code c,line>
+#include <stdio.h>
+
+int main(void) {
+	printf("Hello, World!\n");
+...
+</code>
+Will give:
+<code c,line>
+#include <stdio.h>
+
+int main(void) {
+	printf("Hello, World!\n");
+...
+</code>
+
+The start number may also be selected:
+<code>
+<code c,line=15>
+#include <stdio.h>
+
+int main(void) {
+	printf("Hello, World!\n");
+...
+</code>
+Produces:
+<code c,line=15>
+#include <stdio.h>
+
+int main(void) {
+	printf("Hello, World!\n");
+...
+</code>
+
+
+
+

@@ -177,7 +177,32 @@ class Generator(ahtml.Generator):
 		ahtml.Generator.genLinkBegin(self, url, title)
 
 
-class DocResource(Resource, ahtml.PageHandler):
+class ViewTemplate(ahtml.FileTemplate):
+
+	def __init__(self, doc, path):
+		ahtml.FileTemplate.__init__(self,
+			path,
+			env = doc.env,
+			style_authoring = doc.gen_style_authoring,
+			subtitle = doc.gen_subtitle,
+			icon = doc.gen_icon
+		)
+		self.doc = doc
+		self.css = [doc.env.reduce("@(THOT_BASE)/view/%s.css" % doc.style)]
+
+	def use_listing(self, type):
+		path = self.doc.env.reduce("@(THOT_BASE)/css/%s-%s.css" % (self.doc.style, type))
+		res = os.path.exists(path)
+		if res:
+			self.css.append(path)
+		return res
+
+	def apply(self, handler, gen):
+		self.doc.env["HTML_STYLES"] = ":".join(self.css)
+		ahtml.FileTemplate.apply(self, handler, gen)
+
+
+class DocResource(Resource, ahtml.TemplateHandler):
 	"""Generator for Thot document."""
 
 	def __init__(self, document, man, loc):
@@ -185,7 +210,8 @@ class DocResource(Resource, ahtml.PageHandler):
 		self.document = document
 		self.node = None
 		self.man = man
-		self.style = "@(THOT_BASE)/view/blue-penguin.css"
+		#self.style = "@(THOT_BASE)/view/blue-penguin.css"
+		self.style = "blue-penguin"
 		self.style_author = None
 
 	def get_mime(self):
@@ -193,19 +219,19 @@ class DocResource(Resource, ahtml.PageHandler):
 
 	def prepare(self):
 		"""Read the document."""
-		env = self.manager.env
+		self.env = self.manager.env
 		parser = self.manager.parser
 
 		# prepare the environment
-		env["THOT_FILE"] = self.document
+		self.env["THOT_FILE"] = self.document
 		dir = os.path.dirname(self.document)
 		if dir == "":
 			dir = "."
-		env["THOT_DOC_DIR"] = dir
-		env["HTML_STYLES"] = env.reduce(self.style)
+		self.env["THOT_DOC_DIR"] = dir
+		#env["HTML_STYLES"] = env.reduce(self.style)
 
 		# build the document
-		self.node = doc.Document(env)
+		self.node = doc.Document(self.env)
 		parser.reset(self.node)
 		parser.parse(self.document)
 
@@ -254,12 +280,14 @@ class DocResource(Resource, ahtml.PageHandler):
 	def generate(self, out):
 		if self.node == None:
 			self.prepare()
-		template = ahtml.TemplatePage(
-			os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
-			self.node.env,
-			style_authoring = self.gen_style_authoring,
-			subtitle = self.gen_subtitle,
-			icon = self.gen_icon)
+		path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
+		# template = ahtml.FileTemplate(
+			# os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
+			# self.node.env,
+			# style_authoring = self.gen_style_authoring,
+			# subtitle = self.gen_subtitle,
+			# icon = self.gen_icon)
+		template = ViewTemplate(self, path)
 		gen = Generator(self.node, self.man, template, self.base_level)
 		self.node.pregen(gen)
 		gen.out = out
@@ -273,7 +301,6 @@ class DocResource(Resource, ahtml.PageHandler):
 
 	def gen_content(self, gen):
 		self.node.gen(gen)
-
 
 	def __str__(self):
 		return "doc:%s" % self.document

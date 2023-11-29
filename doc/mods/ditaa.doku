@@ -1,0 +1,38 @@
+====== ditaa Module ======
+
+//ditaa// is tool generating figures from textual description. To use it
+in @(THOT), import the module in your text:
+<code>
+@use ditaa
+</code>
+and ensure that the [[http://ditaa.sourceforge.net|ditaa]] is available on your system.
+
+And insert your figure between ''<ditaa>'' tags:
+<code>
+<ditaa>
+/------+    +-----\
+| here |--->|there|
++------/    \-----+
+</ditaa>
+</code>
+
+For details on //ditaa// format, look at http://ditaa.sourceforge.net/#usage .
+
+As other figures, //ditaa// blocks supports labelling and several
+options:
+^ Option ^ Argument ^
+| no-antialias | yes/no |
+| no-separation | yes/no |
+| round-corners | yes/no |
+| scale | real |
+| no-shadows | yes/no |
+| tabs | integer |
+
+If ''ditaa'' command is available, the example above will give:
+
+@use ditaa
+<ditaa>
+/------+    +-----\
+| here |--->|there|
++------/    \-----+
+</ditaa>

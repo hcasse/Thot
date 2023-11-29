@@ -1,0 +1,24 @@
+====== Lexicon Module ======
+
+In conjunction with the hashed support, this module allows to have
+a collection of terms and their definition and to quickly have back
+links to retrieve the definition from the use of the term in the text.
+
+A term is easily definition with the syntax:
+<code>
+@term ID DEF
+</code>
+Where //ID// is the defined term and //DEF// its definition.
+
+In the text, any reference to //ID// through an hashed word, ''#''//ID//
+will be enclosed in a reference to the document part containing the definition
+//DEF//.
+
+To generate the lexicon (collection of all terms and definitions), one
+has to include the following command at a dedicated place:
+<code>
+@lexicon
+</code>
+
+The lexicon may be put anywhere in the text.
+

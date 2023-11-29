@@ -2,5 +2,5 @@
 @VERSION=1.0
 @AUTHOR=H. Cassé <hug.casse@gmail.com>
 @ICON=@(THOT_BASE_DIR)/thot.png
-
-@use markdown
+@LANG=en_EN
+@THOT=**Thot**

@@ -1,0 +1,243 @@
+====== Basic Syntax ======
+
+This sections describes the minimal @(THOT) syntax that is independent
+of any module.
+
+
+===== Comments =====
+
+@(THOT) supports comments spanning on a complete line. You just have to
+use double ''@'' at the start of the line (notice that most wiki
+independent syntax is prefixed by ''@'').
+
+<code>
+@@ a commend here to the end of the line
+</code>
+
+The comment is just for author information and disappears in the final
+output document.
+
+
+===== Definitions and Variables =====
+
+To share information and to configure modules, @(THOT)
+provides a system of variables. A variable is defined by its name
+and its textual value.
+
+To define a variable, you have just to type:
+<code>
+@IDENTIFIER=VALUE
+</code>
+Where ''IDENTIFIER'' is the variable identifier and ''VALUE'' the value
+of the variable. This value may be any text (including syntax tags)
+to the end of the line (without including the final newline).
+
+To use a variable, you have just to type anywhere in the text and in
+a line.
+<code>
+TEXT-BEFORE @(IDENTIFIER) TEXT-AFTER
+</code>
+Where ''IDENTIFIER'' is the identifier of the variable to get the value
+from. ''TEXT-BEFORE'' and ''TEXT-AFTER'' are any text (possibly
+containing markup or variable use.
+
+In the example below, we define a variable ''THOT'' that is used
+throughout this document and avoid to type boring markup:
+<code>
+@THOT=**//THOT//**
+
+This document presents @(THOT), a textual document process. @(THOT)
+...
+</code>
+
+Notice that the value of a variable may contains variable uses but
+they are processed in a later stage: they are replaced by their value
+only  when the variable is used in
+the main text. For example, the @(THOT) text below:
+<code>
+@X=--@(Y)--
+@Y=hello
+@(X) World !
+@Y=bye, bye
+@(X) World !
+</code>
+will give:
+<code>
+hello World !
+bybe, bye World !
+</code>
+
+
+===== Default Variables =====
+
+As seen in the previous section, variables may be used to generate
+document content but they are also largely used to configure the
+behaviour of the different components of @(THOT) or to provide
+automatic information to the writer. This section
+describe the standard variables used by @(THOT).
+
+The table shows all variables that may be provided to @(THOT):
+
+^ Variable ^Usage ^
+| ''AUTHORS'' |List of authors (including email and separated by comma). |
+| ''ENCODING'' |Character set encoding (as defined by IANA)((if not given, current character set is assumed.)). |
+| ''LANG'' |Language of the document (as in Unix locale). |
+| ''OUTPUT'' |Used by some back-end to precise output (pdf for example) |
+| ''TITLE'' |Title of the generated document. |
+| ''VERSION'' |Version of the document |
+| ''SUBTITLE'' |sub-title of the documeny (not supported by all back-ends) |
+| ''LOGO'' |logo(s) of the organization (separated by commas) (not supported by all back-ends) |
+| ''ORGANIZATION'' |organization producing the document (not supported by all back-ends) |
+
+The variable below are provided by @(THOT) but must not be changed
+(unless you know exactly what you do):
+^ Variable ^Content ^
+| ''THOT_BASE''     |Base directory of @(THOT)((It may be used to retrieve resources provided by @(THOT) like CSS stylesheets.)). |
+| ''THOT_DATE''     |Current date. |
+| ''THOT_DOC_DIR''  |Directory containing the .thot document |
+| ''THOT_FILE''     |Start file containing the @(THOT) text (as passed in command line). |
+| ''THOT_OUT_PATH'' |Path of the file to generate (as passed to ''-o'' option). |
+| ''THOT_OUT_TYPE'' |Type of output back-end (as passed to ''-t'' option). |
+| ''THOT_USE_PATH'' |Colon-separated list of directory containing modules. |
+| ''THOT_VERSION''  |Current version of @(THOT) |
+
+There exist other variables according to used modules or back-end
+that may be found in their documentation.
+
+
+===== Module Usage =====
+
+As shown in the tutorial example, a	proeminent feature of @(THOT) is
+the configuration of the text scanner according to the needs of the user.
+This is mainly performed by the use of specific modules that add
+syntax to the basic parser of @(THOT). To use a module, you have
+just to add the following syntax:
+<code>
+@use MODULE_NAME
+</code>
+
+The module usage is usually performed at the start of the document but
+it is not mandatory. The module is retrieved from the paths found
+in the ''THOT_USE_PATH'' variable (separated by colons). This variable
+is initialized with the path ''$(THOT_BASE)/mods''.
+
+Notice that, when you include a front-end module, like ''dokuwiki'',
+syntax from the previous front-end module are removed but
+syntax rules of other modules are kept.
+
+
+===== Inclusion =====
+
+@(THOT) allows to split big document in multiple files. Then, one has
+to re-assemble the document using inclusion in the main document. The
+inclusion is performed in textual way as if the included text was
+replacing the inclusion command.
+
+An inclusion command has the following syntax:
+<code>
+@include PATH_TO_FILE_TO_INCLUDE
+</code>
+
+The passed path may be absolute or relative. In the latter case, the
+absolute path is built from the path of the directory containing the
+main file. This ensures that the document is well built whatever the
+working directory of @(THOT) invocation.
+
+
+===== References, labels and captions =====
+
+In @(THOT) terminology, an embedded part is a piece of document that is
+not part of the main flow of text. Usual embedded parts are figures,
+tables, listing, etc.
+
+Captions may hooked to embedded part in a standard way using the ''@caption''
+syntax. The caption is formed by any word and formatting following
+the ''@caption'' keyword to the end of the line. It must be placed
+just after the embedded part as in the example below.
+
+<file>
+  <code c>
+  int main() {
+    return 0;
+  }
+  </code>
+  @caption This is //my// listing.
+</file>
+
+In the same way, a label may be added to an embedded part or to an header by putting
+a ''@label'' definition after an embedded part. This tag is followed
+by an identifier that may be then used in a reference, ''@ ref:''//identifier//''@''.
+The reference is then replaced by the number of the referenced item as in the example below.
+
+<file>
+  ====== Title ======
+  @label my-title
+
+  <code c>
+  int main() {
+    return 0;
+  }
+  </code>
+  @label my-code
+  
+  The Listing @ref:my-code@ in Section @ref:my-title@.
+</file>
+
+
+
+===== External Blocks =====
+
+Several additional modules of @(THOT) allows including texts, images, etc
+produced by external tools. This includes, for example, //dot//, //aafig//,
+//gnuplot// or //code//.
+
+This means that  @(THOT) embeds blocks of text targetting a different
+tool but is able to replace this block by the result (often an image
+but not only) of an external tool. 
+
+To mark beginning and end of this blpck, tag between ''<'' and ''>'' are used
+with the name of the external module. For example, the block below
+target the //dot// utility:
+<code>
+<dot>
+digraph {
+	0 -> 1;
+	1 -> 2;
+</dot>
+</code>
+Notice the ''/'' character prefixing the closing tag.
+
+The beginning tag accepts also a list of arguments
+separated by commas '',''. Depending on the module, this argument may
+also be structured as an identifier, following an ''='' sign and
+followed by the value itself.
+
+In the example below, the //aafig// block accepts two arguments:
+  * ''foreground'' whose value is ''##ff0000'',
+  * ''proportional'' whose value is ''off''.
+
+<code>
+<aafig foreground=#ff0000,proportional=off>
+...
+</aafig>
+</code>
+
+
+===== Hashed Words =====
+
+@(THOT) manages a list of term and their definition. To use this term
+and a reference to the corresponding definition, one has to use the
+following syntaxes:
+<code>
+#WORD
+#(WORD)
+</code>
+
+The first form takes a //WORD// made only of word characters depending
+on the current locale. The second form takes //WORD// made of any character
+except a closing parenthesis. If you want to have a single ''##'', just
+double it, ''####'''.
+
+The //WORD// is generated as is in the text but it will also carry a link
+to its definition. @(THOT) supports different ways to provide definitions.
+Currently, modules ''lexicon'' and ''doxygen'' can provide definitions.

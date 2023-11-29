@@ -365,8 +365,9 @@ class Factory(doc.Factory):
 __short__ = "syntax for MarkDown format"
 
 __description__ = \
-"""This modules provides syntax for Markdown wiki format
-(https://daringfireball.net/projects/markdown/).
+"""This modules provides syntax for [Markdown wiki format](https://daringfireball.net/projects/markdown/).
+
+Codes for emoji's can be found [here](https://gist.github.com/rxaviers/7360908).
 
 A summary of the supported syntax is described below:
 """

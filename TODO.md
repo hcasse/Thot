@@ -1,6 +1,6 @@
 # Improvement to Thot
 
-## Application
+## Commands
 
 	[ ] Add a --clean option to clean generated files.
 	[x] Allow thot-view to automatically open `index.EXT`.
@@ -12,6 +12,8 @@
 
 ## Core
 
+	[ ] Add a console text back-end
+	[ ] Add a PDF back-end
 	[ ] Replace use of TT by CODE.
 	[ ] Create a module `mathjax`.
 	[ ] Support for language local to a part of text.

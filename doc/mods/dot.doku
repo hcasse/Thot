@@ -1,0 +1,27 @@
+====== Dot Module ======
+
+The dot module allows to use [[http://www.graphviz.org/|GraphViz]] graph drawing inside @(THOT).
+
+Include the module with:
+<code>
+@use dot
+</code>
+
+The dot graph insertion must implements the syntax below:
+<code>
+<dot DRAWER>
+DOT syntax
+</dot>
+</code>
+
+The //DOT syntax// must follows the rules of ''.dot''. See
+[[http://www.graphviz.org/doc/info/lang.html|DOT language]] for more details.
+
+The //DRAWER// is optional or may be one of the following with the matching effect:
+  * dot -- directed graphs (default)
+  * neato -- undirected graphs
+  * twopi -- radial layouts of graphs
+  * circo -- circular layout of graphs
+  * fdp -- undirected graphs
+
+**NOTE**: old form ''@<dot>'' is now deprecated.

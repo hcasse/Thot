@@ -271,29 +271,32 @@ class Feature(doc.Feature):
 		
 		# build the CSS file
 		if type in CSS_BACKS:
-			try:
-				css = gen.new_resource('highlight/highlight.css')
-				cfd = True
-				if os.name == "nt":
-					cfd = False
-				process = subprocess.Popen(
-					['%s -f --syntax=c --style-outfile=%s' % (command, css)],
-					stdin = subprocess.PIPE,
-					stdout = subprocess.PIPE,
-					close_fds = cfd,
-					shell = True
-				)
-				_ = process.communicate("")
-			except OSError as e:
-				sys.stderr.write("ERROR: can not call 'highlight'\n")
-				sys.exit(1)
+			if not gen.getTemplate().use_listing('highlight'):
 
-			# add the file to the style
-			styles = gen.doc.getVar('HTML_STYLES')
-			if styles:
-				styles += ':'
-			styles += css
-			gen.doc.setVar('HTML_STYLES', styles)
+				# generate the highlight file
+				try:
+					css = gen.new_resource('highlight/highlight.css')
+					cfd = True
+					if os.name == "nt":
+						cfd = False
+					process = subprocess.Popen(
+						['%s -f --syntax=c --style-outfile=%s' % (command, css)],
+						stdin = subprocess.PIPE,
+						stdout = subprocess.PIPE,
+						close_fds = cfd,
+						shell = True
+					)
+					_ = process.communicate("")
+				except OSError as e:
+					sys.stderr.write("ERROR: can not call 'highlight'\n")
+					sys.exit(1)
+
+				# add the file to the style
+				styles = gen.doc.getVar('HTML_STYLES')
+				if styles:
+					styles += ':'
+				styles += css
+				gen.doc.setVar('HTML_STYLES', styles)
 
 		# build .sty
 		if type == 'latex':
@@ -317,7 +320,6 @@ class Feature(doc.Feature):
 			preamble += '\\usepackage{alltt}\n'
 			preamble += '\\input {%s}\n' % gen.get_resource_path(css)
 			gen.doc.setVar('LATEX_PREAMBLE', preamble)
-
 
 FEATURE = Feature()
 

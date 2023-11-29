@@ -1,6 +1,6 @@
 # Thot V2.0
 
-**Thot** is a document generator taking as input a textual document expressed in a wiki-like language (currently `dokuwiki`,  `markdow`, `textile` are supported but more will be added) and produces as output a nice displayable document (HTML, Latex, PDF, etc). The main concept is to make document-making as less painful as possible while unleashing powerful textual dialect: the basic wiki syntax may be improved by augmenting the syntax thanks to external modules.
+**Thot** is a document generator taking as input a textual document expressed in a wiki-like language (currently `dokuwiki`,  `markdown`, `textile` are supported but more will be added) and produces as output a nice displayable document (HTML, Latex, PDF, etc). The main concept is to make document-making as less painful as possible while unleashing powerful textual dialect: the basic wiki syntax may be improved by augmenting the syntax thanks to external modules.
 
 Thot is delivered under the license GPL v2 delivered in the [COPYING.md](file:COPYING.md) file.
 
@@ -25,7 +25,7 @@ Notice that the `PYTHON` command is optional on OSes supporting script invocatio
 
 Ton consult the documentation,
 ```sh
-	$ ./thot-view doc/index.md
+	$ ./thot-view.py doc
 ```
 Notice that **Thot** does not need to be installed to look to the documentation.
 

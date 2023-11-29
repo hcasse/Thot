@@ -1,0 +1,31 @@
+====== Textile Module ======
+
+@(THOT) is really independent of the wiki language used to format the document: ''textile'' module is the proof: it implements the wiki language proposed by https://textile-lang.com/. To use it, just type at the head of your text:
+<code>
+@use textile
+</code>
+
+Currently, @(THOT) only implements 80% of the textile tags but we hope to reach 100% quicly. The unsupported tags includes:
+  * ''<notextile>'' .. ''</notextile>''
+  * ''[S'' ... ''S]''
+  * ''.clear''
+  * ''.dl'' with style
+  * ''.pre..''
+  * ''######..''
+  * ''.notextile..''
+  * style + ''*''
+  * style + ''##*''
+  * style + ''##n''
+  * style + ''##_''
+  * style + '';''
+  * style + ''-''
+  * table header
+  * ''['' ... ''!]''
+  * ''[('' ... '')'' ... '']''
+  * ''fn'' ... ''^.''
+  * ''note#''
+  * ''notelist.''
+  * ''"'' ... ''":'' ...
+  * ''['' .. '']'' ... 
+
+Any contributor will be welcome.

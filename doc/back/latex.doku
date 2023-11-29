@@ -1,0 +1,15 @@
+==== Latex Back-end ====
+
+The Latex back-end produces output as lonely Latex file that may be
+compiled to produces PDF output.
+
+The following variables may be used to control the generation process:
+
+^ Variable ^ Description ^
+| OUTPUT | ''latex'' for simple Latex generation, ''pdf'' for also generating PDF. |
+| SUBTITLE | document subtitle (only for Koma document classes) |
+| ORGANIZATION | producer organization (only for Koma document classes) |
+| LOGO | logo(s) to display |
+| LATEX_CLASS | Select the class of generated document (''book'' as a default). |
+| LATEX_PREAMBLE | The variable value is appended as-is just after class definition (it may be used to included specific Latex modules) |
+| LATEX_PAPER | Select the paper type of the generated document (''a4paper'' as a default). |
