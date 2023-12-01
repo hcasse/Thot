@@ -164,7 +164,6 @@ class Manager(back.Manager):
 			self.anchor_count += 1
 		node._thot_path = path
 		node._thot_anchor = anchor
-		#print("DEBUG:", node, ":", path, "#", anchor)
 
 	def get_anchor(self, node):
 		"""Get the anchor of the node (if any). None else."""
@@ -176,25 +175,30 @@ class Manager(back.Manager):
 	def get_link(self, node, gen):
 		"""Get the link to the given node. Return None if there is no link.
 		If ref is given, the path is relative to the given path."""
+		path = node._thot_path
 		try:
-			path = node._thot_path
 			anchor = node._thot_anchor
-			if path == os.path.abspath(gen.get_out_path()):
-				res = "#%s" % anchor
-			else:
-				path = self.get_resource_path(path, gen)
-				if anchor == None:
-					res = path
-				else:
-					res = "%s#%s" % (path, anchor)
 		except AttributeError:
-			res = "<unlabelled node>"
+			return "<unlabelled node>"
+		if path == os.path.abspath(gen.get_out_path()):
+			res = "#%s" % anchor
+		else:
+			path = self.get_resource_path(path, gen)
+			if anchor == None:
+				res = path
+			else:
+				res = "%s#%s" % (path, anchor)
 		return res	
 
 	def get_resource_link(self, path, gen):
 		"""Get the link to a resource for the given generator."""
 		return self.get_resource_path(path, gen)
 
+	def set_anchor(self, node, path, anchor):
+		"""Assign a path and an anchor to a node."""
+		node._thot_path = path
+		node._thot_anchor = anchor
+		
 
 class Script:
 	"""Use of script in a produced HTML page. After allocation, it may be customized by setting its attributes: content, src, do_async, charset, defer and type. Look https://www.w3schools.com/Tags/tag_script.asp for more setails."""
@@ -734,7 +738,7 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		res = self.manager.get_link(node, self.path)
+		res = self.manager.get_link(node, self)
 		return res
 
 	def get_number(self, node):

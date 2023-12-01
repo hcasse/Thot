@@ -83,6 +83,10 @@ class Resource:
 		"""Called to generate the answer to the post. output is a stream to output answer to."""
 		pass
 
+	def get_location(self):
+		"""Get the location of the resource."""
+		return self.loc
+
 	def __str__(self):
 		return ""
 
@@ -210,7 +214,6 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		self.document = document
 		self.node = None
 		self.man = man
-		#self.style = "@(THOT_BASE)/view/blue-penguin.css"
 		self.style = "blue-penguin"
 		self.style_author = None
 
@@ -228,7 +231,6 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if dir == "":
 			dir = "."
 		self.env["THOT_DOC_DIR"] = dir
-		#env["HTML_STYLES"] = env.reduce(self.style)
 
 		# build the document
 		self.node = doc.Document(self.env)
@@ -281,15 +283,10 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if self.node == None:
 			self.prepare()
 		path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
-		# template = ahtml.FileTemplate(
-			# os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
-			# self.node.env,
-			# style_authoring = self.gen_style_authoring,
-			# subtitle = self.gen_subtitle,
-			# icon = self.gen_icon)
 		template = ViewTemplate(self, path)
 		gen = Generator(self.node, self.man, template, self.base_level)
 		self.node.pregen(gen)
+		self.make_links()
 		gen.out = out
 		gen.getTemplate().apply(self, gen)
 
@@ -304,6 +301,11 @@ class DocResource(Resource, ahtml.TemplateHandler):
 
 	def __str__(self):
 		return "doc:%s" % self.document
+
+	def make_links(self):
+		"""Create links for all objects that support a link."""
+		for node in self.node.get_labelled_nodes():
+			self.man.declare_link(node, self.get_location())
 
 
 class Manager(ahtml.Manager):
@@ -427,9 +429,6 @@ class Manager(ahtml.Manager):
 		return None
 
 	def get_anchor(self, node):
-		return None
-
-	def get_link(self, node, gen):
 		return None
 
 
