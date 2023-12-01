@@ -120,6 +120,32 @@ class MathBlock(doc.Block):
 			gen.genText(self.text)
 
 
+class L2MLBuilder(Builder):
+	
+	def __init__(self, f):
+		self.f = f
+	
+	def genWord(self, gen, w):
+		gen.genVerbatim(self.f(w.text))
+	
+	def genBlock(self, gen, b):
+		gen.genOpenTag("center")
+		f = True
+		for line in b.content:
+			if f:
+				f = False
+			else:
+				gen.genVerbatim("<br/>")
+			gen.genVerbatim(self.f(line))
+		gen.genCloseTag("center")
+
+try:
+	import latex2mathml.converter as m
+	BUILDERS["latex2mathml"] = L2MLBuilder(m.convert)
+	DEFAULT = "latex2mathml"
+except ImportError as e:
+	pass
+
 
 class MathJAXBuilder(Builder):
 	
@@ -148,32 +174,8 @@ class MathJAXBuilder(Builder):
 		gen.genVerbatim("$$")
 	
 BUILDERS["mathjax"] = MathJAXBuilder()
-
-class L2MLBuilder(Builder):
-	
-	def __init__(self, f):
-		self.f = f
-	
-	def genWord(self, gen, w):
-		gen.genVerbatim(self.f(w.text))
-	
-	def genBlock(self, gen, b):
-		gen.genOpenTag("center")
-		f = True
-		for line in b.content:
-			if f:
-				f = False
-			else:
-				gen.genVerbatim("<br/>")
-			gen.genVerbatim(self.f(line))
-		gen.genCloseTag("center")
-
-
-try:
-	import latex2mathml.converter as m
-	BUILDERS["latex2mathml"] = L2MLBuilder(m.convert)	
-except ImportError as e:
-	pass
+if DEFAULT is None:
+	DEFAULT = "mathjax"
 
 class MimetexMath(doc.Word):
 	
@@ -275,7 +277,8 @@ class MimetexBuilder(Builder):
 
 
 BUILDERS["mimetex"] = MimetexBuilder()
-DEFAULT = "mimetex"
+if DEFAULT == None:
+	DEFAULT = "mimetex"
 
 def selectBuilder(man):
 	global DEFAULT

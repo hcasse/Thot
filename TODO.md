@@ -12,6 +12,7 @@
 
 ## Core
 
+	[ ] Add the concept of Figure and improve MarkDown with image/figure.
 	[ ] Add a console text back-end
 	[ ] Add a PDF back-end
 	[ ] Replace use of TT by CODE.

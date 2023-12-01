@@ -222,20 +222,9 @@ class Syntax:
 class Manager:
 
 	def __init__(self, document, mon = common.DEFAULT_MONITOR):
-		words_re = None
-		self.lines = INITIAL_LINES
-		self.words = INITIAL_WORDS
-		self.words_re = None
-		self.added_lines = []
-		self.added_words = []
-		self.used_mods = []
 		self.factory = doc.Factory()
-		self.line_num = None
-		self.file_name = None
-		self.reset(document)
 		self.mon = mon
-		self.info = {}
-		self.completers = []
+		self.reset(document)
 
 	def add_completer(self, completer):
 		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""
@@ -262,6 +251,21 @@ class Manager:
 		self.item = document
 		self.items = []
 		self.parser = DefaultParser()
+		self.line_num = None
+		self.file_name = None
+		self.info = {}
+		self.completers = []
+
+	def clear(self, document = None):
+		"""Reset the parser in the initial state."""
+		self.reset(document)
+		words_re = None
+		self.lines = INITIAL_LINES
+		self.words = INITIAL_WORDS
+		self.words_re = None
+		self.added_lines = []
+		self.added_words = []
+		self.used_mods = []		
 
 	def get_doc(self):
 		"""Get the document currently built."""
