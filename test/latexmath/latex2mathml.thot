@@ -1,10 +1,10 @@
-@TITLE=mimetex test
+@TITLE=latex2mathml test
 @AUTHORS=H. Cassé <hugues.casse@laposte.net>
 @VERSION=0.1
 @LANG=en_EN
 
 @use dokuwiki
-@LATEXMATH=mimetex
+@LATEXMATH=latex2mathml
 @use latexmath
 
 This is a an equation $x \ne 0$.
@@ -18,3 +18,5 @@ A multi-line alone equation:
 \sum_{i=0}^{n} i = 0
 x_1 + x_2 = x_3
 </eq>
+
+And inline $x$ and $y$.

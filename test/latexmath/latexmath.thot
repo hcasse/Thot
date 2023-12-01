@@ -1,0 +1,19 @@
+@TITLE=mathjax test
+@AUTHORS=H. Cassé <hugues.casse@laposte.net>
+@VERSION=0.1
+@LANG=en_EN
+
+@use dokuwiki
+@use latexmath
+
+This is a an equation $x \ne 0$.
+
+Another bigger equation: $\sum_{i=0}^{n} k_i e^{- \pi \omega}$
+
+A multi-line alone equation:
+<eq>
+\sum_{i=0}^{n} i = 0
+x_1 + x_2 = x_3
+</eq>
+
+And inline $x$ and $y$.

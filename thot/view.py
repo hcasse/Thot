@@ -232,7 +232,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 
 		# build the document
 		self.node = doc.Document(self.env)
-		parser.reset(self.node)
+		parser.clear(self.node)
 		parser.parse(self.document)
 
 		# look for the structure
@@ -421,7 +421,10 @@ class Manager(ahtml.Manager):
 		try:
 			return self.fsmap[rpath].loc
 		except KeyError:
-			return "broken link"
+			if ":" in path:
+				return path
+			else:
+				return "broken link"
 
 	def get_number(self, node):
 		return None

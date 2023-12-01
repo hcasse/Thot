@@ -16,3 +16,5 @@ A multi-line alone equation:
 \sum_{i=0}^{n} i = 0
 x_1 + x_2 = x_3
 </eq>
+
+And inline $x$ and $y$.
