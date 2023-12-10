@@ -497,7 +497,7 @@ class Generator(back.Generator):
 			res = subprocess.call(['convert %s %s' % (url, link)], shell = True)
 			if res != 0:
 				common.onError('cannot convert image "%s" to "%s"' % (url, link))
-		link = self.get_resource_path(link)
+		link = self.get_resource_path(link, self.get_out_path())
 
 		# build the command
 		args = ''

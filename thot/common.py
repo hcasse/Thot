@@ -540,3 +540,14 @@ def get_data():
 	return os.path.join(os.path.dirname(__file__), "data")
 
 
+def set_ext(path, ext, replaced = None):
+	"""Set extension to a path. If replaced is not none and the path
+	has this extension, the path is replaced. Otherwise the extension
+	is just appended."""
+	name, cext = os.path.splitext(path)
+	if cext == replaced:
+		return name + ext
+	else:
+		return path + ext
+
+

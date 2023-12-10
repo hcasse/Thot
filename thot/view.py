@@ -60,8 +60,9 @@ class Resource:
 	"""Base class of ressources used by the server. They are identified
 	by a relative location used by the server to provide them."""
 
-	def __init__(self, loc):
+	def __init__(self, loc, manager = None):
 		self.loc = loc
+		self.manager = manager
 
 	def get_mime(self):
 		"""Called to get MIME type."""
@@ -87,6 +88,10 @@ class Resource:
 		"""Get the location of the resource."""
 		return self.loc
 
+	def get_manager(self):
+		"""Get the manager of the resource."""
+		return self.manager
+
 	def __str__(self):
 		return ""
 
@@ -94,8 +99,8 @@ class Resource:
 class HeartBeatResource(Resource):
 
 	def __init__(self, loc, fun = lambda: None):
-			Resource.__init__(self, loc)
-			self.fun = fun
+		Resource.__init__(self, loc)
+		self.fun = fun
 
 	def get_mime(self):
 		return "text/plain"
@@ -111,8 +116,8 @@ class HeartBeatResource(Resource):
 class ActionResource(Resource):
 
 	def __init__(self, loc, fun = lambda: None):
-			Resource.__init__(self, loc)
-			self.fun = fun
+		Resource.__init__(self, loc)
+		self.fun = fun
 
 	def get_mime(self):
 		return "text/plain"
@@ -140,9 +145,15 @@ class FileResource(Resource):
 			raise common.ThotException("cannot access %s" % self.path)
 
 	def generate(self, out):
+		ext = os.path.splitext(self.path)[1]
+
+		# relocated file
+		if ext in ahtml.RELOCATORS:
+			reloc = ahtml.RELOCATORS[ext]
+			reloc.move_to_stream(self.path, self.loc, out, self.manager)
 
 		# send text file
-		if self.get_mime() in TEXT_MIMES:
+		elif self.get_mime() in TEXT_MIMES:
 			with open(self.path, encoding="utf-8") as file:
 				for l in file:
 					out.write(l)
@@ -165,9 +176,13 @@ class FileResource(Resource):
 class Generator(ahtml.Generator):
 	"""Specialized generator."""
 
-	def __init__(self, doc, man, template, base_level):
-		ahtml.Generator.__init__(self, doc, man, template)
-		self.base_level = base_level
+	def __init__(self, doc):
+		ahtml.Generator.__init__(
+			self, doc.get_document(),
+			manager = doc.get_manager(),
+			template = doc.get_template())
+		self.base_level = doc.get_base_level()
+		self.out_path = doc.get_location()
 
 	def genHeader(self, header):
 		header.header_level -= self.base_level
@@ -192,17 +207,20 @@ class ViewTemplate(ahtml.FileTemplate):
 			icon = doc.gen_icon
 		)
 		self.doc = doc
-		self.css = [doc.env.reduce("@(THOT_BASE)/view/%s.css" % doc.style)]
 
 	def use_listing(self, type):
-		path = self.doc.env.reduce("@(THOT_BASE)/css/%s-%s.css" % (self.doc.style, type))
+		styles = self.doc.env["HTML_STYLES"].split(":")
+		if styles == []:
+			return False
+		base = os.path.splitext(styles[0])[0]
+		path = self.doc.env.reduce("@(THOT_BASE)/css/%s-%s.css" % (base, type))
 		res = os.path.exists(path)
 		if res:
-			self.css.append(path)
+			styles.append(path)
+			self.doc.env["HTML_STYLES"] = ":".join(styles)
 		return res
 
 	def apply(self, handler, gen):
-		self.doc.env["HTML_STYLES"] = ":".join(self.css)
 		ahtml.FileTemplate.apply(self, handler, gen)
 
 
@@ -210,18 +228,20 @@ class DocResource(Resource, ahtml.TemplateHandler):
 	"""Generator for Thot document."""
 
 	def __init__(self, document, man, loc):
-		Resource.__init__(self, loc)
+		Resource.__init__(self, loc, man)
 		self.document = document
 		self.node = None
-		self.man = man
 		self.style = "blue-penguin"
 		self.style_author = None
+		self.template = None
 
 	def get_mime(self):
 		return "text/html"
 
 	def prepare(self):
 		"""Read the document."""
+		if self.node is not None:
+			return
 		self.env = self.manager.env
 		parser = self.manager.parser
 
@@ -231,10 +251,13 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if dir == "":
 			dir = "."
 		self.env["THOT_DOC_DIR"] = dir
+		css = [self.env.reduce("@(THOT_BASE)/view/%s.css" % self.style)]
+		self.env["HTML_STYLES"] = ":".join(css)
 
 		# build the document
 		self.node = doc.Document(self.env)
 		parser.clear(self.node)
+		self.get_manager().mon.say("parsing %s", self.document)
 		parser.parse(self.document)
 
 		# look for the structure
@@ -251,6 +274,17 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		for c in self.node.content:
 			if isinstance(c, doc.Header):
 				self.base_level = min(self.base_level, c.header_level)
+
+		# prepare links
+		self.make_links()
+
+	def get_document(self):
+		"""Get the documenty itself for this resource."""
+		return self.node
+
+	def get_base_level(self):
+		"""Get the base level for headers."""
+		return self.base_level
 
 	def gen_subtitle(self, gen):
 		title = self.node.env['TITLE']
@@ -276,19 +310,23 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if icon != "":
 			icon = self.node.env.reduce(icon)
 			icon = self.manager.use_resource(icon)
-			icon = self.manager.get_resource_link(icon, gen)
+			icon = self.manager.get_resource_link(icon, self.get_location())
 			gen.out.write('<div class="icon"><img src="%s"/></div>' % icon)
 
 	def generate(self, out):
 		if self.node == None:
-			self.prepare()
-		path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
-		template = ViewTemplate(self, path)
-		gen = Generator(self.node, self.man, template, self.base_level)
+			self.prepare()	
+		gen = Generator(self)
 		self.node.pregen(gen)
-		self.make_links()
 		gen.out = out
 		gen.getTemplate().apply(self, gen)
+
+	def get_template(self):
+		"""Get the temlate of the document resource."""
+		if self.template == None:
+			path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
+			self.template = ViewTemplate(self, path)
+		return self.template
 
 	def gen_header(self, gen):
 		gen.gen_header()
@@ -374,6 +412,7 @@ class Manager(ahtml.Manager):
 
 	def alias_resource(self, res, loc):
 		"""Add an aliases to a resource."""
+		self.mon.say("alias %s to %s", res, loc)
 		self.map[loc] = res
 
 	def link_resource(self, res):
@@ -396,9 +435,13 @@ class Manager(ahtml.Manager):
 			if rpath.startswith(self.base_dir):
 				loc = rpath[len(self.base_dir):]
 			else:
-				ext = os.path.splitext(rpath)[1]
-				loc = "/static/file-%d%s" % (self.counter, ext)
-				self.counter += 1
+				name = os.path.basename(rpath)
+				base, ext = os.path.splitext(rpath)
+				loc = "/static/%s" % name
+				cnt = 0
+				while loc in self.map:
+					loc = "%s-%d%s" % (base, cnt, ext)
+					cnt = cnt + 1
 			res = self.make_gen(rpath, loc)
 			self.fsmap[rpath] = res
 			self.link_resource(res)
@@ -418,15 +461,13 @@ class Manager(ahtml.Manager):
 		self.link_resource(res)
 		return path
 
-	def get_resource_link(self, path, gen):
-		rpath = os.path.abspath(path)
-		try:
-			return self.fsmap[rpath].loc
-		except KeyError:
-			if ":" in path:
-				return path
-			else:
-				return "broken link"
+	def get_resource_link(self, path, ref):
+		if ":" in path:
+			return path
+		else:
+			path = os.path.normpath(path)
+			res_loc = self.fsmap[path].loc
+			return os.path.relpath(res_loc, ref)
 
 	def get_number(self, node):
 		return None
@@ -446,7 +487,6 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 	def do_GET(self):
 		self.server.record_heartbeat()
 		path = unquote(self.path)
-		self.server.mon.say("GET " + path)
 		try:
 			file = self.server.manager.map[path]
 			file.prepare()
@@ -458,7 +498,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 			self.send_error(500)
 			self.error("error for %s: %s" % (path, e))
 			return
-			
+
 		self.send_response(200)
 		self.send_header("Content-type",  file.get_mime())
 		self.end_headers()
