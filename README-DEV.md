@@ -114,6 +114,8 @@ The life cycle described concerns used and new resources. The first step only ap
 
 ## HTML Templating
 
+### Template Escapes
+
 `<thot:title/>`
 `<thot:authors/>`
 `<thot:header>`
@@ -124,6 +126,65 @@ The life cycle described concerns used and new resources. The first step only ap
 `<thot:style_authoring>`
 
 `<thot:text>`...`</thot:text>` with @ variables inside.
+
+### Template structure
+
+#### Plain
+
+<body><div class="main">
+	<div class="header">
+		<div class="title">TITLE</div>
+		<div class="authors">AUTHORS</div>
+	</div>
+	<div class="toc">
+		<h1>TOC</h1>
+		<ul class="toc"><li><a href="...">MENU</a></li></ul>*
+	</div>
+	<div class="page">
+		CONTENT
+		<div class="footnotes">
+			<p class="footnote"><a class="footnumber" name="...">...</a>...</p>
+		</div>
+	</div>
+</div></body>
+
+
+#### View
+
+<body>
+	<header>
+		ICON
+		<h1>TITLE</h1>
+		SUBTITLE
+	</header>
+	<main>
+		CONTENT
+		<div class="footnotes">
+		...
+		</div>
+	</main>
+	<footer>
+		<div class="authors">AUTHORS</div>
+		<div class="tool-authors">...</div>
+	</footer>
+</body>
+
+
+### Styles
+
+Usual HTML tags are used as most as possible but sometimes HTML classic tags are not enough:
+
+* footnote reference: <a class="footnumber" href="...">...</a>
+* figures: <div class="figure">...</div>
+* label/caption: <div class="label"><a name="..." class="label-ref">...</a>...</div>
+* embedded block: <div class="BLOCK">...</div>
+* code: <pre class="code">...</pre>
+
+
+
+
+
+
 
 
 

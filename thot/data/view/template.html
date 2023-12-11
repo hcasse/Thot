@@ -1,34 +1,13 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title><thot:title/></title>
-		<meta name="AUTHOR" content="<thot:authors/>">
-		<meta name="GENERATOR" content="Thot <thot:text>@(THOT_VERSION)</thot:text>/>">
-		<meta http-equiv="Content-Type" content="text/html; charset='<thot:text>@(ENCODING)</thot:text>'">
-		<thot:header/>
-	</head>
-
-	<script>
-		const thot_request = new XMLHttpRequest();
-
-		function send(cmd) {
-			thot_request.open("GET", cmd, true);
-			thot_request.send();		
-		}
-		
-		function quit() {
-			send("/quit");
-			sleep(500);
-		}
-
-		function heartbeat() {
-			send("/heartbeat");
-		}
-		setInterval(heartbeat, 1000);
-
-	</script>
-
-<body> <!--/body> onbeforeunload="quit();"-->
+<head>
+	<title><thot:title/></title>
+	<meta name="AUTHOR" content="<thot:authors/>">
+	<meta name="GENERATOR" content="Thot <thot:text>@(THOT_VERSION)</thot:text>/>">
+	<meta http-equiv="Content-Type" content="text/html; charset='<thot:text>@(ENCODING)</thot:text>'">
+	<thot:header/>
+</head>
+<body>
 
 <header>
 	<thot:icon/>

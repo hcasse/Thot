@@ -173,6 +173,26 @@ class FileResource(Resource):
 		return self.path
 
 
+VIEW_SCRIPT = """
+	const thot_request = new XMLHttpRequest();
+
+	function send(cmd) {
+		thot_request.open("GET", cmd, true);
+		thot_request.send();		
+	}
+		
+	function quit() {
+		send("/quit");
+		sleep(500);
+	}
+
+	function heartbeat() {
+		send("/heartbeat");
+	}
+	setInterval(heartbeat, 1000);
+"""
+
+
 class Generator(ahtml.Generator):
 	"""Specialized generator."""
 
@@ -183,6 +203,8 @@ class Generator(ahtml.Generator):
 			template = doc.get_template())
 		self.base_level = doc.get_base_level()
 		self.out_path = doc.get_location()
+		script = self.newScript()
+		script.content = VIEW_SCRIPT
 
 	def genHeader(self, header):
 		header.header_level -= self.base_level
@@ -242,7 +264,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		"""Read the document."""
 		if self.node is not None:
 			return
-		self.env = self.manager.env
+		self.env = self.manager.env.copy()
 		parser = self.manager.parser
 
 		# prepare the environment
@@ -324,7 +346,10 @@ class DocResource(Resource, ahtml.TemplateHandler):
 	def get_template(self):
 		"""Get the temlate of the document resource."""
 		if self.template == None:
-			path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
+			if self.get_manager().single:
+				path = os.path.join(self.node.env["THOT_BASE"], "themes/plain.html")
+			else:
+				path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
 			self.template = ViewTemplate(self, path)
 		return self.template
 
@@ -336,6 +361,9 @@ class DocResource(Resource, ahtml.TemplateHandler):
 
 	def gen_content(self, gen):
 		self.node.gen(gen)
+
+	def gen_authors(self, gen):
+		gen.genAuthors()
 
 	def __str__(self):
 		return "doc:%s" % self.document
@@ -349,11 +377,16 @@ class DocResource(Resource, ahtml.TemplateHandler):
 class Manager(ahtml.Manager):
 	"""Manager for thot-view."""
 
-	def __init__(self, document, verbose = False, mon = common.DEFAULT_MONITOR):
+	def __init__(self, document,
+		verbose = False,
+		mon = common.DEFAULT_MONITOR,
+		single = False
+	):
 		ahtml.Manager.__init__(self, mon = mon)
 		self.verbose = verbose
 		self.mon = mon
 		self.mon.set_verbosity(verbose)
+		self.single = single
 
 		# prepare environment
 		self.env = common.Env()
@@ -467,7 +500,8 @@ class Manager(ahtml.Manager):
 		else:
 			path = os.path.normpath(path)
 			res_loc = self.fsmap[path].loc
-			return os.path.relpath(res_loc, ref)
+			link = os.path.relpath(res_loc, os.path.dirname(ref))
+			return link
 
 	def get_number(self, node):
 		return None
@@ -601,6 +635,8 @@ def main():
 			description = "Fast viewer for wiki-like documentation."
 		)
 	parser.add_argument('document', nargs='?')
+	parser.add_argument('--single', action='store_true',
+		help="Consider the passed document as single, not part of a wiki.")
 	parser.add_argument('-v', '--verbose', action='store_true',
 		help="Enable verbose mode.")
 	
@@ -622,7 +658,7 @@ def main():
 			mon.fatal("no document to open")
 
 	# run the server
-	manager = Manager(path, args.verbose, mon=mon)
+	manager = Manager(path, args.verbose, mon=mon, single=args.single)
 	MyServer(manager).serve_forever()
 	
 
