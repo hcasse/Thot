@@ -77,11 +77,17 @@ class Relocator:
 	associated file or special transformation due to this move."""
 
 	def move(self, spath, tpath, man):
-		"""Move the file from source path to the target path.
-		For information, location used for links and manager are
-		given.
-
+		"""Move the file from source path to the target path and
+		perform relocation of references in side the source file.
+		ref is the path of the resource  
 		If there is an error, must raise a BackException."""
+		output = open(tpath, "w")
+		self.move_to_stream(spath, tpath, output, man)
+		output.close()	
+
+	def move_to_stream(self, spath, tpath, output, man):
+		"""Move file spath and relocates the content to the output
+		stream. The logical path of relocated spath is tpath."""
 		pass
 
 
@@ -93,33 +99,26 @@ class CSSRelocator(Relocator):
 	def __init__(self):
 		Relocator.__init__(".css")
 
-	def move(self, spath, tpath, man):
+	def move_to_stream(self, spath, tpath, output, man):
 
 		# open files
 		try:
 			input = open(spath)
 		except FileNotFoundError as e:
 			raise common.BackException(str(e))
-		output = open(tpath, "w")
-		sdir = os.path.dirname(spath)
-		tdir = os.path.dirname(tpath)
 
 		# perform the copy
+		dir = os.path.dirname(spath)
 		for line in input:
 			m = CSSRelocator.CSS_URL_RE.search(line)
 			while m:
 				output.write(line[:m.start()])
 				url = m.group(1)
-				res = urlparse.urlparse(url)
-				if res[0]:
-					output.write(m.group())
-				else:
-					surl = res[2]
-					if ":" not in surl:
-						surl = os.path.join(sdir, surl)
-					burl = man.use_resource(surl)
-					turl = os.path.relpath(burl, tdir)
-					output.write("url(%s)" % turl)
+				if ":" not in url:
+					path = os.path.join(dir, url)
+					rpath = man.use_resource(path)
+					url = man.get_resource_link(rpath, tpath)
+				output.write("url(%s)" % url)
 				line = line[m.end():]
 				m = CSSRelocator.CSS_URL_RE.search(line)
 			output.write(line)
@@ -164,7 +163,6 @@ class Manager(back.Manager):
 			self.anchor_count += 1
 		node._thot_path = path
 		node._thot_anchor = anchor
-		#print("DEBUG:", node, ":", path, "#", anchor)
 
 	def get_anchor(self, node):
 		"""Get the anchor of the node (if any). None else."""
@@ -173,28 +171,33 @@ class Manager(back.Manager):
 		except AttributeError:
 			return None
 
-	def get_link(self, node, gen):
+	def get_link(self, node, ref):
 		"""Get the link to the given node. Return None if there is no link.
 		If ref is given, the path is relative to the given path."""
+		path = node._thot_path
 		try:
-			path = node._thot_path
 			anchor = node._thot_anchor
-			if path == os.path.abspath(gen.get_out_path()):
-				res = "#%s" % anchor
-			else:
-				path = self.get_resource_path(path, gen)
-				if anchor == None:
-					res = path
-				else:
-					res = "%s#%s" % (path, anchor)
 		except AttributeError:
-			res = "<unlabelled node>"
+			return "<unlabelled node>"
+		if path == ref:
+			res = "#%s" % anchor
+		else:
+			path = self.get_resource_link(path, ref)
+			if anchor == None:
+				res = path
+			else:
+				res = "%s#%s" % (path, anchor)
 		return res	
 
-	def get_resource_link(self, path, gen):
-		"""Get the link to a resource for the given generator."""
-		return self.get_resource_path(path, gen)
+	def get_resource_link(self, path, ref):
+		"""Get the link to a resource relative to the ref resource."""
+		return self.get_resource_path(path, ref)
 
+	def set_anchor(self, node, path, anchor):
+		"""Assign a path and an anchor to a node."""
+		node._thot_path = path
+		node._thot_anchor = anchor
+		
 
 class Script:
 	"""Use of script in a produced HTML page. After allocation, it may be customized by setting its attributes: content, src, do_async, charset, defer and type. Look https://www.w3schools.com/Tags/tag_script.asp for more setails."""
@@ -361,12 +364,13 @@ class FileTemplate(Template):
 					else:
 						try:
 							x = self.defs[kw]
-							if callable(x):
-								x(gen)
-							else:
-								self.gen_text(str(x), gen)				
 						except KeyError as e:
-							common.onError("unknown element %s at %d" % (kw, n))	
+							common.onWarning("unknown template element <thot:%s> at %s:%d" % (kw, self.path, n))
+							x = ""
+						if callable(x):
+							x(gen)
+						else:
+							self.gen_text(str(x), gen)	
 				gen.out.write(line[f:])
 			
 		except IOError as e:
@@ -426,7 +430,7 @@ class Generator(back.Generator):
 				if style == "":
 					continue
 				style_res = self.manager.use_resource(style)
-				style_link = self.manager.get_resource_link(style_res, self)
+				style_link = self.manager.get_resource_link(style_res, self.get_out_path())
 				out.write('	<link rel="stylesheet" type="text/css" href="' + style_link + '">\n')
 		short_icon = self.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
@@ -629,7 +633,7 @@ class Generator(back.Generator):
 			if url.startswith("mailto:"):
 				url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
 		else:
-			url = self.manager.get_resource_link(url, self)
+			url = self.manager.get_resource_link(url, self.get_out_path())
 
 		# generate the code
 		self.out.write('<a href="%s"' % url)
@@ -645,7 +649,7 @@ class Generator(back.Generator):
 			new_url = url
 		else:
 			self.manager.use_resource(url)
-			new_url = self.manager.get_resource_link(url, self)
+			new_url = self.manager.get_resource_link(url, self.get_out_path())
 		self.out.write('<img src="' + new_url + '"')
 		if node.get_width() != None:
 			self.out.write(' width="%d"' % node.get_width())
@@ -734,7 +738,7 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		res = self.manager.get_link(node, self.path)
+		res = self.manager.get_link(node, self)
 		return res
 
 	def get_number(self, node):

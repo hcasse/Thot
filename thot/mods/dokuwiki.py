@@ -221,14 +221,14 @@ def handleEntity(man, match):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, glyph))
 
 def handleLink(man, match):
-	target = man.fix_path(match.group('target'))
+	target = man.fix_url(match.group('target'))
 	label = match.group('label')
 	if not label:
 		label = target
 	processLink(man, target, doc.Word(label))
 
 def handleFigure(man, match):
-	image = man.fix_path(match.group("image"))
+	image = man.fix_url(match.group("image"))
 	width = match.group("image_width")
 	if width != None:
 		width = int(width)
@@ -256,7 +256,7 @@ def handleImage(man, match):
 	if match.group("left") or match.group("right"):
 		handleFigure(man, match)
 	else:
-		image = man.fix_path(match.group("image"))
+		image = man.fix_url(match.group("image"))
 		width = match.group("image_width")
 		if width != None:
 			width = int(width)

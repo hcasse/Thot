@@ -44,7 +44,7 @@ class LexPar(doc.Par):
 		self.id = id
 
 	def gen(self, gen):
-		# Don't anything at this point.
+		# Don't do anything at this point.
 		pass
 
 	def numbering(self):

@@ -1,5 +1,7 @@
 ====== latexmath Module ======
 
+@use latexmath
+
 This module, to be used, must be imported as below:
 <code>
 @use latexmath

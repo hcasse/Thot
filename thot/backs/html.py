@@ -331,11 +331,11 @@ class Generator(abstract_html.Generator):
 		self.out.write("</div>\n</body>\n</html>\n")
 
 	def get_href(self, node):
-		return self.manager.get_link(node, self.out_path)
+		return self.manager.get_link(node, self)
 
 	def genContentEntry(self, node, indent):
 		"""Generate a content entry (including numbering, title and link)."""
-		self.out.write('%s<a href="%s">' % (indent, self.manager.get_link(node, self)))
+		self.out.write('%s<a href="%s">' % (indent, self.manager.get_link(node, self.get_out_path())))
 		self.out.write(self.get_number(node))
 		self.out.write(' ')
 		node.genTitle(self)

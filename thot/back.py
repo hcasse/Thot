@@ -59,8 +59,9 @@ class Manager:
 		shutil.copyfile(spath, dpath)
 		shutil.copystat(spath, dpath)
 
-	def get_resource_path(self, path, gen):
-		"""Get a resource path to be used in the given generator.
+	def get_resource_path(self, path, ref = None):
+		"""Get a resource path to be used in the given reference source
+		(if provided) or general for the manager.
 		The default implementation returns an absolute path."""
 		return os.path.abspath(path)
 
@@ -125,10 +126,15 @@ class LocalManager(Manager):
 				self.relocate(path, fpath)
 				return fpath
 
-	def get_resource_path(self, path, gen):
+	def get_resource_path(self, path, ref = None):
 		path = os.path.abspath(path)
-		gpath = os.path.dirname(gen.get_out_path())
-		return os.path.relpath(path, gpath)
+		if ref == None:
+			return path
+		else:
+			gpath = os.path.dirname(ref)
+			rpath = os.path.relpath(path, gpath)
+			return rpath
+
 
 class Generator:
 	"""Abstract back-end generator."""
@@ -201,14 +207,18 @@ class Generator:
 			self.out =None
 
 	def use_resource(self, path):
+		"""Declare a used resource in the generation of the current
+		document."""
 		return self.manager.use_resource(path)
 
 	def new_resource(self, path = None, ext = None):
+		"""Create a new resource used in the generation of the current
+		document."""
 		return self.manager.new_resource(path, ext)
 
 	def get_resource_path(self, path):
-		return self.manager.get_resource_path(path, self)
-
+		"""Get a resource path relative to the current document."""
+		return self.manager.get_resource_path(path, self.get_out_path())
 
 	# Node generation functions
 

@@ -1433,6 +1433,14 @@ class Document(Container):
 		else:
 			return None
 
+	def get_labels(self):
+		"""Get the labels defined in this document."""
+		return self.labels.keys()
+
+	def get_labelled_nodes(self):
+		"""Get the node that supports a label."""
+		return self.inv_labels.keys()
+
 	def visit(self, visitor):
 		"""Visit the content of a document using the visitor interface."""
 		visitor.onDocument(self)
