@@ -224,7 +224,7 @@ class Manager:
 	def __init__(self, document, mon = common.DEFAULT_MONITOR):
 		self.factory = doc.Factory()
 		self.mon = mon
-		self.reset(document)
+		self.clear(document)
 
 	def add_completer(self, completer):
 		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""

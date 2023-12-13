@@ -281,12 +281,6 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if self.node == None:
 			self.prepare()
 		path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
-		# template = ahtml.FileTemplate(
-			# os.path.join(self.node.env["THOT_BASE"], "view/template.html"),
-			# self.node.env,
-			# style_authoring = self.gen_style_authoring,
-			# subtitle = self.gen_subtitle,
-			# icon = self.gen_icon)
 		template = ViewTemplate(self, path)
 		gen = Generator(self.node, self.man, template, self.base_level)
 		self.node.pregen(gen)
@@ -314,6 +308,7 @@ class Manager(ahtml.Manager):
 		self.verbose = verbose
 		self.mon = mon
 		self.mon.set_verbosity(verbose)
+		self.tmpdir = None
 
 		# prepare environment
 		self.env = common.Env()
