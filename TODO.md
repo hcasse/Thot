@@ -2,6 +2,7 @@
 
 ## Commands
 
+	[ ] Add `thot-info` to get all introspection information.
 	[ ] Add a --clean option to clean generated files.
 	[x] Allow thot-view to automatically open `index.EXT`.
 	[x] Add ``thot-view`` command.

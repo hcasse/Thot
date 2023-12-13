@@ -645,8 +645,15 @@ def main():
 		help="Consider the passed document as single, not part of a wiki.")
 	parser.add_argument('-v', '--verbose', action='store_true',
 		help="Enable verbose mode.")
+	parser.add_argument("--version", action="store_true",
+		help="print version")
 	
 	args = parser.parse_args()
+
+	# version support
+	if args.version:
+		common.print_version()
+		exit()
 
 	# find the file to open
 	path = args.document

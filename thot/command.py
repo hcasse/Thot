@@ -165,11 +165,16 @@ def main():
 		help="list the content of a module")
 	oparser.add_option("--list-avail", dest = "list_avail", action="store_true", default=False,
 		help="list available modules")
+	oparser.add_option("--version", action="store_true", default=False,
+		help="print version")
 
 	# Parse arguments
 	(options, args) = oparser.parse_args()
 	common.IS_VERBOSE = options.verbose		# TO REMOVE when monitors will be used throughout the application
 	mon.set_verbosity(options.verbose)
+	if options.version:
+		common.print_version()
+		exit()
 	if options.encoding:
 		common.ENCODING = options.encoding
 	env["THOT_OUT_TYPE"] = options.out_type

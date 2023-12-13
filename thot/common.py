@@ -28,6 +28,13 @@ import traceback
 
 from html import escape
 
+VERSION = "2.1"
+
+def print_version():
+	print("Thot", VERSION)
+	print("Copyright (c) 2023 Hugues Cassé <hug.cassegmail.com>")
+	print("This is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.")
+
 class ThotException(Exception):
 	"""Exception of the Thot system.
 	Any back-passed to the Thot system must inherit this exception.
@@ -431,7 +438,7 @@ class Env:
 		else:
 			self.map = os.environ.copy()
 			thot_dir = os.path.abspath(os.path.dirname(__file__))
-			self.map["THOT_VERSION"] = "2.0"
+			self.map["THOT_VERSION"] = VERSION
 			self.map["ENCODING"] = locale.getpreferredencoding()
 			self.map["THOT_LIB"] = thot_dir
 			self.map["THOT_BASE"] = os.path.join(thot_dir, "data", "")
