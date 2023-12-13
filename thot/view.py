@@ -376,7 +376,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 	def make_links(self):
 		"""Create links for all objects that support a link."""
 		for node in self.node.get_labelled_nodes():
-			self.man.declare_link(node, self.get_location())
+			self.get_manager().declare_link(node, self.document)
 
 
 class Manager(ahtml.Manager):

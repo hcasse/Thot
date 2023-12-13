@@ -738,7 +738,7 @@ class Generator(back.Generator):
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
-		res = self.manager.get_link(node, self)
+		res = self.manager.get_link(node, self.get_out_path())
 		return res
 
 	def get_number(self, node):

@@ -95,7 +95,8 @@ class Term(doc.Word):
 
 	def gen_html(self, gen):
 		node = gen.doc.getLabel(label(self.text))
-		gen.genOpenTag("a", self, [("href", gen.get_href(gen.doc.getLabel(label(self.text))))])
+		href = gen.get_href(gen.doc.getLabel(label(self.text)))
+		gen.genOpenTag("a", self, [("href", href)])
 		doc.Word.gen(self, gen)
 		gen.genCloseTag("a")
 	
