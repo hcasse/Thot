@@ -41,6 +41,7 @@ The pages and sections provide a detailed documentation including tutorial, writ
 ## Modules
 
 * [aafig](mods/aafig.doku)
+* [box](mods/box.md)
 * [codeme](mods/codeme.md)
 * [ditaa](mods/ditaa.doku)
 * [dot](mods/dot.doku)

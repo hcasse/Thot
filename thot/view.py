@@ -256,13 +256,15 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		self.style = "blue-penguin"
 		self.style_author = None
 		self.template = None
+		self.date = None
 
 	def get_mime(self):
 		return "text/html"
 
 	def prepare(self):
 		"""Read the document."""
-		if self.node is not None:
+		if self.node is not None \
+		and self.date >= os.stat(self.document).st_mtime:
 			return
 		self.env = self.manager.env.copy()
 		parser = self.manager.parser
@@ -281,6 +283,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		parser.clear(self.node)
 		self.get_manager().mon.say("parsing %s", self.document)
 		parser.parse(self.document)
+		self.date = os.stat(self.document).st_mtime
 
 		# look for the structure
 		if len(self.node.content) == 1 \
