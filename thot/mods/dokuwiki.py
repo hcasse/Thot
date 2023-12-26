@@ -224,7 +224,7 @@ def handleLink(man, match):
 	target = man.fix_url(match.group('target'))
 	label = match.group('label')
 	if not label:
-		label = target
+		label = match.group('target')
 	processLink(man, target, doc.Word(label))
 
 def handleFigure(man, match):

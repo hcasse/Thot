@@ -214,7 +214,7 @@ class Script:
 		write = gen.genVerbatim
 		write("\t<script")
 		if self.src != None:
-			link = gen.get_manager().get_resource_link(self.src, gen)
+			link = gen.get_manager().get_resource_link(self.src, gen.get_out_path())
 			write(" src=\"%s\"" % escape_attr(link))
 		if self.do_async != None and self.do_async:
 			write(" async=\"async\"")

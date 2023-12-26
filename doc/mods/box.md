@@ -41,7 +41,7 @@ This is a todo!
 This is a rounded todo!
 </box>
 
-<box color=red text=blue rounded|Custom>
+<box content color=red text=blue rounded|Custom>
 Custom!
 </box>
 
@@ -79,7 +79,14 @@ This is a todo!
 This is a rounded todo!
 </box>
 
-<box color=red text=blue rounded|Custom>
+<box content color=red text=blue rounded|Custom>
 Custom!
 </box>
 ```
+
+**This module only works with HTML output.** To customize further, the generated boxes supports specific classes to provide adapted CSS design:
+* `box` is the main class,
+* `box-`_type_ is the class provided by the type of box,
+* `title` is the class of the title part,
+* `body` is the class of the body part.
+

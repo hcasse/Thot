@@ -286,10 +286,11 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		self.date = os.stat(self.document).st_mtime
 
 		# look for the structure
-		if len(self.node.content) == 1 \
+		if self.get_manager().single:
+			self.title = doc.Par([doc.Word(self.env["TITLE"])])
+		elif len(self.node.content) == 1 \
 		and isinstance(self.node.content[0], doc.Header):
 			self.title = self.node.content[0].title
-			self.node.content = self.node.content[0].content
 		else:
 			title = os.path.splitext(os.path.basename(self.document))[0]
 			self.title = doc.Par([doc.Word(title)])
