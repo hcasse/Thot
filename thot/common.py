@@ -17,6 +17,7 @@
 import datetime
 import html
 import imp
+import importlib.util
 import locale
 import os
 import os.path
@@ -125,11 +126,10 @@ def loadModule(name, paths):
 		for path in paths.split(":"):
 			path = os.path.join(path, name + ".py")
 			if os.path.exists(path):
-				return imp.load_source(name, path)
-			else:
-				path = path + "c"
-				if os.path.exists(path):
-					return imp.load_compiled(name, path)
+				spec = importlib.util.spec_from_file_location(name, path)
+				module = importlib.util.module_from_spec(spec)
+				spec.loader.exec_module(module)
+				return module
 		return None
 	except Exception as e:
 		tb = sys.exc_info()[2]
