@@ -16,7 +16,6 @@
 
 import datetime
 import html
-import imp
 import importlib.util
 import locale
 import os
