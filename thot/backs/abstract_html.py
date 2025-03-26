@@ -397,7 +397,7 @@ class Generator(back.Generator):
 		self.pages = { }
 		self.page_count = 0
 		self.stack = []
-		self.refs = { }
+		#self.refs = { }
 		self.scripts = []
 		self.template = template
 		self.manager = manager
@@ -701,11 +701,14 @@ class Generator(back.Generator):
 
 	def genLabel(self, node):
 		caption = node.get_caption()
-		if caption or node in self.refs:
+		anchor = self.manager.get_anchor(node)
+		if caption or anchor:
 			self.out.write('<div class="label">')
-			if node in self.refs:
-				r = self.refs[node]
-				self.out.write("<a name=\"%s\" class=\"label-ref\">%s</a>" % (r[1], self.trans.caption(node.numbering(), r[1])))
+			if anchor:
+				number = self.manager.get_number(node)
+				if number is None:
+					number = ""
+				self.out.write("<a name=\"%s\" class=\"label-ref\">%s</a>" % (anchor, number))
 			if caption:
 				for item in caption.getContent():
 					item.gen(self)
@@ -725,16 +728,16 @@ class Generator(back.Generator):
 		if not node:
 			common.onWarning("label\"%s\" cannot be resolved" % ref.label)
 		else:
-			r = self.refs[node]
+			r = self.get_href(node)
 			self.out.write("<a href=\"%s\">%s</a>" % (r[0], r[1]))
 
 	def gen_line_break(self):
 		self.out.write("<br/>")
 
-	def add_ref(self, node, anchor, number = ""):
-		"""Add a new reference to the given node represented by
-		the given anchor, possibly a number."""
-		self.refs[node] = (anchor, number)
+	#def add_ref(self, node, anchor, number = ""):
+	#	"""Add a new reference to the given node represented by
+	#	the given anchor, possibly a number."""
+	#	self.refs[node] = (anchor, number)
 	
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""

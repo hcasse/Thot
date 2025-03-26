@@ -254,7 +254,7 @@ class Feature(doc.Feature):
 		# parse list of languages
 		try:
 			global LANGS
-			ans = subprocess.check_output("%s -p" % command, shell = True).decode('utf-8')
+			ans = subprocess.check_output("%s --list-scripts=langs" % command, shell = True).decode('utf-8')
 			LANGS = []
 			for line in ans.split("\n"):
 				try:
