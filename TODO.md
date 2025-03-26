@@ -6,9 +6,10 @@
 	[ ] Add a --clean option to clean generated files.
 	[x] Allow thot-view to automatically open `index.EXT`.
 	[x] Add ``thot-view`` command.
-	[x] Add ``thot-gen`` command.  
+	[x] Add ``thot-gen`` command.
 	[x] Add ANSI colorization.
-	[o] Remove ``thot.py`` command.  
+	[o] Remove ``thot.py`` command.
+	[ ] Fix in blue-penguin unstyled code display.
 
 
 ## Core
@@ -51,6 +52,7 @@ Basic : [Source](https://www.markdownguide.org/basic-syntax/)
 	[x] `<URL>` quick link
 	[x] `<email>` fast email link
 	[x] Automatic link support the different forms.
+	[ ] Text between `...` must be rough (no MD tags except \`).
 
 Advanced: [Source](https://www.markdownguide.org/extended-syntax/)
 	[x] Support image link.

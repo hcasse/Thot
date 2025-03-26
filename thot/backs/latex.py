@@ -94,7 +94,9 @@ STYLES = {
 	'subscript': '\\subscript{',
 	'superscript': '\\superscript{',
 	'monospace': '\\texttt{',
-	'deleted': '{'
+	'deleted': '{',
+	'strong': '\\textbf{',
+	'emphasized': '\\emph{'
 }
 
 UNSUPPORTED_IMAGE = [ '.gif' ]
@@ -159,8 +161,8 @@ class Generator(back.Generator):
 	first = False
 	multi = False
 
-	def __init__(self, doc):
-		back.Generator.__init__(self, doc)
+	def __init__(self, doc, out=None):
+		back.Generator.__init__(self, doc, out=out)
 
 	def escape(self, text):
 		res = ""
@@ -172,7 +174,7 @@ class Generator(back.Generator):
 		return res
 
 	def unsupported(self, feature):
-		common.onError('%s unsupported for Latex back-end')
+		common.onError(f'{feature} unsupported for Latex back-end')
 
 	def getType(self):
 		return 'latex'
@@ -260,7 +262,7 @@ class Generator(back.Generator):
 				self.out.write("\\publishers{%s}\n" % self.escape(organization))
 			self.out.write('\\maketitle\n\n')
 		else:
-			
+
 			self.out.write("\\begin{titlepage}\n")
 			self.out.write("\\newcommand{\\thotorganization}{%s}\n" % self.escape(self.doc.getVar("ORGANIZATION")))
 			self.out.write("\\newcommand{\\thottitle}{%s}\n" % self.escape(self.doc.getVar("TITLE")))
@@ -279,8 +281,8 @@ class Generator(back.Generator):
 			file = open(latex_title)
 			for l in file:
 				self.out.write(l)
-			self.out.write("\\end{titlepage}\n")			
-				
+			self.out.write("\\end{titlepage}\n")
+
 		# generate the content
 		self.out.write('\\tableofcontents\n\n')
 		self.out.write('\\pagebreak\n\n')

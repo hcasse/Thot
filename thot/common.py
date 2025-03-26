@@ -39,13 +39,13 @@ class ThotException(Exception):
 	"""Exception of the Thot system.
 	Any back-passed to the Thot system must inherit this exception.
 	Other exceptions will not be caught."""
-	
+
 	def __init__(self, msg):
 		self.msg = msg
-	
+
 	def __str__(self):
 		return self.msg
-	
+
 	def __repr__(self):
 		return self.msg
 
@@ -53,21 +53,21 @@ class ThotException(Exception):
 class ParseException(ThotException):
 	"""This exception may be thrown by any parser encountering an error.
 	File and line information will be added by the parser."""
-	
+
 	def __init__(self, msg):
 		ThotException.__init__(self, msg)
 
 
 class BackException(ThotException):
 	"""Exception thrown by a back-end."""
-	
+
 	def __init__(self, msg):
 		ThotException.__init__(self, msg)
 
 
 class CommandException(ThotException):
 	"""Thrown if there is an error during a command call."""
-	
+
 	def __init__(self, msg):
 		ThotException.__init__(self, msg)
 
@@ -120,7 +120,7 @@ def onDeprecated(msg):
 
 def loadModule(name, paths):
 	"""Load a module by its name and a collection of paths to look in
-	and return its object."""
+	and return its object. Raises ThotException in case of error."""
 	try:
 		for path in paths.split(":"):
 			path = os.path.join(path, name + ".py")
@@ -132,9 +132,8 @@ def loadModule(name, paths):
 					return imp.load_compiled(name, path)
 		return None
 	except Exception as e:
-		tb = sys.exc_info()[2]
-		traceback.print_tb(tb)
-		onError("cannot open module '%s': %s" % (path, str(e)))
+		onVerbose(lambda _: show_stack())
+		raise ThotException(f"cannot open module '{path}': {e}")
 
 AUTHOR_RE = re.compile('(.*)\<([^>]*)\>\s*')
 def scanAuthors(text):
@@ -167,7 +166,7 @@ def which(program):
 	"""Function to test if an executable is available.
 	program: program to look for
 	return: the found path of None."""
-	
+
 	fpath, fname = os.path.split(program)
 	if fpath:
 		if is_exe(program):
@@ -217,27 +216,27 @@ class CommandRequirement:
 	cmd = None
 	msg = None
 	error = False
-	
+
 	def __init__(self, cmd, msg = None, error = ERROR_WARN):
 		self.cmd = cmd
 		self.msg = msg
 		self.error = error
-	
+
 	def get(self):
 		if not self.checked:
 			self.checked = True
 			self.path = which(self.cmd)
 			if not self.path:
 				self.error(self.msg)
-		return self.path 
+		return self.path
 
 
 class Command(CommandRequirement):
 	"""Handle the operation of an external command."""
-	
+
 	def __init__(self, cmd, msg = None, error = False):
 		CommandRequirement.__init__(self, cmd, msg, error)
-	
+
 	def call(self, args = [], input = None, quiet = False):
 		"""Call the command. Throw CommandException if there is an error.
 		args -- list of arguments.
@@ -288,7 +287,7 @@ class Options:
 	except that, if some symbol is not defined, returns an empty string.
 	It may also defined with accepted identifier s and default values.
 	Any value that is not in the original definition list is warned."""
-	
+
 	def __init__(self, man, defs):
 		self.man = man
 		self.map = { }
@@ -319,7 +318,7 @@ def parse_options(man, text, defs):
 	opts = Options(man, defs)
 	opts.parse(text)
 	return opts
-	
+
 
 STANDARD_VARS = [
 	("AUTHORS",			"authors of the document (',' separated, name <email>)"),
@@ -349,7 +348,7 @@ arg_re = re.compile("\(\?P<([a-zA-Z0-9]+)(_[a-zA-Z0-9_]*)?>(%s|%s)*\)" %
 	("[^)[]", "\[[^\]]*\]"))
 REPS = [
 	(" ", 		u"␣"	),
-	("\t", 		u"⭾"	),	
+	("\t", 		u"⭾"	),
 	("\\s+",	" "		),
 	("\\s*", 	" "		),
 	("\\s", 	" "		),
@@ -398,13 +397,13 @@ def display_syntax(syn):
 	"""Display list of syntax items. syn is a sequence of pairs (s, d)
 	where s is the syntax and d is the documentation. The documentation
 	may be split in several lines."""
-	
+
 	# find row size
 	(w, _) = os.get_terminal_size()
-	
+
 	# prepare the strings
 	syn = [(decorate_syntax(s), d) for (s, d) in syn]
-	
+
 	# display the strings
 	m = min(16, 1 + max([l for ((l, _), _) in syn]))
 	for ((l, r), d) in syn:

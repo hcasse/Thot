@@ -76,11 +76,11 @@ class Manager:
 		elif not os.path.isdir(dir):
 			raise common.BackException("%s is not a directory" % dir)
 
-		
+
 
 class LocalManager(Manager):
 	"""A manager that keeps local files (in the same directory as output) as is and creates new files and move non-local files in a devoted directory named import directory and derived from the output path PATH by adding suffixing it with "imports"."""
-	
+
 
 	def __init__(self, out_path, mon = common.DEFAULT_MONITOR):
 		Manager.__init__(self, mon = mon)
@@ -120,7 +120,7 @@ class LocalManager(Manager):
 				while name in self.used:
 					dir, dname = os.path.split(dir)
 					name = "%s-%s" % (dname, name)
-				fpath = os.path.join(self.get_import(), name)	
+				fpath = os.path.join(self.get_import(), name)
 				self.used.append(name)
 				self.map[apath] = fpath
 				self.relocate(path, fpath)
@@ -147,10 +147,11 @@ class Generator:
 	out = None
 	tmp = -1
 
-	def __init__(self, doc, manager = None):
+	def __init__(self, doc, manager = None, out = None):
 		"""Build the abstract generator.
 		doc -- document to generate."""
 		self.doc = doc
+		self.out = out
 		self.trans = i18n.getTranslator(self.doc)
 		if manager != None:
 			self.manager = manager
@@ -194,11 +195,12 @@ class Generator:
 
 	def openMain(self):
 		"""Create and open an out file for the given document."""
-		out_path = self.get_out_path()
-		if out_path == STDOUT:
-			self.out = sys.stdout
-		else:
-			self.out = open(self.get_out_path(), "w")
+		if self.out is None:
+			out_path = self.get_out_path()
+			if out_path == STDOUT:
+				self.out = sys.stdout
+			else:
+				self.out = open(self.get_out_path(), "w")
 
 	def closeMain(self):
 		"""Close the main output."""
@@ -301,7 +303,7 @@ class Generator:
 
 	def genImage(self, url, node, caption):
 		pass
-	
+
 	def genFigure(self, url, node, caption):
 		"""Generate a figure made of an image."""
 		pass
@@ -336,7 +338,7 @@ class Generator:
 			return ""
 		else:
 			return node.getFileLine()
-	
+
 	def info(self, msg, *args, node = None):
 		"""Display an information message."""
 		self.manager.mon.info(self.get_prefix(node) + msg, *args)
@@ -348,3 +350,20 @@ class Generator:
 	def error(self, msg, *args, node = None):
 		"""Display an error with file and line."""
 		self.manager.mon.error(self.get_prefix(node) + msg, *args)
+
+	def run(self):
+		"""Perform the generation of the document."""
+		pass
+
+
+def get_output(doc):
+	"""Get the output for the passed document.
+	Raises a ThotException if there is an error."""
+	out_name = doc.env["THOT_OUT_TYPE"]
+	out_path = os.path.join(doc.env["THOT_LIB"], "backs")
+	back = common.loadModule(out_name,  out_path)
+	if back is None:
+		raise common.ThotException(f"cannot load back-end  {out_name} at {out_path}")
+	else:
+		return back
+

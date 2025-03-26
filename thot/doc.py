@@ -78,7 +78,7 @@ VAR_REC = re.compile(VAR_RE)
 # alignment
 ALIGN_NONE = 0
 ALIGN_LEFT = 1
-ALIGN_CENTER = 2	
+ALIGN_CENTER = 2
 ALIGN_RIGHT = 3
 ALIGN_JUSTIFY = 4
 ALIGN_TOP = 1
@@ -87,7 +87,7 @@ ALIGN_BOTTOM = 3
 
 # standard styles
 STYLE_BOLD = "bold"
-STYLE_STRONG = "string"
+STYLE_STRONG = "strong"
 STYLE_ITALIC = "italic"
 STYLE_EMPHASIZED = "emphasized"
 STYLE_MONOSPACE = "monospace"
@@ -164,7 +164,7 @@ class ObjectEvent(Event):
 
 	def make(self):
 		return self.object
-	
+
 	def __str__(self):
 		return "event(%s, %s, %s)" % (LEVELS[self.level], self.id, self.object)
 
@@ -233,7 +233,7 @@ class DefEvent(Event):
 	def __init__(self, id = ID_NEW_DEF, depth = -1):
 		Event.__init__(self, L_PAR, id)
 		self.depth = depth
-	
+
 	def make_ext(self, man):
 		list = man.factory.makeDefList(self.depth)
 		list.add_item(man.factory.makeDefItem())
@@ -269,8 +269,8 @@ class CustomizeEvent(Event):
 	def process(self, object):
 		"""Called to let the event process the current object."""
 		pass
-	
-	
+
+
 
 class Info:
 	info = None
@@ -278,13 +278,13 @@ class Info:
 	def setInfo(self, id, val):
 		"""Deprecated."""
 		self.set_info(id, val)
-		
+
 	def set_info(self, id, val):
 		"""Set an information value."""
 		if not self.info:
 			self.info = { }
 		self.info[id] = val
-	
+
 	def appendInfo(self, id, val):
 		"""Append the given value to identifier with identifier processed as a list."""
 		if not self.info:
@@ -293,11 +293,11 @@ class Info:
 			self.info[id].append(val)
 		except KeyError:
 			self.info[id] = [ val ]
-			
+
 	def getInfo(self, id, dflt = None):
 		"""Deprecated."""
 		return self.get_info(id, dflt)
-	
+
 	def get_info(self, id, dflt = None):
 		"""Get an information value. None if it not defined."""
 		if not self.info:
@@ -322,7 +322,7 @@ class Node(Info):
 	is called."""
 	file = None
 	line = None
-	
+
 	def __init__(self):
 		pass
 
@@ -386,7 +386,7 @@ class Node(Info):
 		"""Method called called when a label is found. Nodes not supporting
 		just return False (default behaviour) else node return True."""
 		return False
-	
+
 	def visit(self, visitor):
 		"""Visit the current node, that is, call the method in
 		visitor that matches the node."""
@@ -405,7 +405,7 @@ class Node(Info):
 
 	def get_width(self):
 		return self.get_info(INFO_WIDTH)
-	
+
 	def get_height(self):
 		return self.get_info(INFO_HEIGHT)
 
@@ -449,7 +449,7 @@ class Container(Node):
 
 	def check_last(self):
 		if self.content != [] and self.content[-1].isEmpty():
-			del self.content[-1]		
+			del self.content[-1]
 
 	def add(self, man, item):
 		self.check_last()
@@ -522,7 +522,7 @@ class Word(Node):
 
 	def gen(self, gen):
 		gen.genText(self.text)
-	
+
 	def __str__(self):
 		return "word(%s)" % self.text
 
@@ -535,17 +535,17 @@ class Word(Node):
 
 class Ref(Node):
 	label = None
-	
+
 	def __init__(self, label):
 		Node.__init__(self)
 		self.label = label
-	
+
 	def dump(self, out=sys.stdout, tab=""):
 		sys.write("%sref(%s)\n" % (tab, self.label))
 
 	def gen(self, gen):
 		gen.genRef(self)
-	
+
 	def __str__(self):
 		return "ref(%s)" % self.label
 
@@ -554,25 +554,25 @@ class Ref(Node):
 
 
 class Tag(Node):
-	
+
 	def __init__(self, tag, doc):
 		Node.__init__(self)
 		self.tag = tag
 		self.doc = doc
-	
+
 	def gen(self, gen):
 		v = self.doc.resolve_hash(self.tag)
 		if v != None:
 			v.gen(gen)
 		else:
 			gen.genText(self.tag)
-	
+
 	def dump(self, out=sys.stdout, tab=""):
 		out.write("%stag(%s)\n" % (tab, self.tag))
-	
+
 	def __str__(self):
 		return "tag(%d)" % self.tag
-	
+
 	def visit(self, visitor):
 		visitor.onTag(self)
 
@@ -623,7 +623,7 @@ class Glyph(Node):
 
 class LineBreak(Node):
 	"""Represents a line-break in the paragraph flow."""
-	
+
 	def __init__(self):
 		Node.__init__(self)
 
@@ -887,7 +887,7 @@ class Block(Embedded):
 
 	def accepts_caption(self):
 		return True
-		
+
 
 class Figure(Block):
 	path = None
@@ -921,7 +921,7 @@ class Figure(Block):
 
 	def acceptLabel(self):
 		return True
-	
+
 	def accepts_caption(self):
 		return True
 
@@ -1004,13 +1004,13 @@ class DefItem(Node):
 	def get_def(self):
 		"""Deprecated."""
 		return self.get_body()
-		
+
 	def dump(self, out=sys.stdout, tab=""):
 		out.write(tab + "item(\n")
 		self.term.dump(out, tab + INDENT)
 		out.write(tab + ',\n')
 		self.body.dump(out, tab + INDENT)
-		out.write(tab + ')\n')		
+		out.write(tab + ')\n')
 
 	def visit(self, visitor):
 		visitor.onDefItem(self)
@@ -1108,7 +1108,7 @@ class Cell(Par):
 
 	def get_hspan(self):
 		return self.get_info(INFO_HSPAN, 1)
-	
+
 	def get_vspan(self):
 		return self.get_info(INFO_VSPAN, 1)
 
@@ -1321,7 +1321,7 @@ class Header(Container):
 
 	def numbering(self):
 		return self.header_level
-	
+
 	def set_title(self, title):
 		"""Set the title of the header."""
 		self.title = title
@@ -1347,13 +1347,13 @@ class Feature:
 
 class HashSource:
 	"""A hash source provides a way to resolve hash word, prefixed by '#'."""
-	
+
 	def resolve(self, word):
 		"""This function is called to resolve an hash word. If the word is
 		not known by the source, a None is returned. Else a document word
 		must be returned."""
 		return None
-	
+
 
 class Document(Container):
 	"""This is the top object of the document, containing the headings
@@ -1371,7 +1371,7 @@ class Document(Container):
 		self.features = []
 		self.hashes = { }
 		self.hash_srcs = []
-	
+
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
 			self.add(man, man.make_par())
@@ -1417,7 +1417,7 @@ class Document(Container):
 		"""Add a label for the given node."""
 		self.labels[label] = node
 		self.inv_labels[node] = label
-	
+
 	def getLabel(self, label):
 		"""Find the node matching the given label.
 		Return None if there is no node matching the label."""
@@ -1444,13 +1444,13 @@ class Document(Container):
 	def visit(self, visitor):
 		"""Visit the content of a document using the visitor interface."""
 		visitor.onDocument(self)
-	
+
 	def add_hash_source(self, src):
 		"""Add an hash source (involved in the #WORD resolution).
 		Several modules can add their own hash definitions. The src
 		must implement the HashSource class."""
 		self.hash_srcs.append(src)
-	
+
 	def resolve_hash(self, word):
 		"""Try to resolve an hash word. If the word is known or provided
 		by an hash source, it is returned. Else warning is displayed
@@ -1468,45 +1468,45 @@ class Document(Container):
 
 class Visitor:
 	"""Visitor default class."""
-	
+
 	def onDocument(self, doc):
 		pass
-	
+
 	def onHeader(self, header):
 		pass
 
 	def onPar(self, par):
 		pass
-	
+
 	def onQuote(self, quote):
 		pass
-	
+
 	def onEmbedded(self, embeddded):
 		pass
-	
+
 	def onList(self, list):
 		pass
-	
+
 	def onDefList(self, list):
 		pass
-	
+
 	def onTable(self, table):
 		pass
-	
+
 	def onHeader(self, header):
 		pass
-	
+
 	def onTag(self, tag):
 		pass
 
 
 class Factory:
 	"""Factory to customize the building of objects."""
-	
+
 	def makeDocument(self, env):
 		"""Build a document."""
 		return Document(env)
-	
+
 	def makeHeader(self, level):
 		"""Build a new header."""
 		return Header(env)
@@ -1514,19 +1514,19 @@ class Factory:
 	def makePar(self):
 		"""Build a new paragraph."""
 		return Par()
-	
+
 	def makeQuote(self, level):
 		"""Build a new quote."""
 		return Quote(level)
-	
+
 	def makeBlock(self, kind):
 		"""Build a new block."""
 		return Block(kind)
-	
+
 	def makeList(self, kind, depth):
 		"""Build a new list."""
 		return List(kind, depth)
-	
+
 	def makeListItem(self):
 		"""Build a new list item."""
 		return ListItem()
@@ -1542,11 +1542,11 @@ class Factory:
 		if body == None:
 			body = self.makePar()
 		return DefItem(term, body)
-	
+
 	def makeTable(self):
 		"""Build a new table."""
 		return Table()
-	
+
 	def makeRow(self, kind):
 		"""Build a new table row."""
 		return Row()

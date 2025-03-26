@@ -256,6 +256,11 @@ class Manager:
 		self.info = {}
 		self.completers = []
 
+	def close_to_top(self):
+		"""Close the current stack to top-level."""
+		self.item = self.doc
+		self.items = []
+
 	def clear(self, document = None):
 		"""Reset the parser in the initial state."""
 		self.reset(document)
@@ -265,12 +270,12 @@ class Manager:
 		self.words_re = None
 		self.added_lines = []
 		self.added_words = []
-		self.used_mods = []		
+		self.used_mods = []
 
 	def get_doc(self):
 		"""Get the document currently built."""
 		return self.doc
-	
+
 	def get_var(self, id, deflt = ""):
 		return self.doc.getVar(id, deflt)
 
@@ -285,7 +290,7 @@ class Manager:
 	def send(self, event):
 		"""Send an event along the node stack."""
 		if DEBUG:
-			self.debug("send(%s)" % event) 
+			self.debug("send(%s)" % event)
 		self.item.onEvent(self, event)
 
 	def iter(self):
@@ -293,11 +298,11 @@ class Manager:
 		yield self.item
 		for i in xrange(len(self.items) - 1, -1, -1):
 			yield self.items[i]
-	
+
 	def top(self):
 		"""Return the top item of the element stack."""
 		return self.item
-	
+
 	def push(self, item):
 		self.items.append(self.item)
 		self.item = item
@@ -311,7 +316,7 @@ class Manager:
 		self.item = self.items.pop()
 		if DEBUG:
 			self.debug("pop(): %s" % self.item)
-			self.debug("stack = %s" % self.items)		
+			self.debug("stack = %s" % self.items)
 
 	def forward(self, event):
 		if DEBUG:
@@ -328,6 +333,9 @@ class Manager:
 		return self.parser
 
 	def parseInternal(self, file, name):
+		"""Parse a text made of several lines.
+		file: object iterable resulting in several lines.
+		name: name of the text (for error display purpose)."""
 		prev_line = self.line_num
 		prev_file = self.file_name
 		self.line_num = 0
@@ -352,7 +360,7 @@ class Manager:
 					self.parse(input, file)
 				return
 			except OSError as e:
-				raise common.ParseException(str(e))				
+				raise common.ParseException(str(e))
 		else:
 			try:
 
@@ -449,7 +457,7 @@ class Manager:
 				self.setSyntax(
 					[(l[0], re.compile(l[1])) for l in lines],
 					[(w[0], w[1]) for w in words])
-			
+
 			# simple extension
 			else:
 				if"__lines__" in  mod.__dict__:
@@ -513,4 +521,4 @@ class BlockParser(LineParser):
 			self.block.add(line)
 
 
-	
+
