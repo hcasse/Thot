@@ -18,7 +18,8 @@
 
 """commodity module to insert blocks of document in a different syntax.
 
-This block are enclosed between tags <ID OPTIONS>...</ID> and supports a comma-separated list of options.
+This block are enclosed between tags <ID OPTIONS>...</ID> and supports
+a comma-separated list of options.
 """
 
 import re
@@ -26,32 +27,34 @@ import re
 from thot import common, doc, tparser
 from thot.common import ParseException
 
-ARG_RE = re.compile("[\s]*([\S]+)[\s]*=(.*)")
+ARG_RE = re.compile(r"[\s]*([\S]+)[\s]*=(.*)")
 
 class OptionException(Exception):
 	option = None
 	msg = None
 	value = None
-	
+
 	def __init__(self, option, msg, value):
 		self.option = option
 		self.msg = msg
 		self.value = value
 
 	def __str__(self):
-		return "%s for option \"%s\" in \"%s\"" % (self.msg, self.option.name, value)
+		return f"{self.msg} for option \"{self.option.name}\" in \"{self.value}\""
 
 
 class Option:
-	"""An option for the block. The option are stored in a dictionary in a dictionary inside the block. If the option decoding fails, an OptionException has to be raised."""
+	"""An option for the block. The option are stored in a dictionary in a
+	dictionary inside the block. If the option decoding fails, an OptionException
+	has to be raised."""
 	name = None
 	default = None
 	opt = None
-	
+
 	def __init__(self, name, default = None):
 		self.name = name
 		self.default = default
-	
+
 	def parse(self, value):
 		"""Called when the option is found in text to build it
 		and check it. If there is an error, an OptionException must be thrown."""
@@ -60,10 +63,10 @@ class Option:
 
 class SwitchOption(Option):
 	"""Option accepting on/off, true/false, yes, no, etc or no argument"""
-	
+
 	def __init__(self, name, default = False):
 		Option.__init__(self, name, default)
-	
+
 	def parse(self, value):
 		value = value.lower()
 		if value in ["yes", "on", "true"]:
@@ -71,7 +74,7 @@ class SwitchOption(Option):
 		elif value in ["no", "off", "false"]:
 			return False
 		else:
-			raise OptionException(self, "accepted values includes yes/no, on/off, true/false.")
+			raise OptionException(self, "accepted values includes yes/no, on/off, true/false.", value)
 
 
 class IntOption(Option):
@@ -84,18 +87,18 @@ class IntOption(Option):
 		try:
 			return int(value)
 		except ValueError:
-			raise OptionException(self, "bad integer value: %s" % value)
+			raise OptionException(self, "bad integer value", value)
 
 
 class Block(doc.Block):
 	"""Abstract class for block providing custom syntax."""
-	
+
 	def __init__(self, syntax, man):
 		"""Build an external block. syntax is a block.Syntax instance."""
 		doc.Block.__init__(self, syntax.name)
 		self.syntax = syntax
 		self.options = man.get_info(syntax.name)
-		if self.options == None:
+		if self.options is None:
 			self.options = {}
 		else:
 			self.options = dict(self.options)
@@ -118,8 +121,8 @@ class Block(doc.Block):
 				option = self.syntax.options[option]
 				return option.default
 			except KeyError:
-				raise common.ThotException("no option %s" % option)
-	
+				raise common.ThotException(f"no option {option}")
+
 	def gen(self, gen):
 		"""Must be implemenetd to generate the content.
 		Default implementation does nothing."""
@@ -127,11 +130,11 @@ class Block(doc.Block):
 
 	def numbering(self):
 		return "figure"
-	
+
 	def parse_free(self, arg):
 		"""Called to parse a free argument (not formatetd as id=value).
 		As a default, return an error."""
-		raise ParseException("unsupported free argument: \"%s\"" % arg)
+		raise ParseException(f"unsupported free argument: \"{arg}\"")
 
 	def parse_args(self, argl):
 		"""Called to parse argument of the block."""
@@ -148,7 +151,7 @@ class Block(doc.Block):
 						if isinstance(option, SwitchOption):
 							self.options[option.name] = option.parse("yes")
 						else:
-							raise ParseException("argument missing for \"%s\"" % arg)
+							raise ParseException(f"argument missing for \"{arg}\"")
 					except KeyError:
 						self.parse_free(arg)
 
@@ -158,7 +161,7 @@ class Block(doc.Block):
 					option = self.syntax.options[match.group(1)]
 					self.options[option.name] = option.parse(match.group(2))
 				except KeyError:
-					raise ParseException("unknown option \"%s\"" % arg)
+					raise ParseException(f"unknown option \"{arg}\"")
 
 	def check_args(self, man):
 		"""Called to parse arguments. Manager parameter allows to display error messages."""
@@ -167,22 +170,24 @@ class Block(doc.Block):
 
 class Syntax(tparser.Syntax):
 	"""Provides syntax to build blocks with different syntax."""
-	
+
 	def __init__(self,
 		name,
-		options=[], 
+		options=None,
 		maker = Block,
 		doc = "",
 		set = False):
 		"""Build a custom syntax block of the form:
 			<name OPTIONS> content </name>
-		
+
 		* name: name of the block,
 		* options: options supported by the block,
 		* maker: block class or callable maker for the block,
 		* doc: block documentation.
 		* set: generate a command <name-set OPTIONS> to record default option values.
 		"""
+		if options is None:
+			options = []
 
 		# initialize attributes
 		self.name = name
@@ -193,18 +198,18 @@ class Syntax(tparser.Syntax):
 		self.doc = doc
 
 		# prepare internals
-		self.close = re.compile("^</%s>" % name)
-		self.re = "^<%s([\s]+([^>]*))?>" % name
+		self.close = re.compile(f"^</{name}>")
+		self.re = f"^<{name}([\\s]+([^>]*))?>"
 		if set:
-			self.set_re = "^<%s-set[\s]*([^>]*)>" % name
+			self.set_re = f"^<{name}-set[\\s]*([^>]*)>"
 		else:
 			self.set_re = None
 		self.count = 0
 
 	def get_doc(self):
 		return [(
-			"<%s [options]>...</%s>" % (self.name, self.name),
-			"%s\nOptions includes: %s" % (self.doc, ", ".join(self.options))
+			f"<{self.name} [options]>...</{self.name}>",
+			f"{self.doc}\nOptions includes: {', '.join(self.options)}"
 		)]
 
 	def get_lines(self):
@@ -217,7 +222,7 @@ class Syntax(tparser.Syntax):
 	def handle_set(self, man, match):
 		block = self.make(man)
 		options = man.get_info(self.name, None)
-		if options == None:
+		if options is None:
 			options = block.options
 			man.set_info(self.name, options)
 		else:
@@ -231,7 +236,7 @@ class Syntax(tparser.Syntax):
 		block = self.make(man)
 		try:
 			args = match.group(2)
-			if args != None:
+			if args is not None:
 				block.parse_args(args)
 		except ParseException as exn:
 			man.error(str(exn))
@@ -240,11 +245,11 @@ class Syntax(tparser.Syntax):
 			tparser.BlockParser(man, block, self.close)
 		except ParseException as exn:
 			man.error(str(exn))
-	
+
 	def make(self, man):
 		"""Build a block for the module."""
 		return self.maker(self, man)
-	
+
 	def new_num(self):
 		"""Return a new unique number."""
 		r = self.count

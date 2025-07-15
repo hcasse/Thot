@@ -14,23 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Thot module proviuding generic classes to embed external content producer."""
+
 import re
 import subprocess
 import sys
 import tempfile
 
-import thot.common as common
-import thot.doc as doc
-import thot.tparser as tparser
+from thot import common
+from thot import doc
+from thot import tparser
 
-ARG_RE = re.compile("[\s]*([\S]+)[\s]*=(.*)")
+ARG_RE = re.compile(r"[\s]*([\S]+)[\s]*=(.*)")
 
 class ExternalException(Exception):
-	msg = None
-	
+
 	def __init__(self, msg = None):
 		self.msg = msg
-	
+
 	def __str__(self):
 		return self.msg
 
@@ -38,49 +39,49 @@ class OptionException(ExternalException):
 	option = None
 	msg = None
 	value = None
-	
+
 	def __init__(self, option, msg, value):
+		ExternalException.__init__(self, msg)
 		self.option = option
-		self.msg = msg
 		self.value = value
 
 	def __str__(self):
-		return "%s for option \"%s\" in \"%s\"" % (self.msg, self.option.name, value)
+		return f"{self.msg} for option \"{self.option.name}\" in \"{self.value}\""
 
 
 class Option:
 	name = None
 	default = None
 	opt = None
-	
+
 	def __init__(self, name, opt, default=None):
 		self.name = name
 		self.opt = opt
 		self.default = default
-	
+
 	def parse(self, value):
 		"""Called when the option is found in text to build it
 		and check it. If there is an error, an OptionException must be thrown."""
 		return value
-	
+
 	def make(self, opts, input, value):
 		"""Called when the option must be built.
 		Return the option text."""
-		if type(value) == bool:
+		if isinstance(value, bool):
 			if value:
-				opts.append(self.op)
+				opts.append(self.opt)
 			else:
 				pass
 		else:
-			opts.append("%s \"%s\"" % (self.opt, value))
+			opts.append(f"{self.opt} \"{value}\"")
 
 
 class SwitchOption(Option):
 	"""Option accepting on/off, true/false, yes, no, etc."""
-	
+
 	def __init__(self, name, opt, default=None):
 		Option.__init__(self, name, opt, default)
-	
+
 	def parse(self, value):
 		value = value.lower()
 		if value in ["yes", "on", "true"]:
@@ -89,11 +90,11 @@ class SwitchOption(Option):
 			return False
 		else:
 			raise OptionException(self, "accepted values includes yes/no, on/off, true/false.")
-	
+
 	def make(self, opts, input, value):
 		if (self.default and value) or (not self.default and value != self.default):
 			opts.append(self.opt)
-		
+
 
 class ExternalBlock(doc.Block):
 	"""Abstract class for external block providing facilities to call
@@ -102,7 +103,7 @@ class ExternalBlock(doc.Block):
 	args = None
 	path = None
 	temps = None
-	
+
 	def __init__(self, meta):
 		"""Build an external block. meta is an ExternalModule meta-descriptor."""
 		doc.Block.__init__(self, meta.name)
@@ -165,7 +166,7 @@ class ExternalBlock(doc.Block):
 		"""Prepare the input of the external command, modifying either options
 		or the input. Do nothing as a default."""
 		pass
-	
+
 	def finalize_output(self, gen):
 		"""Called once the command has been launched and if it is successful.
 		Enable the execution of post-pass commands. As a default, do nothgin."""
@@ -215,13 +216,14 @@ class ExternalBlock(doc.Block):
 				return res
 			else:
 				self.meta.cmd = ""
-				self.onWarning("cannot generate %s block: none of commands %s is available." % (self.meta.name, ", ".join(self.meta.cmds)))
+				self.onWarning("cannot generate %s block: none of commands %s is available." \
+					% (self.meta.name, ", ".join(self.meta.cmds)))
 				return False
-	
+
 	def make_input(self, input):
 		"""Prepare input. As a default, do nothing."""
 		pass
-			
+
 	def gen(self, gen):
 		if not self.is_ready():
 			return
@@ -236,7 +238,7 @@ class ExternalBlock(doc.Block):
 
 	def numbering(self):
 		return "figure"
-	
+
 	def parse_free(self, arg):
 		"""Called to parse a free argument (not formatetd as id=value).
 		As a default, return an error."""
@@ -273,15 +275,17 @@ class ExternalModule(tparser.Syntax):
 	ext = None
 	maker = None
 	doc = None
-	
+
 	def __init__(self, name, ext="", options=[], cmds=[],
 		maker = ExternalBlock, doc = ""):
 		"""Build an external module with the given name
 		and given options.
-		man: Thot manager.
-		name: name of the module, used to generate file, identity the block and the tags in Thot.
-		out: used to generate the option to get back result (it must contain %s to be replaced by the actual path.
-		ext: output file extension."""
+		* man: Thot manager.
+		* name: name of the module, used to generate file, identity the block and
+		the tags in Thot.
+		* out: used to generate the option to get back result (it must contain
+		%s to be replaced by the actual path.
+		* ext: output file extension."""
 
 		# initialize attributes
 		self.name = name
@@ -294,13 +298,13 @@ class ExternalModule(tparser.Syntax):
 		self.doc = doc
 
 		# prepare syntax
-		self.close = re.compile("^</%s>" % name)
-		self.re = "^<%s[\s]*([^>]*)>" % name
+		self.close = re.compile(f"^</{name}>")
+		self.re = f"^<{name}[\\s]*([^>]*)>"
 
 	def get_doc(self):
 		return [(
-			"<%s [options]>...</%s>" % (self.name, self.name),
-			"%s\nOptions includes: %s" % (self.doc, ", ".join(self.options))
+			f"<{self.name} [options]>...</{self.name}>",
+			f"{self.doc}\nOptions includes: {', '.join(self.options)}"
 		)]
 
 	def get_lines(self):
@@ -313,18 +317,18 @@ class ExternalModule(tparser.Syntax):
 			tparser.BlockParser(man, block, self.close)
 		except ExternalException as exn:
 			man.error(exn)
-	
+
 	def make(self):
 		"""Build a block for the module."""
 		return self.maker(self)
-	
+
 	def test_command(self):
 		"""Look for a command for the block."""
 		pass
-	
+
 	def command_found(self):
 		"""Test if the command has been found."""
-		return not(self.cmd == "")
+		return self.cmd != ""
 
 	def new_num(self):
 		"""Return a new unique number."""

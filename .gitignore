@@ -9,17 +9,17 @@ test/*.html
 test/*.log
 test/simple.aux
 test/simple.docbook
-test/simple.out
-test/simple.pdf
-test/simple.tex
-test/simple.toc
+/test/*.out
+/test/*.pdf
+/test/simple.tex
+/test/simple.toc
 test/headers/*.html
 test/embed/*.html
 test/embed/*-imports
 test/errors/*.html
 
-build
-dist
+/build
+/dist
 thot.egg-info
 
 
