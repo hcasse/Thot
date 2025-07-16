@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Thot module generating source content."""
+
 import os.path
 import subprocess
 import sys
 
-import thot.doc as doc
-import thot.common as common
+from thot import doc
+from thot import common
 
 LANGS=[
   '4gl',
@@ -170,7 +172,7 @@ def getCommand():
 	global checked
 	if not checked:
 		checked = True
-		(id, release) = common.getLinuxDistrib()
+		(id, _) = common.getLinuxDistrib()
 		if id == "LinuxMint":
 			command = "/usr/bin/highlight"
 			common.onWarning("LinuxMint detected. Workaround to find 'highlight' command in /usr/bin/")
@@ -179,19 +181,18 @@ def getCommand():
 			if not command:
 				common.onWarning("no highlight command found: code will not be colored.")
 	return command
-	
+
 
 def genCode(gen, lang, text, type, line):
 	"""Generate colorized code.
 	gen -- back-end generator
 	lang -- code language
 	lines -- lines of the code"""
-	global COMMAND
-	
+
 	type = gen.getType()
 	if lang in LANGS and type in BACKS:
 		command = getCommand()
-		
+
 		# default behaviour if no command
 		if not command:
 			if type == 'html':
@@ -201,32 +202,32 @@ def genCode(gen, lang, text, type, line):
 				gen.genTex(text)
 				gen.genVerbatim("\n\\end{verbatim}\n")
 			return
-		
+
 		# other options
 		opts = ""
-		if line != None:
+		if line is not None:
 			opts = opts + " -l"
 			if line != 1:
-				opts = opts + " -m %s" % line
-		
+				opts = f"{opts} -m {line}"
+
 		# perform the command
 		try:
 			cfd = True
 			if os.name == "nt":
 				cfd = False
 			process = subprocess.Popen(
-				['%s -f --syntax=%s %s %s' % (command, lang, BACKS[type], opts)],
+				[f'{command} -f --syntax={lang} {BACKS[type]} {opts}'],
 				stdin = subprocess.PIPE,
 				stdout = subprocess.PIPE,
 				close_fds = cfd,
 				shell = True
 			)
 			res, _ = process.communicate(text.encode('utf-8'))
-			
+
 			# generate the source
 			gen.genVerbatim(res.decode('utf-8'))
-			
-		except OSError as e:
+
+		except OSError:
 			sys.stderr.write("ERROR: can not call 'highlight'\n")
 			sys.exit(1)
 	else:
@@ -235,7 +236,7 @@ def genCode(gen, lang, text, type, line):
 			unsupported.append(lang)
 		if gen.getType() not in BACKS and gen.getType() not in unsupported_backs:
 			sys.stderr.write('WARNING: ' + gen.getType() + ' unsupported highlight back-end\n')
-			unsupported_baks.append(lang)
+			unsupported.append(lang)
 		if type == 'latex':
 			gen.genVerbatim('\\begin{verbatim}\n')
 		gen.genText(text)
@@ -250,11 +251,11 @@ class Feature(doc.Feature):
 		command = getCommand()
 		if not command:
 			return
-			
+
 		# parse list of languages
 		try:
 			global LANGS
-			ans = subprocess.check_output("%s --list-scripts=langs" % command, shell = True).decode('utf-8')
+			ans = subprocess.check_output(f"{command} --list-scripts=langs", shell = True).decode('utf-8')
 			LANGS = []
 			for line in ans.split("\n"):
 				try:
@@ -262,13 +263,14 @@ class Feature(doc.Feature):
 					if p >= 0:
 						line = line[p+1:]
 						for w in line.split():
-							if w != '(' and w != ')':
+							if w not in ('(', ')'):
 								LANGS.append(w)
-				except ValueError as e:
+				except ValueError:
 					pass
-		except subprocess.CalledProcessError as e :
-			common.onWarning("cannot get supported languages from %s, falling back to default list." % command)
-		
+		except subprocess.CalledProcessError:
+			common.onWarning(f"cannot get supported languages from {command}, " +
+					"falling back to default list.")
+
 		# build the CSS file
 		if type in CSS_BACKS:
 			if not gen.getTemplate().use_listing('highlight'):
@@ -280,14 +282,14 @@ class Feature(doc.Feature):
 					if os.name == "nt":
 						cfd = False
 					process = subprocess.Popen(
-						['%s -f --syntax=c --style-outfile=%s' % (command, css)],
+						[f'{command} -f --syntax=c --style-outfile={css}'],
 						stdin = subprocess.PIPE,
 						stdout = subprocess.PIPE,
 						close_fds = cfd,
 						shell = True
 					)
 					_ = process.communicate("")
-				except OSError as e:
+				except OSError:
 					sys.stderr.write("ERROR: can not call 'highlight'\n")
 					sys.exit(1)
 
@@ -303,14 +305,14 @@ class Feature(doc.Feature):
 			try:
 				css = gen.new_resource('highlight/highlight.sty')
 				process = subprocess.Popen(
-					['%s -f --syntax=c --style-outfile=%s %s' % (command, css, BACKS[type])],
+					[f'{command} -f --syntax=c --style-outfile={css} {BACKS[type]}'],
 					stdin = subprocess.PIPE,
 					stdout = subprocess.PIPE,
 					close_fds = True,
 					shell = True
 				)
 				_ = process.communicate("")
-			except OSError as e:
+			except OSError:
 				sys.stderr.write("ERROR: can not call 'highlight'\n")
 				sys.exit(1)
 
@@ -359,15 +361,12 @@ class CodeBlock(doc.Block):
 		elif type == 'docbook':
 			gen.genVerbatim('<programlisting xml:space="preserve" ')
 			if self.lang in DOCBOOK_LANGS:
-				gen.genVerbatim(' language="%s"' % DOCBOOK_LANGS[self.lang])
+				gen.genVerbatim(f' language="{DOCBOOK_LANGS[self.lang]}"')
 			gen.genVerbatim('>\n')
 			gen.genText(self.toText())
 			gen.genVerbatim('</programlisting>\n')
 		else:
-			common.onWarning('backend %s unsupported for code block' % type)
-
-	def kind(self):
-		return "listing"
+			common.onWarning(f'backend {type} unsupported for code block')
 
 	def numbering(self):
 		return "listing"

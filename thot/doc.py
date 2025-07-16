@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Base classes of Thot document representation."""
+
 import re
 import sys
 
-import thot.common as common
+from thot import common
 
 INDENT = "  "
 
@@ -71,7 +73,7 @@ ID_CUSTOMIZE = "customize"
 
 
 # variable reduction
-VAR_RE = "@\((?P<varid>[a-zA-Z_0-9]+)\)"
+VAR_RE = r"@\((?P<varid>[a-zA-Z_0-9]+)\)"
 VAR_REC = re.compile(VAR_RE)
 
 
@@ -166,7 +168,7 @@ class ObjectEvent(Event):
 		return self.object
 
 	def __str__(self):
-		return "event(%s, %s, %s)" % (LEVELS[self.level], self.id, self.object)
+		return f"event({LEVELS[self.level]}, {self.id}, {self.object})"
 
 
 class TypedEvent(Event):
@@ -328,25 +330,25 @@ class Node(Info):
 
 	def setFileLine(self, file, line):
 		"""Set file/line information corresponding to the node."""
-		if self.file == None:
+		if self.file is None:
 			self.file = file
 			self.line = line
 
 	def getFileLine(self):
 		"""Get formatted version of file/line (useful for message display)."""
-		return "%s:%d" % (self.file, self.line)
+		return f"{self.file}:{self.line}"
 
 	def onError(self, msg):
 		"""Called to display an error."""
-		common.onError('%s:%d: %s' % (self.file, self.line, msg))
+		common.onError(f'{self.file}:{self.line}: {msg}')
 
 	def onWarning(self, msg):
 		"""Called to display a warning."""
-		common.onWarning('%s:%d: %s' % (self.file, self.line, msg))
+		common.onWarning(f'{self.file}:{self.line}: {msg}')
 
 	def onInfo(self, msg):
 		"""Called to display an information to the user."""
-		common.onInfo('%s:%d: %s' % (self.file, self.line, msg))
+		common.onInfo(f'{self.file}:{self.line}: {msg}')
 
 	def onEvent(self, man, event):
 		"""Called each time a new word is found.
@@ -442,7 +444,7 @@ class Container(Node):
 
 	def __init__(self, content = None):
 		Node.__init__(self)
-		if content != None:
+		if content is not None:
 			self.content = content
 		else:
 			self.content = []
@@ -518,13 +520,13 @@ class Word(Node):
 		self.text = text
 
 	def dump(self, out=sys.stdout, tab=""):
-		out.write("%s%s\n" % (tab, self))
+		out.write(f"{tab}{self}\n")
 
 	def gen(self, gen):
 		gen.genText(self.text)
 
 	def __str__(self):
-		return "word(%s)" % self.text
+		return f"word({self.text})"
 
 	def visit(self, visitor):
 		visitor.onWord(self)
@@ -541,13 +543,13 @@ class Ref(Node):
 		self.label = label
 
 	def dump(self, out=sys.stdout, tab=""):
-		sys.write("%sref(%s)\n" % (tab, self.label))
+		out.write(f"{tab}ref({self.label})\n")
 
 	def gen(self, gen):
 		gen.genRef(self)
 
 	def __str__(self):
-		return "ref(%s)" % self.label
+		return f"ref({self.label})"
 
 	def visit(self, visitor):
 		visitor.onRef(self)
@@ -562,16 +564,16 @@ class Tag(Node):
 
 	def gen(self, gen):
 		v = self.doc.resolve_hash(self.tag)
-		if v != None:
+		if v is not None:
 			v.gen(gen)
 		else:
 			gen.genText(self.tag)
 
 	def dump(self, out=sys.stdout, tab=""):
-		out.write("%stag(%s)\n" % (tab, self.tag))
+		out.write(f"{tab}tag({self.tag})\n")
 
 	def __str__(self):
-		return "tag(%d)" % self.tag
+		return f"tag({self.tag})"
 
 	def visit(self, visitor):
 		visitor.onTag(self)
@@ -591,8 +593,8 @@ class Image(Node):
 			self.set_caption(caption)
 
 	def dump(self, out=sys.stdout, tab=""):
-		out.write("%simage(%s, %s, %s, %s)\n" % \
-			(tab, self.path, self.get_width(), self.get_height(), self.get_caption()))
+		out.write(f"{tab}image({self.path}, {self.get_width()}, " +
+			f"{self.get_height()}, {self.get_caption()})\n")
 
 	def gen(self, gen):
 		gen.genImage(self.path, self, self.get_caption())
@@ -612,7 +614,7 @@ class Glyph(Node):
 		self.code = code
 
 	def dump(self, out=sys.stdout, tab=""):
-		out.write("%sglyph(%x)\n" % (tab, self.code))
+		out.write(f"{tab}glyph({hex(self.code)})\n")
 
 	def gen(self, gen):
 		gen.genGlyph(self.code)
@@ -628,25 +630,10 @@ class LineBreak(Node):
 		Node.__init__(self)
 
 	def dump(self, out=sys.stdout, tab=""):
-		print("%sline-break\n" % tab)
+		print(f"{tab}line-break\n")
 
 	def gen(self, gen):
 		gen.gen_line_break()
-
-
-class LineBreak(Node):
-
-	def __init__(self):
-		Node.__init__(self)
-
-	def dump(self, out=sys.stdout, tab=""):
-		out.write(tab + "linebreak")
-
-	def gen(self, gen):
-		gen.genLineBreak()
-
-	def visit(self, visitor):
-		visitor.onLineBreak(self)
 
 
 # Style family
@@ -710,9 +697,12 @@ class OpenStyle(Container):
 
 class FootNote(OpenStyle):
 	"""A foot note. There a 3 kinds of note:
-	* FOOTNOTE_EMBEDDED -- the note content is embedded in the text and the number automatically generated.
-	* FOOTNOTE_REF -- only the note reference is given and the note content will be provide thereafter.
-	* FOOTNOTE_DEF -- provide the content of a foot note whose reference is given by FOOTNOTE_REF.
+	* FOOTNOTE_EMBEDDED -- the note content is embedded in the text and the number
+		automatically generated.
+	* FOOTNOTE_REF -- only the note reference is given and the note content will
+		be provided thereafter.
+	* FOOTNOTE_DEF -- provide the content of a foot note whose reference is given
+		by FOOTNOTE_REF.
 	"""
 	kind = None
 	id = None		# footnote identifier as displayed to the user
@@ -728,9 +718,9 @@ class FootNote(OpenStyle):
 
 	def dumpHead(self, out, tab):
 		if self.kind == FOOTNOTE_EMBED:
-			out.write('%sfootnote(\n' % tab)
+			out.write(f'{tab}footnote(\n')
 		else:
-			out.write('%sfootnote#%s(\n' % (tab, self.ref))
+			out.write(f'{tab}footnote#{self.ref}(\n')
 
 	def isEmpty(self):
 		return False
@@ -763,7 +753,7 @@ class Link(Container):
 			self.add(man, event.make_ext(man))
 
 	def dumpHead(self, out, tab):
-		out.write("%slink(\"%s\",\n" % (tab, self.ref))
+		out.write(f"{tab}link(\"{self.ref}\",\n")
 
 	def gen(self, gen):
 		gen.genLinkBegin(self.ref, self.title)
@@ -817,7 +807,7 @@ class Quote(Par):
 			Par.onEvent(self, man, event)
 
 	def dumpHead(self, out, tab):
-		out.write(tab + "quote:%d(\n" % self.depth)
+		out.write(f"{tab}quote:{self.depth}(\n")
 
 	def gen(self, gen):
 		gen.genQuoteBegin(self.depth)
@@ -869,6 +859,9 @@ class Block(Embedded):
 	def add(self, line):
 		self.content.append(line)
 
+	def dumpHead(self, out, tab):
+		out.write(f"{tab}{self.kind}(\n")
+
 	def dump(self, out=sys.stdout, tab=""):
 		self.dumpHead(out, tab)
 		for line in self.content:
@@ -893,7 +886,7 @@ class Figure(Block):
 	path = None
 
 	def __init__(self, path, width = None, height = None, caption = None, align = ALIGN_NONE):
-		Node.__init__(self)
+		Block.__init__(self, "figure")
 		self.path = path
 		if width:
 			self.setInfo(INFO_WIDTH, width)
@@ -908,7 +901,7 @@ class Figure(Block):
 		caption = ""
 		if self.get_caption() is not None:
 			caption = self.get_caption().toText()
-		out.write("%sfigure(%s, %s)\n" % (tab, self.path, caption))
+		out.write(f"{tab}figure({self.path}, {caption})\n")
 
 	def gen(self, gen):
 		gen.genFigure(self.path, self, self.get_caption())
@@ -965,7 +958,7 @@ class List(Container):
 			elif self.kind == event.type:
 				self.content.append(ListItem())
 			else:
-				self.forward(event)
+				man.forward(event)
 		elif event.id is ID_END_ITEM:
 			man.pop()
 		else:
@@ -989,7 +982,7 @@ class DefItem(Node):
 	"""Description of a definition list item."""
 
 	def __init__(self, term, body):
-		Container.__init__(self)
+		Node.__init__(self)
 		self.term = term
 		self.body = body
 
@@ -1119,13 +1112,13 @@ class Cell(Par):
 		s = tab + 'cell(' + TABLE_KINDS[self.kind]
 		align = self.getInfo(INFO_ALIGN)
 		if align is not None:
-			s += ", align=%s" % TABLE_ALIGNS[align + 1]
+			s += f", align={TABLE_ALIGNS[align + 1]}"
 		hspan = self.getInfo(INFO_HSPAN)
 		if hspan is not None:
-			s += ", hspan=%d" % hspan
+			s += f", hspan={hspan}"
 		vspan = self.getInfo(INFO_VSPAN)
 		if vspan is not None:
-			s += ", vspan=%d" % vspan
+			s += f", vspan={vspan}"
 		out.write(s + "\n")
 
 	def gen(self, gen):
@@ -1181,7 +1174,7 @@ class Table(Container):
 		Container.__init__(self)
 
 	def getWidth(self):
-		if self.width == None:
+		if self.width is None:
 			self.width = self.content[0].getWidth()
 		return self.width
 
@@ -1211,7 +1204,7 @@ class Table(Container):
 		visitor.onTable(self)
 
 	def numbering(self):
-		return("table")
+		return "table"
 
 	def acceptLabel(self):
 		return True
@@ -1228,7 +1221,7 @@ class HorizontalLine(Node):
 		Node.__init__(self)
 
 	def dump(self, out=sys.stdout, tab=""):
-		out.write("%shorizontal-line()\n" % tab)
+		out.write(f"{tab}horizontal-line()\n")
 
 	def gen(self, gen):
 		gen.genHorizontalLine()
@@ -1309,9 +1302,6 @@ class Header(Container):
 		self.genBody(gen)
 		gen.genHeaderBodyEnd(self.header_level)
 		gen.genHeaderEnd(self.header_level)
-
-	def isEmpty(self):
-		return False
 
 	def acceptLabel(self):
 		return True
@@ -1460,7 +1450,7 @@ class Document(Container):
 		except KeyError:
 			for src in self.hash_srcs:
 				res = src.resolve(word)
-				if res != None:
+				if res is not None:
 					self.hashes[word] = res
 					return res
 			return None
@@ -1493,9 +1483,6 @@ class Visitor:
 	def onTable(self, table):
 		pass
 
-	def onHeader(self, header):
-		pass
-
 	def onTag(self, tag):
 		pass
 
@@ -1509,7 +1496,7 @@ class Factory:
 
 	def makeHeader(self, level):
 		"""Build a new header."""
-		return Header(env)
+		return Header(level)
 
 	def makePar(self):
 		"""Build a new paragraph."""
@@ -1537,9 +1524,9 @@ class Factory:
 
 	def makeDefItem(self, term = None, body = None):
 		"""Build a definition list item."""
-		if term == None:
+		if term is None:
 			term = self.makePar()
-		if body == None:
+		if body is None:
 			body = self.makePar()
 		return DefItem(term, body)
 
@@ -1549,7 +1536,7 @@ class Factory:
 
 	def makeRow(self, kind):
 		"""Build a new table row."""
-		return Row()
+		return Row(kind)
 
 	def makeCell(self, kind, align = TAB_CENTER, span = 1):
 		"""Build a new table cell."""
@@ -1565,7 +1552,9 @@ class Factory:
 
 	def makeEmbeddedImage(self, path, width = None, height = None, caption = None, align = ALIGN_NONE):
 		"""Build an embedded image."""
-		return EmbeddedImage(path, width, height, caption, align)
+		img = Image(path, width, height, caption)
+		img.set_info(INFO_ALIGN, align)
+		return img
 
 	def makeGlyph(self, code):
 		"""Build a glyph."""

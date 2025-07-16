@@ -23,3 +23,6 @@ test/errors/*.html
 thot.egg-info
 
 
+/.kdev4
+/thot.kdev4
+/log

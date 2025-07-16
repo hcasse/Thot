@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Generic parser for Thot."""
+
 import os.path
 import re
-import sys
-import traceback
 
-import thot.doc as doc
-import thot.common as common
+from thot import doc
+from thot import common
 
 DEBUG = False
 
@@ -66,16 +66,16 @@ __words__ = [
 		doc.VAR_RE,
 		"""use of a variable (replaced by the variable value)."""),
 	(handleRef,
-		"@ref:(?P<ref>[^@]+)@",
+		r"@ref:(?P<ref>[^@]+)@",
 		"""reference to a labeled element."""),
 	(handleDouble,
-		"##",
+		r"##",
 		"""single '#'."""),
 	(handleParent,
-		"#\((?P<pterm>[^)\s]+)\)",
+		r"#\((?P<pterm>[^)\s]+)\)",
 		"""definition of a term."""),
 	(handleSharp,
-		"#(?P<term>\w+)",
+		r"#(?P<term>\w+)",
 		"""reference to a defined term.""")
 ]
 INITIAL_WORDS = [(f, e) for (f, e, _) in __words__]
@@ -83,7 +83,7 @@ INITIAL_WORDS = [(f, e) for (f, e, _) in __words__]
 def handleText(man, line, suffix = ' '):
 
 	# init RE_WORDS
-	if man.words_re == None:
+	if man.words_re is None:
 		text = ""
 		i = 0
 		for (fun, wre) in man.words:
@@ -126,7 +126,7 @@ def handleInclude(man, match):
 	if not os.path.isabs(path):
 		path = os.path.join(os.path.dirname(man.file_name), path)
 	try:
-		file = open(path)
+		file = open(path, encoding="utf8")
 		man.parseInternal(file, path)
 	except IOError as e:
 		man.error('cannot include "%s": %s',  path, e)
@@ -149,27 +149,27 @@ def handleLabel(man, match):
 		if item.acceptLabel():
 			man.doc.addLabel(match.group(1), item)
 			return
-	ma.warn('label %s out of any container', match.group(1))
+	man.warn(f'label {match.group(1)} out of any container')
 
 
 __lines__ = [
 	(handleComment,
-		"^@@.*",
+		r"^@@.*",
 		"""comment."""),
 	(handleAssign,
-		"^@([a-zA-Z_0-9]+)\s*=(.*)",
+		r"^@([a-zA-Z_0-9]+)\s*=(.*)",
 		"""definition of a variable."""),
 	(handleUse,
-		"^@use\s+(\S+)",
+		r"^@use\s+(\S+)",
 		"""use of a module."""),
 	(handleInclude,
-		'^@include\s+(.*)',
+		r'^@include\s+(.*)',
 		"""inclusion of a THOT file."""),
 	(handleCaption,
-		'^@caption\s+(.*)',
+		r'^@caption\s+(.*)',
 		"""assignment of a caption to the previous element."""),
 	(handleLabel,
-		'^@label\s+(.*)',
+		r'^@label\s+(.*)',
 		"""assignment of a label for references to the previous element.""")
 ]
 INITIAL_LINES = [(f, re.compile(e)) for (f, e, _) in __lines__]
@@ -187,17 +187,17 @@ class DefaultParser(LineParser):
 	"""Default parser that tries to parser the line with the manager
 	recorded lines. Else scan the text with the manager recorded words."""
 
-	def parse(self, handler, line):
-		line = handler.doc.reduceVars(line)
+	def parse(self, manager, line):
+		line = manager.doc.reduceVars(line)
 		done = False
-		for (fun, re) in handler.lines:
+		for (fun, re) in manager.lines:
 			match = re.match(line)
 			if match:
-				fun(handler, match)
+				fun(manager, match)
 				done = True
 				break
 		if not done:
-			handleText(handler, line)
+			handleText(manager, line)
 
 
 class Syntax:
@@ -224,10 +224,23 @@ class Manager:
 	def __init__(self, document, mon = common.DEFAULT_MONITOR):
 		self.factory = doc.Factory()
 		self.mon = mon
+		self.doc = None
+		self.item = None
+		self.items = None
+		self.parser = None
+		self.line_num = None
+		self.file_name = None
+		self.info = None
+		self.completers = None
+		self.lines = None
+		self.words = None
+		self.words_re = None
+
 		self.clear(document)
 
 	def add_completer(self, completer):
-		"""Add a completer, a function that will be called at the end of document analysis. This may be used to perform checking for example."""
+		"""Add a completer, a function that will be called at the end of document
+		analysis. This may be used to perform checking for example."""
 		self.completers.append(completer)
 
 	def make_par(self):
@@ -264,7 +277,6 @@ class Manager:
 	def clear(self, document = None):
 		"""Reset the parser in the initial state."""
 		self.reset(document)
-		words_re = None
 		self.lines = INITIAL_LINES
 		self.words = INITIAL_WORDS
 		self.words_re = None
@@ -285,18 +297,18 @@ class Manager:
 
 	def debug(self, msg):
 		"""Used to output message."""
-		print("DEBUG: %s" % msg)
+		print(f"DEBUG: {msg}")
 
 	def send(self, event):
 		"""Send an event along the node stack."""
 		if DEBUG:
-			self.debug("send(%s)" % event)
+			self.debug(f"send({event})")
 		self.item.onEvent(self, event)
 
 	def iter(self):
 		"""Generate an iterator on the stack of items (from top to bottom)."""
 		yield self.item
-		for i in xrange(len(self.items) - 1, -1, -1):
+		for i in range(len(self.items) - 1, -1, -1):
 			yield self.items[i]
 
 	def top(self):
@@ -308,19 +320,19 @@ class Manager:
 		self.item = item
 		item.setFileLine(self.file_name, self.line_num)
 		if DEBUG:
-			self.debug("push(%s)" % item)
-			self.debug("stack = %s" % self.items)
+			self.debug(f"push({item})")
+			self.debug(f"stack = {self.items}")
 
 	def pop(self):
 		self.item.complete()
 		self.item = self.items.pop()
 		if DEBUG:
-			self.debug("pop(): %s" % self.item)
-			self.debug("stack = %s" % self.items)
+			self.debug(f"pop(): {self.item}")
+			self.debug(f"stack = {self.items}")
 
 	def forward(self, event):
 		if DEBUG:
-			self.debug("forward(%s)" % event)
+			self.debug(f"forward({event})")
 		self.pop()
 		self.send(event)
 
@@ -356,7 +368,7 @@ class Manager:
 		a file name. Raise common.ParseException in case of error."""
 		if isinstance(file, str):
 			try:
-				with open(file) as input:
+				with open(file, encoding="utf8") as input:
 					self.parse(input, file)
 				return
 			except OSError as e:
@@ -367,7 +379,7 @@ class Manager:
 				# manage the wiki parsing
 				ext = os.path.splitext(name)[1]
 				mod = PARSERS[ext]
-				if mod != None:
+				if mod is not None:
 					self.use(mod)
 
 				# perform the parse
@@ -377,7 +389,7 @@ class Manager:
 					completer(self)
 
 			except common.ParseException as e:
-				raise common.ParseException(self.message(e))
+				raise common.ParseException(f"{self.get_prefix()}:{e}")
 
 	def addLine(self, line):
 		"""A syntax working on lines. The line parameter is pair
@@ -409,15 +421,15 @@ class Manager:
 
 	def get_prefix(self):
 		"""Generate a message prefixed with error line and file."""
-		if self.file_name != None and self.line_num != None:
+		if self.file_name is not None and self.line_num is not None:
 			file_name = os.path.relpath(self.file_name, os.curdir)
-			return "%s:%d: " % (file_name, self.line_num)
+			return f"{file_name}:{self.line_num}: "
 		else:
 			return ""
 
-	def info(self, msg, *args):
-		"""Display an information message."""
-		self.mon.info(self.get_prefix() + msg, *args)
+	#def info(self, msg, *args):
+	#	"""Display an information message."""
+	#	self.mon.info(self.get_prefix() + msg, *args)
 
 	def warn(self, msg, *args):
 		"""Display a warning with file and line."""
@@ -473,7 +485,7 @@ class Manager:
 						for w in s.get_words():
 							self.addWord(w)
 		else:
-			self.mon.fatal('cannot find module %s' % name)
+			self.mon.fatal(f'cannot find module {name}')
 
 	def fix_path(self, path):
 		"""Fix the given path if it is not absolute to be relative to the current document path."""
@@ -514,9 +526,9 @@ class BlockParser(LineParser):
 		self.re = re
 		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, self.block))
 
-	def parse(self, man, line):
+	def parse(self, manager, line):
 		if self.re.match(line):
-			man.setParser(self.old)
+			manager.setParser(self.old)
 		else:
 			self.block.add(line)
 

@@ -89,7 +89,8 @@ class SwitchOption(Option):
 		elif value in ["no", "off", "false"]:
 			return False
 		else:
-			raise OptionException(self, "accepted values includes yes/no, on/off, true/false.")
+			raise OptionException(self,
+				"accepted values includes yes/no, on/off, true/false.", value)
 
 	def make(self, opts, input, value):
 		if (self.default and value) or (not self.default and value != self.default):
@@ -122,11 +123,11 @@ class ExternalBlock(doc.Block):
 	def get_path(self, gen):
 		"""Declare the given block file as friend and generate a valid path."""
 		if not self.path:
-			self.path = gen.new_resource('extern/%s-%s%s' % (self.meta.name, self.new_num(), self.meta.ext))
+			self.path = gen.new_resource(f'extern/{self.meta.name}-{self.new_num()}{self.meta.ext}')
 		return self.path
 
 	def dumpHead(self, out, tab):
-		out.write("%sblock.%s(\n" % (tab, self.meta.name))
+		out.write(f"{tab}block.{self.meta.name}(\n")
 
 	def make_options(self, opts, input):
 		"""Prepare the options: must return a string sequence."""
@@ -149,11 +150,11 @@ class ExternalBlock(doc.Block):
 			t.file.close()
 
 	def get_temporary(self):
-		"""Open a temporary file and return an object whose name is the pah and file the file handle.
-		The created file will be cleaned automatically."""
-		t = tempfile.NamedTemporaryFile(suffix = ".txt")
-		self.temps.append(t)
-		return t
+		"""Open a temporary file and return an object whose name is the pah and
+		file the file handle. The created file will be cleaned automatically."""
+		tmp = tempfile.NamedTemporaryFile(suffix = ".txt")
+		self.temps.append(tmp)
+		return tmp
 
 	def dump_temporary(self, text):
 		"""Dump given text to temporary and return its path."""
@@ -175,29 +176,29 @@ class ExternalBlock(doc.Block):
 	def run(self, cmd, opts, input):
 		"""Run the command. Return True for success, False else."""
 		try:
-			cmd = "%s %s" % (cmd, " ".join(opts))
-			common.onVerbose(lambda _: "CMD: %s" % cmd)
-			process = subprocess.Popen(
-					cmd,
-					stdin = subprocess.PIPE,
-					stdout = subprocess.PIPE,
-					stderr = subprocess.PIPE,
-					close_fds = True,
-					shell = True
-				)
-			(out, err) = process.communicate("".join(input).encode('utf-8'))
-			if process.returncode == 127:
-				return False
-			if not self.meta.cmd:
-				self.meta.cmd = cmd
-			if process.returncode:
-				sys.stderr.write(err.decode('utf-8'))
-				self.onWarning("error during \"%s\' call (return code = %d)" % (cmd, process.returncode))
-				return False
-			else:
-				return True
+			cmd = f"{cmd} {' '.join(opts)}"
+			common.onVerbose(lambda _: f"CMD: {cmd}")
+			with subprocess.Popen(
+				cmd,
+				stdin = subprocess.PIPE,
+				stdout = subprocess.PIPE,
+				stderr = subprocess.PIPE,
+				close_fds = True,
+				shell = True
+			) as process:
+				(_, err) = process.communicate("".join(input).encode('utf-8'))
+				if process.returncode == 127:
+					return False
+				if not self.meta.cmd:
+					self.meta.cmd = cmd
+				if process.returncode:
+					sys.stderr.write(err.decode('utf-8'))
+					self.onWarning(f"error during \"{cmd}\" call (return code = {process.returncode})")
+					return False
+				else:
+					return True
 		except OSError as e:
-			self.onError('can not process %s: %s' % (self.meta.name, str(e)))
+			self.onError(f'can not process {self.meta.name}: {e}')
 			return False
 
 	def run_command(self, opts, input):
@@ -216,8 +217,8 @@ class ExternalBlock(doc.Block):
 				return res
 			else:
 				self.meta.cmd = ""
-				self.onWarning("cannot generate %s block: none of commands %s is available." \
-					% (self.meta.name, ", ".join(self.meta.cmds)))
+				self.onWarning(f"cannot generate {self.meta.name} block: " +
+					f"none of commands {', '.join(self.meta.cmds)} is available.")
 				return False
 
 	def make_input(self, input):
@@ -242,7 +243,7 @@ class ExternalBlock(doc.Block):
 	def parse_free(self, arg):
 		"""Called to parse a free argument (not formatetd as id=value).
 		As a default, return an error."""
-		raise ExternalException("unsupported free argument: \"%s\"" % arg)
+		raise ExternalException(f"unsupported free argument: \"{arg}\"")
 
 	def parse_args(self, argl):
 		"""Called to parse argument of the block."""
@@ -259,7 +260,7 @@ class ExternalBlock(doc.Block):
 					option = self.meta.options[key]
 					self.args.append((option, option.parse(match.group(2))))
 				else:
-					raise ExternalException("unknown option \"%s\"" % key)
+					raise ExternalException(f"unknown option \"{key}\"")
 
 
 class ExternalModule(tparser.Syntax):
@@ -276,7 +277,7 @@ class ExternalModule(tparser.Syntax):
 	maker = None
 	doc = None
 
-	def __init__(self, name, ext="", options=[], cmds=[],
+	def __init__(self, name, ext="", options=None, cmds=None,
 		maker = ExternalBlock, doc = ""):
 		"""Build an external module with the given name
 		and given options.
@@ -286,6 +287,11 @@ class ExternalModule(tparser.Syntax):
 		* out: used to generate the option to get back result (it must contain
 		%s to be replaced by the actual path.
 		* ext: output file extension."""
+
+		if options is None:
+			options = []
+		if cmds is None:
+			cmds = []
 
 		# initialize attributes
 		self.name = name
@@ -308,7 +314,7 @@ class ExternalModule(tparser.Syntax):
 		)]
 
 	def get_lines(self):
-		return [(lambda man, match: self.handle(man, match), self.re)]
+		return [(self.handle, self.re)]
 
 	def handle(self, man, match):
 		try:

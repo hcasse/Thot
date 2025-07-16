@@ -16,7 +16,8 @@
 
 """Module dedicated to javascript communication with a dynamic HTML page.
 
-To use it, one has to declare the feature named FEATURE and to create and send messages using class Message."""
+To use it, one has to declare the feature named FEATURE and to create and send
+messages using class Message."""
 
 import json
 import os.path
@@ -87,5 +88,3 @@ class Message:
 			print("DEBUG: replied", self.answer)
 		res = json.dumps(self.answer)
 		out.write(bytes(res, "utf8"))
-		
-

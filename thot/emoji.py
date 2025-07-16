@@ -17,7 +17,8 @@
 """
 Allow to decode emoji encoded with :ID: syntax.
 
-Proposed encoding is proposed from https://gist.github.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb
+Proposed encoding is proposed from
+https://gist.github.com/oliveratgithub/0bf11a9aff0d6da7b46f1490f86a71eb
 under "Creative Commons Legal Code".
 
 """
@@ -1915,7 +1916,8 @@ MAP = {
 }
 
 def get(id):
-	"""Get an emoji encoded as a string with the given identifier id (":" surrounded). Return an empty string if the emoji is not known."""
+	"""Get an emoji encoded as a string with the given identifier id (":" surrounded).
+	Return an empty string if the emoji is not known."""
 	try:
 		return MAP[id]
 	except KeyError:

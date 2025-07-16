@@ -110,7 +110,11 @@ disable=raw-checker-failed,
         duplicate-code,
         too-many-return-statements,
         arguments-out-of-order,
-		W0707
+		W0707,
+		consider-using-with,
+		global-statement,
+		too-many-branches,
+		too-many-nested-blocks
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

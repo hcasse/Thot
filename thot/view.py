@@ -29,14 +29,14 @@ import time
 from urllib.parse import unquote
 import webbrowser
 
-import thot.command as command
-import thot.common as common
-import thot.doc as doc
-import thot.tparser as tparser
-import thot.backs.abstract_html as ahtml
+from thot import command
+from thot import common
+from thot import doc
+from thot import tparser
+from thot.backs import abstract_html as ahtml
 
 
-"""Heartbeat time-out in seconds."""
+# Heartbeat time-out in seconds.
 HEARTBEAT_TIMEOUT = 1.5
 
 PARSERS = {
@@ -127,7 +127,7 @@ class ActionResource(Resource):
 		out.write("\n")
 
 	def __str__(self):
-		return "action:%s" % self.fun
+		return f"action:{self.fun}"
 
 
 class FileResource(Resource):
@@ -138,11 +138,11 @@ class FileResource(Resource):
 		self.path = path
 
 	def get_mime(self):
-		return mimetypes.guess_type(self.path)[0]		
+		return mimetypes.guess_type(self.path)[0]
 
 	def prepare(self):
 		if not os.access(self.path, os.R_OK):
-			raise common.ThotException("cannot access %s" % self.path)
+			raise common.ThotException(f"cannot access {self.path}")
 
 	def generate(self, out):
 		ext = os.path.splitext(self.path)[1]
@@ -178,9 +178,9 @@ VIEW_SCRIPT = """
 
 	function send(cmd) {
 		thot_request.open("GET", cmd, true);
-		thot_request.send();		
+		thot_request.send();
 	}
-		
+
 	function quit() {
 		send("/quit");
 		sleep(500);
@@ -212,7 +212,7 @@ class Generator(ahtml.Generator):
 		header.header_level += self.base_level
 		return True
 
-	def genLinkBegin(self, url, title):
+	def genLinkBegin(self, url, title = None):
 		if not self.is_distant_url(url):
 			url = self.manager.use_resource(url)
 		ahtml.Generator.genLinkBegin(self, url, title)
@@ -235,7 +235,7 @@ class ViewTemplate(ahtml.FileTemplate):
 		if styles == []:
 			return False
 		base = os.path.splitext(os.path.basename(styles[0]))[0]
-		path = self.doc.env.reduce("@(THOT_BASE)/css/%s-%s.css" % (base, type))
+		path = self.doc.env.reduce(f"@(THOT_BASE)/css/{base}-{type}.css")
 		res = os.path.exists(path)
 		if res:
 			styles.append(path)
@@ -257,6 +257,9 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		self.style_author = None
 		self.template = None
 		self.date = None
+		self.env = None
+		self.title = None
+		self.base_level = None
 
 	def get_mime(self):
 		return "text/html"
@@ -275,7 +278,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		if dir == "":
 			dir = "."
 		self.env["THOT_DOC_DIR"] = dir
-		css = [self.env.reduce("@(THOT_BASE)/view/%s.css" % self.style)]
+		css = [self.env.reduce(f"@(THOT_BASE)/view/{self.style}.css")]
 		self.env["HTML_STYLES"] = ":".join(css)
 
 		# build the document
@@ -296,7 +299,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 			self.title = doc.Par([doc.Word(title)])
 
 		# find base level
-		self.base_level = 10;
+		self.base_level = 10
 		for c in self.node.content:
 			if isinstance(c, doc.Header):
 				self.base_level = min(self.base_level, c.header_level)
@@ -315,18 +318,17 @@ class DocResource(Resource, ahtml.TemplateHandler):
 	def gen_subtitle(self, gen):
 		title = self.node.env['TITLE']
 		if title != '':
-			gen.out.write("<h2>%s</h2>" % title)
+			gen.out.write(f"<h2>{title}</h2>")
 
 	def gen_style_authoring(self, gen):
-		if self.style_author == None:
+		if self.style_author is None:
 			name = os.path.splitext(os.path.basename(self.style))[0]
 			self.style_author = name
 			try:
-				with open(self.node.env.reduce(self.style)) as input:
+				with open(self.node.env.reduce(self.style), encoding="utf8") as input:
 					l = input.readline()
 					if l.startswith("/*") and l.endswith("*/\n"):
-						self.style_author = '<a href="%s">%s</a>' \
-							% (l[2:-3].strip(), name)
+						self.style_author = f'<a href="{l[2:-3].strip()}">{name}</a>'
 			except OSError:
 				pass
 		gen.out.write(self.style_author)
@@ -337,13 +339,13 @@ class DocResource(Resource, ahtml.TemplateHandler):
 			icon = self.node.env.reduce(icon)
 			icon = self.manager.use_resource(icon)
 			icon = self.manager.get_resource_link(icon, self.get_location())
-			gen.out.write('<div class="icon"><img src="%s"/></div>' % icon)
+			gen.out.write(f'<div class="icon"><img src="{icon}"/></div>')
 
 	def generate(self, out):
-		if self.node == None:
+		if self.node is None:
 			self.prepare()
 		path = os.path.join(self.node.env["THOT_BASE"], "view/template.html")
-		template = ViewTemplate(self, path)
+		ViewTemplate(self, path)
 		gen = Generator(self)
 		self.node.pregen(gen)
 		gen.out = out
@@ -351,7 +353,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 
 	def get_template(self):
 		"""Get the temlate of the document resource."""
-		if self.template == None:
+		if self.template is None:
 			if self.get_manager().single:
 				path = os.path.join(self.node.env["THOT_BASE"], "themes/plain.html")
 			else:
@@ -372,7 +374,7 @@ class DocResource(Resource, ahtml.TemplateHandler):
 		gen.genAuthors()
 
 	def __str__(self):
-		return "doc:%s" % self.document
+		return f"doc:{self.document}"
 
 	def make_links(self):
 		"""Create links for all objects that support a link."""
@@ -421,7 +423,7 @@ class Manager(ahtml.Manager):
 		# load the config
 		self.base_doc = doc.Document(self.env)
 		self.parser = tparser.Manager(self.base_doc)
-		if config_path != None:
+		if config_path is not None:
 			self.mon.say("readind configuration from %s", config_path)
 			self.dir = dir
 			try:
@@ -444,7 +446,7 @@ class Manager(ahtml.Manager):
 		self.alias_resource(gen, '/index.htm')
 
 	def __del__(self):
-		if self.tmpdir != None:
+		if self.tmpdir is not None:
 			shutil.rmtree(self.tmpdir)
 
 	def is_interactive(self):
@@ -477,7 +479,7 @@ class Manager(ahtml.Manager):
 			else:
 				name = os.path.basename(rpath)
 				base, ext = os.path.splitext(rpath)
-				loc = "/static/%s" % name
+				loc = f"/static/{name}"
 				cnt = 0
 				while loc in self.map:
 					loc = "%s-%d%s" % (base, cnt, ext)
@@ -488,12 +490,12 @@ class Manager(ahtml.Manager):
 		return rpath
 
 	def new_resource(self, path = None, ext = None):
-		if self.tmpdir == None:
+		if self.tmpdir is None:
 			self.tmpdir = os.path.abspath(tempfile.mkdtemp(prefix = "thot-"))
-		if path == None:
-			path = "file-%d%s" % (self.counter, ext)
+		if path is None:
+			path = f"file-{self.counter}{ext}"
 			self.counter += 1
-		loc = "/static/%s" % path
+		loc = f"/static/{path}"
 		path = os.path.join(self.tmpdir, path)
 		self.ensure_dir(os.path.dirname(path))
 		res = self.make_gen(path, loc)
@@ -532,12 +534,12 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 			file = self.server.manager.map[path]
 			file.prepare()
 		except KeyError:
-			msg = "%s not found" % path
+			msg = f"{path} not found"
 			self.send_error(404, msg)
 			return
 		except common.ThotException as e:
 			self.send_error(500)
-			self.error("error for %s: %s" % (path, e))
+			self.error(f"error for {path}: {e}"
 			return
 
 		self.send_response(200)
@@ -553,7 +555,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		try:
 			file = self.server.manager.map[path]
 		except KeyError:
-			msg = "%s not found" % path
+			msg = f"{path} not found"
 			self.send_error(404, msg)
 			return
 
@@ -562,9 +564,9 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 			# post the message
 			res = file.post(int(self.headers['content-length']), self.rfile)
-			if res != None:
+			if res is not None:
 				self.send_error(res[0], res[1])
-				return				
+				return
 
 			# build answer
 			self.send_response(200)
@@ -574,7 +576,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
 		except common.ThotException as e:
 			self.send_error(500)
-			self.error("error for %s: %s" % (path, e))
+			self.error(f"error for {path}:  {e}")
 			return
 
 	def error(self, msg):
@@ -631,7 +633,7 @@ class MyServer(http.server.HTTPServer):
 		if not self.heartbeat_started:
 			self.heartbeat_started = True
 			threading.Thread(target = self.check_heartbeat).start()
-		
+
 
 def main():
 	mon = common.DEFAULT_MONITOR
@@ -648,7 +650,7 @@ def main():
 		help="Enable verbose mode.")
 	parser.add_argument("--version", action="store_true",
 		help="print version")
-	
+
 	args = parser.parse_args()
 
 	# version support
@@ -674,7 +676,7 @@ def main():
 	# run the server
 	manager = Manager(path, args.verbose, mon=mon, single=args.single)
 	MyServer(manager).serve_forever()
-	
+
 
 if __name__ == "__main__":
 	main()
