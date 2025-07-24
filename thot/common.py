@@ -14,26 +14,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Convenient definitions for Thot."""
+
 import datetime
-import html
 import importlib.util
 import locale
 import os
 import os.path
 import re
-import shutil
 import subprocess
 import sys
 import traceback
-
-from html import escape
 
 VERSION = "2.1"
 
 def print_version():
 	print("Thot", VERSION)
 	print("Copyright (c) 2023 Hugues Cassé <hug.cassegmail.com>")
-	print("This is free software; see the source for copying conditions.  There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.")
+	print(
+"""This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.""")
 
 class ThotException(Exception):
 	"""Exception of the Thot system.
@@ -96,25 +96,25 @@ def onParseError(msg):
 def onError(text):
 	"""Display the given error and stop the application."""
 	onVerbose(lambda _: show_stack())
-	sys.stderr.write("ERROR: %s\n" % text)
+	sys.stderr.write(f"ERROR: {text}\n")
 	sys.exit(1)
 
 
 def onWarning(message):
 	"""Display a warning message."""
-	sys.stderr.write("WARNING: %s\n" % message)
+	sys.stderr.write(f"WARNING: {message}\n")
 
 
 def onInfo(message):
 	"""Display an information message."""
-	sys.stderr.write("INFO: %s\n" % message)
+	sys.stderr.write(f"INFO: {message}\n")
 
 
 DEPRECATED = []
 def onDeprecated(msg):
 	"""Display a deprecated message with the given message."""
 	if msg not in DEPRECATED:
-		sys.stderr.write("DEPRECATED: %s\n" % msg)
+		sys.stderr.write(f"DEPRECATED: {msg}\n")
 		DEPRECATED.append(msg)
 
 
@@ -134,7 +134,7 @@ def loadModule(name, paths):
 		onVerbose(lambda _: show_stack())
 		raise ThotException(f"cannot open module '{path}': {e}")
 
-AUTHOR_RE = re.compile('(.*)\<([^>]*)\>\s*')
+AUTHOR_RE = re.compile(r'(.*)\<([^>]*)\>\s*')
 def scanAuthors(text):
 	"""Scan the author text to get structured representation of authors.
 	text -- text containing author declaration separated by ','
@@ -166,7 +166,7 @@ def which(program):
 	program: program to look for
 	return: the found path of None."""
 
-	fpath, fname = os.path.split(program)
+	fpath, _ = os.path.split(program)
 	if fpath:
 		if is_exe(program):
 			return program
@@ -184,28 +184,14 @@ def getLinuxDistrib():
 	try:
 		id = ""
 		release = 0
-		for line in open("/etc/lsb-release"):
+		for line in open("/etc/lsb-release", encoding="utf8"):
 			if line.startswith("DISTRIB_ID="):
 				id = line[11:-1]
 			elif line.startswith("DISTRIB_RELEASE="):
 				release = line[16:-1]
 		return (id, release)
-	except IOError as e:
+	except IOError:
 		return ("", 0)
-
-
-def onRaise(msg):
-	"""Raise a command error with the given message."""
-	raise CommandError(msg)
-
-def onIgnore(msg):
-	"""Ignore the error."""
-	pass
-
-ERROR_FAIL = onError
-ERROR_RAISE = onRaise
-ERROR_WARN = onWarning
-ERROR_IGNORE = onIgnore
 
 
 class CommandRequirement:
@@ -216,7 +202,7 @@ class CommandRequirement:
 	msg = None
 	error = False
 
-	def __init__(self, cmd, msg = None, error = ERROR_WARN):
+	def __init__(self, cmd, msg = None, error = onWarning):
 		self.cmd = cmd
 		self.msg = msg
 		self.error = error
@@ -236,39 +222,46 @@ class Command(CommandRequirement):
 	def __init__(self, cmd, msg = None, error = False):
 		CommandRequirement.__init__(self, cmd, msg, error)
 
-	def call(self, args = [], input = None, quiet = False):
+	def call(self, args = None, input = None, quiet = False):
 		"""Call the command. Throw CommandException if there is an error.
 		args -- list of arguments.
 		input -- input to pass to the called command.
 		quiet -- do not produce any output."""
+		if args is None:
+			args = []
 		cmd = self.get()
 		if not cmd:
 			return
 		out = None
 		if quiet:
-			out = open(os.devnull, "w")
+			out = open(os.devnull, "w", encoding="utf8")
 		cmd = " ".join([ cmd ] + args)
 		try:
-			code = subprocess.check_call( cmd, close_fds = True, shell = True, stdout = out, stderr = out, stdin = input )
+			subprocess.check_call(cmd, close_fds = True, shell = True,
+				stdout = out, stderr = out, stdin = input )
 		except (OSError, subprocess.CalledProcessError) as e:
-			self.error("command %s failed: %s" % (self.cmd, e))
+			self.error(f"command {self.cmd} failed: {e}")
 
-	def scan(self, args = [], input = None, err = False):
+	def scan(self, args = None, input = None, err = False):
 		"""Launch a command and return the output if successful, a CommandException is raise else.
 		input -- optional input stream.
 		err -- if True, redirect also the standard error."""
+		if args is None:
+			args = []
 		cmd = self.get()
 		if not cmd:
-			return
+			return ""
 		errs = None
 		if err:
 			errs = subprocess.PIPE
 		cmd = " ".join([ cmd ] + args)
 		try:
-			out = subprocess.check_output( cmd, close_fds = True, shell = True, stdout = subprocess.PIPE, stderr = errs, stdin = input )
+			out = subprocess.check_output( cmd, close_fds = True, shell = True,
+												stderr = errs, stdin = input )
 			return out
 		except (OSError, subprocess.CalledProcessError) as e:
-			self.error("command %s failed: %s" % (self.cmd, e))
+			self.error(f"command {self.cmd} failed: {e}")
+			return ""
 
 
 ESCAPES = [ '(', ')', '+', '.', '*', '/', '?', '^', '$', '\\', '|' ]
@@ -299,12 +292,12 @@ class Options:
 			for opt in options.split(","):
 				p = opt.find("=")
 				if p < 0:
-					self.man.warn("bad option: '%s" % opt)
+					self.man.warn(f"bad option: '{opt}'")
 					continue
 				id = opt[:p]
 				val = opt[p+1:]
 				if id not in self.map:
-					self.man.warn("unknown option '%s'" % opt)
+					self.man.warn(f"unknown option {opt}'")
 				else:
 					self.map[id] = val
 
@@ -336,29 +329,29 @@ def make_var_doc(custom):
 	and custom variables."""
 	vars = STANDARD_VARS + custom
 	vars.sort()
-	imax = max([len(i) for (i, _) in vars])
+	imax = max(len(i) for (i, _) in vars)
 	d = ""
 	for (i, id) in vars:
-		d += "%s:%s %s\n" % (i, " " * (imax - len(i)), id)
+		d += f"{i}:{' ' * (imax - len(i))} {id}\n"
 	return d
 
 
-arg_re = re.compile("\(\?P<([a-zA-Z0-9]+)(_[a-zA-Z0-9_]*)?>(%s|%s)*\)" %
-	("[^)[]", "\[[^\]]*\]"))
+arg_re = re.compile(r"\(\?P<([a-zA-Z0-9]+)(_[a-zA-Z0-9_]*)?>(%s|%s)*\)" %
+	(r"[^)[]", r"\[[^\]]*\]"))
 REPS = [
-	(" ", 		u"␣"	),
-	("\t", 		u"⭾"	),
+	(" ", 		"␣"	),
+	("\t", 		"⭾"	),
 	("\\s+",	" "		),
 	("\\s*", 	" "		),
 	("\\s", 	" "		),
-	("\(", 		"("		),
-	("\)", 		")"		),
+	(r"\(", 	"("		),
+	(r"\)", 	")"		),
 	("^", 		""		),
 	("$", 		""		)
 ]
 def prepare_syntax(t):
 	"""Prepare a regular expression to be displayed to human user."""
-	if t == "^$" or t == "^\s+$":
+	if t in ("^$", r"^\s+$"):
 		return "\\n"
 	t = arg_re.sub('/\\1/', t)
 	for (p, r) in REPS:
@@ -404,22 +397,22 @@ def display_syntax(syn):
 	syn = [(decorate_syntax(s), d) for (s, d) in syn]
 
 	# display the strings
-	m = min(16, 1 + max([l for ((l, _), _) in syn]))
+	m = min(16, 1 + max(l for ((l, _), _) in syn))
 	for ((l, r), d) in syn:
 		ls = d.split("\n")
 		if l > m:
-			print("%s:" % r)
+			print(f"{r}:")
 		else:
-			print("%s:%s%s" % (r, " " * (m - l), ls[0][0:min(w, len(ls[0]))]))
+			print(f"{r}:{' ' * (m - l)}{ls[0][0:min(w, len(ls[0]))]}")
 			if len(ls[0]) > w:
 				ls[0] = ls[0][w:]
 			else:
 				ls = ls[1:]
 		for l in ls:
 			while len(l) > w:
-				print("%s %s" % (" " * m, l[:w]))
+				print(f"{' ' * m} {l[:w]}")
 				l = l[w:]
-			print("%s %s" % (" " * m, l))
+			print("{' ' * m} {l}")
 
 
 class Env:
@@ -431,7 +424,7 @@ class Env:
 	VAR_REC = re.compile(VAR_RE)
 
 	def __init__(self, map = None):
-		if map != None:
+		if map is not None:
 			self.map = map
 		else:
 			self.map = os.environ.copy()
@@ -510,7 +503,7 @@ class Monitor:
 	def fatal(self, msg, *args):
 		"""Print an error and stop the application."""
 		self.err.write(Monitor.ERROR_FMT % (msg % args))
-		exit(1)
+		sys.exit(1)
 
 	def error(self, msg, *args):
 		"""Print an error."""

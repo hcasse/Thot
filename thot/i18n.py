@@ -14,12 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Thot module for managing internationalization."""
+
 import locale
 import os.path
-import string
 import sys
 
-import thot.common as common
+from thot import common
 
 ID_CONTENT = "Content"
 ID_INTRODUCTION = "Introduction"
@@ -42,59 +43,60 @@ ALL = {
 	CAPTION_TABLE		: "Table %s: ",
 	CAPTION_FIGURE		: "Figure %s: ",
 	CAPTION_LISTING		: "Listing %s: ",
-	GLYPH_OPEN_DQUOTE	: u'\u201c',
-	GLYPH_CLOSE_DQUOTE	: u'\u201d',
-	GLYPH_OPEN_SQUOTE	: u'\u2018',
-	GLYPH_CLOSE_SQUOTE	: u'\u2019'
+	GLYPH_OPEN_DQUOTE	: '\u201c',
+	GLYPH_CLOSE_DQUOTE	: '\u201d',
+	GLYPH_OPEN_SQUOTE	: '\u2018',
+	GLYPH_CLOSE_SQUOTE	: '\u2019'
 }
 
 class Translator:
 	"""Class providing translation to generate document
 	according to a selected language."""
-	
+
 	def get(self, text):
 		"""Get translation for the given text that may be one
 		of GLYPH_xxx or CAPTION_xxx."""
 		return ""
-		
+
 
 class DictTranslator(Translator):
 	"""A translator based on a dictionary."""
 	dict = None
-	
+
 	def __init__(self, dict):
 		self.dict = dict
-	
+
 	def get(self, text):
 		if text in self.dict:
 			return self.dict[text]
 		else:
 			sys.stderr.write("WARNING: no translation for '" + text + "'")
+			return text
 
 
 class DefaultTranslator(DictTranslator):
 	"""A translator for english."""
-	
+
 	def __init__(self):
 		DictTranslator.__init__(self, ALL)
 
 
 def getTranslator(doc):
 	"""Find a translator for the given document."""
-	
+
 	# find the language
 	lang = doc.getVar('LANG')
 	if not lang:
-		lang, _ = locale.getdefaultlocale()
+		lang, _ = locale.getlocale()
 		sys.stderr.write("INFO: using default language: " + lang + "\n")
 	nlang = lang.lower().replace('-', '_')
-	
+
 	# look for the local version
 	path = os.path.join(doc.getVar('THOT_LIB'), "langs")
 	mod = common.loadModule(nlang, path)
 	if mod:
 		return mod.getTranslator(doc, nlang)
-	
+
 	# look for the global version
 	comps = nlang.split('_')
 	if comps[0] == 'en':

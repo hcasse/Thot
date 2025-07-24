@@ -28,30 +28,28 @@ scripts. The following variables are used:
 * DURATION - duration of the presentation to display a time count.
 * ORG_LOGO - logo of organization,
 * DOC_LOGO -- logo of the document.
-* OUTLINE -- none to not generate outline pages, top for outline only 
+* OUTLINE -- none to not generate outline pages, top for outline only
   with top-level entries (default).
 """
 
-import thot.backs.abstract_html as  abstract_html
-import thot.common as common
-import thot.doc as doc
-import thot.i18n as i18n
 import os
 import os.path
 import re
 import shutil
-import types
-
 import sys
-import traceback
+
+from thot.backs import abstract_html
+from thot import common
+from thot import doc
+from thot import i18n
 
 class Templater:
 
 	def __init__(self, env):
 		self.env = env
-	
+
 	def gen(self, temp, out):
-		temp = open(temp, "r")
+		temp = open(temp, "r", encoding="utf8")
 		for line in temp.readlines():
 			while line:
 				p = line.find("@(")
@@ -60,11 +58,11 @@ class Templater:
 				if p < 0:
 					out.write(line)
 					break
-					
+
 				# write the prefix
 				out.write(line[:p])
 				line = line[p+2:]
-					
+
 				# find closing variable
 				q = line.find(")")
 				if q < 0:
@@ -78,7 +76,8 @@ class Templater:
 					if hasattr(v, "__call__"):
 						v(self.env, out)
 					else:
-						out.write(backs.abstract_html.escape(v))
+						#out.write(abstract_html.escape(v))
+						pass
 				except KeyError:
 					pass
 		temp.close()
@@ -91,12 +90,12 @@ class Marker(doc.Node):
 		doc.Node.__init__(self)
 		self.type = type
 
-	def dump(self, tab):
-		print("%smaker(%s)" % (tab, self.type))
+	def dump(self, out=sys.stdout, tab=""):
+		out.write("{tab}maker({self.type})")
 
 
 class Generator(abstract_html.Generator):
-	
+
 	def __init__(self, doc):
 		abstract_html.Generator.__init__(self, doc)
 		self.inc = False
@@ -118,53 +117,53 @@ class Generator(abstract_html.Generator):
 			return
 		if cur.getHeaderLevel() > 0:
 			return
-		
+
 		self.out.write('\n<div class="slide outline">\n')
-		self.out.write('\t<h1>%s</h1>\n' % self.trans.get(i18n.ID_OUTLINE))
+		self.out.write(f'\t<h1>{self.trans.get(i18n.ID_OUTLINE)}</h1>\n')
 		self.out.write('\t<ul>\n')
-		
+
 		cls = "header-done"
 		for h in self.get_top_headers():
 			if h == self.last:
 				cls = "header-last"
 			elif h == cur:
 				cls = "header-current"
-			self.out.write('\t\t<li class="%s">' % cls)
+			self.out.write(f'\t\t<li class="{cls}">')
 			h.genTitle(self)
 			self.out.write('</li>\n')
 			if h == cur:
 				cls = "header-todo"
 		self.last = cur
-		
+
 		self.out.write('\t</ul>\n')
 		self.out.write('</div>\n')
 
 	def run(self):
 
 		try:
-		
+
 			# prepare the files to process
 			(base, css) = self.get_css()
 			tpath = self.get_template()
 			tool_base = os.path.join(self.doc.getVar("THOT_BASE"), "slidy")
-			tool_css = os.path.join("styles", "slidy.css")
-	
+			#tool_css = os.path.join("styles", "slidy.css")
+
 			# add CSS
-			self.openMain(".html")
-			tool_rel_css = self.importCSS(tool_css, tool_base)
+			self.openMain()
+			#tool_rel_css = self.importCSS(tool_css, tool_base)
 			if css:
 				self.rel_css = self.importCSS(css, base)
-			
+
 			# add scripts
-			ipath = self.getImportDir()
+			#ipath = self.getImportDir()
 			spath = os.path.join(tool_base, "scripts")
-			path = os.path.join(ipath, "scripts")
+			path = ""	#os.path.join(ipath, "scripts")
 			if not os.path.exists(path):
 				shutil.copytree(spath, path)
-			
+
 			# write the output
 			env = dict(self.doc.env)
-			env["IMPORTS"] = ipath
+			env["IMPORTS"] = ""	#ipath
 			env["IF_IMPORTED_STYLE"] = self.gen_imported_style
 			env["SLIDES"] = self.gen_slides
 			env["IF_COVER_IMAGE"] = self.gen_cover_image
@@ -175,48 +174,48 @@ class Generator(abstract_html.Generator):
 			templater.gen(tpath, self.out)
 
 		except IOError as e:
-			common.onError("error during generation: %s" % e)
+			common.onError(f"error during generation: {e}")
 
 	def gen_imported_style(self, env, out):
 		if self.rel_css:
-			out.write('<link rel="stylesheet" href="%s" type="text/css" />\n' % self.rel_css)
+			out.write(f'<link rel="stylesheet" href="{self.rel_css}" type="text/css" />\n')
 
 	def gen_doc_logo(self, env, out):
 		try:
-			path = self.use_friend(env["DOC_LOGO"])
-			out.write('<img id="head-icon" alt="document logo" src="%s"/>' % path) 
+			path = ""	#self.use_friend(env["DOC_LOGO"])
+			out.write(f'<img id="head-icon" alt="document logo" src="{path}"/>')
 		except KeyError:
 			pass
-	
+
 	def gen_org_logo(self, env, out):
 		try:
-			path = self.use_friend(env["ORG_LOGO"])
-			out.write('<img src="%s" alt="W3C logo" id="head-logo-fallback" />' % path) 
+			path = ""	#self.use_friend(env["ORG_LOGO"])
+			out.write(f'<img src="{path}" alt="W3C logo" id="head-logo-fallback" />')
 		except KeyError:
 			pass
-	
+
 	def gen_cover_image(self, env, out):
 		try:
-			path = self.use_friend(env["COVER_IMAGE"])
-			out.write('<img src="%s"  alt="cover picture" class="cover"/><br clear="all" />' % path)
+			path = ""	#self.use_friend(env["COVER_IMAGE"])
+			out.write(f'<img src="{path}"  alt="cover picture" class="cover"/><br clear="all" />')
 		except KeyError:
 			pass
-	
+
 	def gen_duration(self, env, out):
 		if "DURATION" in env:
-			out.write('<meta name="duration" content="%s"/>' % env["DURATION"])
-	
+			out.write(f'<meta name="duration" content="{env["DURATION"]}"/>')
+
 	def gen_slides(self, env, out):
 		stack = []
 		started = False
 		header = self.trans.get(i18n.ID_INTRODUCTION)
 		i = iter(self.doc.content)
-		inc = False
-				
+		#inc = False
+
 		while True:
 			try:
 				node = i.next()
-				
+
 				# marker processing
 				if isinstance(node, Marker):
 					if node.type == "slice":
@@ -231,7 +230,7 @@ class Generator(abstract_html.Generator):
 					elif node.type == "non-inc":
 						self.out.write('</div>')
 						self.inc = False
-				
+
 				# header processing
 				if node.getHeaderLevel() >= 0:
 					self.gen_outline(node)
@@ -243,7 +242,7 @@ class Generator(abstract_html.Generator):
 					header = node
 					i = iter(node.content)
 					started = False
-				
+
 				# other paragraph processing
 				else:
 					if not started:
@@ -262,18 +261,18 @@ class Generator(abstract_html.Generator):
 				if not stack:
 					break
 				header, i = stack.pop()
-		
-	def genHeaderTitle(self, header):
+
+	def genHeaderTitle(self, header, href=None):
 		"""Generate the title of a header."""
 		self.out.write("<h1>")
-		self.out.write('<a name="%s"></a>' % id(header))
+		self.out.write(f'<a name="{id(header)}"></a>')
 		header.genTitle(self)
 		self.out.write('</h1>\n')
 
 	def get_slide_template(self, name):
 		"""Find a HTML template file for a particular slide type."""
-		(base, css) = self.get_css()
-		path = os.path.join(base, "%s.html" % name)
+		(base, _) = self.get_css()
+		path = os.path.join(base, f"{name}.html")
 		if os.path.exists(path):
 			return path
 		else:
@@ -282,25 +281,25 @@ class Generator(abstract_html.Generator):
 	def get_template(self):
 		"""Get the HTML template to generate presentation.
 		It is derived from the CSS."""
-		
+
 		# already computed?
 		if self.template:
 			return self.template
-		(base, css) = self.get_css()
-		
+		(base, _) = self.get_css()
+
 		# look in base / template.html
 		if base:
 			path = os.path.join(base, "template.html")
 			if os.path.exists(path):
 				self.template = path
-		
+
 		# else fallback to default blank
 		if not self.template:
 			self.template = os.path.join(self.doc.getVar("THOT_BASE"), "slidy", "blank.html")
-		
+
 		# return result
 		return self.template
-	
+
 
 	def get_css(self):
 		"""Get the CSS style from the current configuration.
@@ -314,14 +313,14 @@ class Generator(abstract_html.Generator):
 		style = self.doc.getVar("STYLE")
 		if not style:
 			return (None, None)
-		
+
 		# absolute path
 		if os.path.isabs(style):
 			if os.path.isdir(style):
 				self.css = (style, "style.css")
 			else:
 				self.css = (os.path.dirname(style), os.path.basename(style))
-		
+
 		# in the current directory
 		elif os.path.exists(style):
 			if os.path.isdir(style):
@@ -340,15 +339,15 @@ class Generator(abstract_html.Generator):
 				if os.path.exists(path):
 					self.css = (base, os.path.join("styles", style + ".css"))
 				else:
-					common.onError("cannot find style '%s'" % style)
-		
+					common.onError(f"cannot find style '{style}'")
+
 		# return result
 		return self.css
 
 	def genList(self, list, attrs = ""):
 		if self.inc:
 			attrs = attrs + ' class="incremental"'
-		backs.abstract_html.Generator.genList(self, list, attrs)
+		abstract_html.Generator.genList(self, list, attrs)
 
 
 def handle_slide(man, match):
@@ -368,4 +367,4 @@ def init(man):
 	man.addLine((handle_slide, re.compile("<slide>")))
 	man.addLine((handle_inc, re.compile("<inc>")))
 	man.addLine((handle_not_inc, re.compile("<non-inc>")))
-	
+

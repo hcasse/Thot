@@ -29,7 +29,7 @@ import time
 from urllib.parse import unquote
 import webbrowser
 
-from thot import command
+#from thot import command
 from thot import common
 from thot import doc
 from thot import tparser
@@ -482,7 +482,7 @@ class Manager(ahtml.Manager):
 				loc = f"/static/{name}"
 				cnt = 0
 				while loc in self.map:
-					loc = "%s-%d%s" % (base, cnt, ext)
+					loc = f"{base}-{cnt}{ext}"
 					cnt = cnt + 1
 			res = self.make_gen(rpath, loc)
 			self.fsmap[rpath] = res
@@ -539,7 +539,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 			return
 		except common.ThotException as e:
 			self.send_error(500)
-			self.error(f"error for {path}: {e}"
+			self.error(f"error for {path}: {e}")
 			return
 
 		self.send_response(200)
@@ -600,19 +600,20 @@ class MyServer(http.server.HTTPServer):
 		manager.link_resource(ActionResource("/quit", self.quit))
 		manager.link_resource(ActionResource("/heartbeat", self.record_heartbeat))
 		self.heartbeat_started = False
+		self.last_heartbeat = None
 
 	def get_address(self):
 		return self.socket.getsockname()
 
 	def run_browser(self):
 		time.sleep(.5)
-		webbrowser.open_new_tab("http://%s:%d" % self.get_address())
+		webbrowser.open_new_tab(f"http://{self.get_address()}")
 
 	def quit(self):
 		self.mon.say("Quit.")
 		threading.Thread(target = self.shutdown).start()
 
-	def serve_forever(self):
+	def run(self):
 		self.mon.say("Listening to %s", self.get_address())
 		threading.Thread(target = self.run_browser).start()
 		try:
@@ -656,7 +657,7 @@ def main():
 	# version support
 	if args.version:
 		common.print_version()
-		exit()
+		sys.exit()
 
 	# find the file to open
 	path = args.document
@@ -675,7 +676,7 @@ def main():
 
 	# run the server
 	manager = Manager(path, args.verbose, mon=mon, single=args.single)
-	MyServer(manager).serve_forever()
+	MyServer(manager).run()
 
 
 if __name__ == "__main__":

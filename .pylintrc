@@ -95,7 +95,6 @@ disable=raw-checker-failed,
         unnecessary-pass,
         missing-class-docstring,
         too-many-arguments,
-        no-self-use,
         no-else-return,
         unused-argument,
         invalid-unary-operand-type,
@@ -114,7 +113,11 @@ disable=raw-checker-failed,
 		consider-using-with,
 		global-statement,
 		too-many-branches,
-		too-many-nested-blocks
+		too-many-nested-blocks,
+		too-many-statements,
+		consider-iterating-dictionary,
+		no-else-raise,
+		too-many-locals
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

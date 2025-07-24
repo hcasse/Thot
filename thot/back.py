@@ -19,26 +19,27 @@ Definition of the abstract class back.Generator to help generation
 of output files.
 """
 
-import tempfile
 import os.path
 import shutil
 import sys
 
-import thot.common as common
-import thot.doc as tdoc
-import thot.i18n as i18n
+from thot import common
+from thot import i18n
 
 STDOUT = "<stdout>"
 
 
 class Manager:
-	"""The manager is in charge of organizing where to put files invovled in the building of a document."""
+	"""The manager is in charge of organizing where to put files invovled in
+	the building of a document."""
 
 	def __init__(self, mon = common.DEFAULT_MONITOR):
 		self.mon = mon
 
 	def is_interactive(self):
-		"""Called to test if the page will be served by an HTTP server implemented by Thot. This allows to pass custom commands to Thot. Default implementation returns false."""
+		"""Called to test if the page will be served by an HTTP server implemented
+		by Thot. This allows to pass custom commands to Thot. Default implementation
+		returns false."""
 		return False
 
 	def use_resource(self, path):
@@ -55,7 +56,8 @@ class Manager:
 		return None
 
 	def relocate(self, spath, dpath):
-		"""Called to relocate a used path (spath) )into the current build path (dpath). The default implementation just copies the file."""
+		"""Called to relocate a used path (spath) )into the current build path (dpath).
+		The default implementation just copies the file."""
 		shutil.copyfile(spath, dpath)
 		shutil.copystat(spath, dpath)
 
@@ -72,14 +74,17 @@ class Manager:
 			try:
 				os.makedirs(dir)
 			except OSError as e:
-				raise common.BackException("cannot creare %s: %s" % (dir, e))
+				raise common.BackException(f"cannot creare {dir}: {e}")
 		elif not os.path.isdir(dir):
-			raise common.BackException("%s is not a directory" % dir)
+			raise common.BackException(f"{dir} is not a directory")
 
 
 
 class LocalManager(Manager):
-	"""A manager that keeps local files (in the same directory as output) as is and creates new files and move non-local files in a devoted directory named import directory and derived from the output path PATH by adding suffixing it with "imports"."""
+	"""A manager that keeps local files (in the same directory as output) as is
+	and creates new files and move non-local files in a devoted directory named
+	import directory and derived from the output path PATH by adding suffixing it
+	with "imports"."""
 
 
 	def __init__(self, out_path, mon = common.DEFAULT_MONITOR):
@@ -99,8 +104,8 @@ class LocalManager(Manager):
 		return self.import_dir
 
 	def new_resource(self, path = None, ext = None):
-		if path == None:
-			path = "+file-%d.%s" % (self.tmp, ext)
+		if path is None:
+			path = f"+file-{self.tmp}.{ext}"
 			self.tmp += 1
 		path = os.path.join(self.get_import(), path)
 		dpath = os.path.dirname(path)
@@ -119,7 +124,7 @@ class LocalManager(Manager):
 				dir, name = os.path.split(path)
 				while name in self.used:
 					dir, dname = os.path.split(dir)
-					name = "%s-%s" % (dname, name)
+					name = f"{dname}-{name}"
 				fpath = os.path.join(self.get_import(), name)
 				self.used.append(name)
 				self.map[apath] = fpath
@@ -128,7 +133,7 @@ class LocalManager(Manager):
 
 	def get_resource_path(self, path, ref = None):
 		path = os.path.abspath(path)
-		if ref == None:
+		if ref is None:
 			return path
 		else:
 			gpath = os.path.dirname(ref)
@@ -153,7 +158,7 @@ class Generator:
 		self.doc = doc
 		self.out = out
 		self.trans = i18n.getTranslator(self.doc)
-		if manager != None:
+		if manager is not None:
 			self.manager = manager
 		else:
 			self.manager = LocalManager(self.get_out_path())
@@ -168,7 +173,7 @@ class Generator:
 
 	def get_out_path(self):
 		"""Get the path to the generated file."""
-		if self.out_path == None:
+		if self.out_path is None:
 			self.out_path = self.doc.getVar("THOT_OUT_PATH")
 			if self.out_path == "":
 				in_path = self.doc.getVar("THOT_FILE")
@@ -181,7 +186,7 @@ class Generator:
 	def get_base_path(self):
 		"""Get the base path, that is, the directory that contains the input.
 		If input is <stdin>, the current directory."""
-		if self.base_path == None:
+		if self.base_path is None:
 			in_path = self.doc.getVar("THOT_FILE")
 			if in_path == "":
 				self.base_path = os.getcwd()
@@ -200,7 +205,7 @@ class Generator:
 			if out_path == STDOUT:
 				self.out = sys.stdout
 			else:
-				self.out = open(self.get_out_path(), "w")
+				self.out = open(self.get_out_path(), "w", encoding="utf8")
 
 	def closeMain(self):
 		"""Close the main output."""
@@ -334,7 +339,7 @@ class Generator:
 	# error management
 
 	def get_prefix(self, node):
-		if node == None:
+		if node is None:
 			return ""
 		else:
 			return node.getFileLine()

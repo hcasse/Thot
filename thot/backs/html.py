@@ -14,15 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""HTML back-end for Thot."""
+
 import os
 
-import thot.back as back
-import thot.backs.abstract_html as abstract_html
-import thot.common as common
-import thot.doc as doc
-import thot.i18n as i18n
+from thot import back
+from thot.backs import abstract_html
+from thot import common
+from thot import doc
+from thot import i18n
 
-from thot.backs.abstract_html import escape_cdata, escape_attr
+from thot.backs.abstract_html import escape_cdata
 
 def makeRef(nums):
 	"""Generate a reference from an header number array."""
@@ -74,7 +76,7 @@ class PagePolicy:
 			if isinstance(type, int):
 				for i in range(type+1, 7):
 					if i not in self.nums:
-						break;
+						break
 					else:
 						del self.nums[i]
 		except KeyError:
@@ -86,12 +88,12 @@ class PagePolicy:
 
 		# build the number
 		if not isinstance(type, int):
-			return str(num + 1)
+			self.hnums = str(num + 1)
 		else:
-			if self.hnums == None:
+			if self.hnums is None:
 				self.hnums = str(num + 1)
 			else:
-				self.hnums = "%s.%s" % (self.hnums, num + 1)
+				self.hnums = f"{self.hnums}.{num + 1}"
 		self.man.declare_number(node, self.hnums)
 
 	def push_file(self, path):
@@ -115,15 +117,17 @@ class PagePolicy:
 	def format_number(self, node):
 		"""Called to format the number of the given node."""
 		num = node.numbering()
-		if num == None:
+		if num is None:
 			return None
+		else:
+			return num
 
 	def make_numbers(self, node):
 		"""Assign numbers to the given nodes and nodes below."""
 		num = node.numbering()
 
 		# no numbering or a document
-		if num == None:
+		if num is None:
 			if isinstance(node, doc.Document):
 				for item in node.getContent():
 					self.make_numbers(item)
@@ -150,10 +154,10 @@ class PagePolicy:
 		out = gen.out
 		short_icon = gen.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
-			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
+			out.write(f'<link rel="shortcut icon" href="{short_icon}"/>')
 		self.gen.gen_header_embedded()
 
-	
+
 class AllInOne(PagePolicy):
 	"""Simple page policy doing nothing: only one page."""
 
@@ -162,15 +166,15 @@ class AllInOne(PagePolicy):
 
 	def gen_title(self, gen):
 		gen.genTitleText()
-	
+
 	def gen_authors(self, gen):
 		gen.genAuthors()
 
 	def gen_menu(self, gen):
 		self.gen.genContent([], 100)
-		
+
 	def gen_content(self, gen):
-		self.gen.genBody()		
+		self.gen.genBody()
 
 	def run(self):
 		self.gen.openMain()
@@ -191,34 +195,34 @@ class PerChapter(PagePolicy):
 	def page_name(self, page):
 		"""Compute the page name."""
 		if page < 0:
-			return "%s.html" % self.gen.get_out_path()
+			return f"{self.gen.get_out_path()}.html"
 		else:
-			return "%s-%d.html" % (os.path.splitext(self.gen.get_out_path())[0], page)
+			return f"{os.path.splitext(self.gen.get_out_path())[0]}-{page}.html"
 
-	def enter_header(self, header):
-		if header.getHeaderLevel() == 0:
+	def enter_header(self, node):
+		if node.getHeaderLevel() == 0:
 			name = self.page_name(len(self.todo))
 			self.push_file(name)
-			self.todo.append((name, header))
+			self.todo.append((name, node))
 
-	def leave_header(self, header):
-		if header.getHeaderLevel() == 0:
+	def leave_header(self, node):
+		if node.getHeaderLevel() == 0:
 			self.pop_file()
 
 	def gen_title(self, gen):
 		gen.genTitleText()
-	
+
 	def gen_authors(self, gen):
 		gen.genAuthors()
 
 	def gen_menu(self, gen):
-		if self.current == None:
+		if self.current is None:
 			gen.genContent([], 0)
 		else:
 			gen.genContent([self.current], 100)
-		
+
 	def gen_content(self, gen):
-		if self.current == None:
+		if self.current is None:
 			for node in self.gen.doc.getContent():
 				if node.getHeaderLevel() != 0:
 					node.gen(gen)
@@ -263,20 +267,20 @@ class PerSection(PerChapter):
 		self.header_stack.pop()
 
 	def gen_menu(self, gen):
-		if self.current == None:
+		if self.current is None:
 			gen.genContent([], 0)
 		else:
 			gen.genContent(self.current.header_stack, 100)
-	
+
 	def gen_content(self, gen):
 
 		# get content
-		if self.current == None:
-			content = self.gen.doc.getContent()			
+		if self.current is None:
+			content = self.gen.doc.getContent()
 		else:
 			content = self.current.getContent()
 			self.gen.genHeaderTitle(self.current)
-			
+
 		# print the content
 		for node in content:
 			if node.getHeaderLevel() < 0:
@@ -305,7 +309,7 @@ class Generator(abstract_html.Generator):
 	def genTitleText(self):
 		"""Generate the text of the title."""
 		self.out.write(escape_cdata(self.doc.getVar('TITLE')))
-	
+
 	def genTitle(self):
 		self.out.write('<div class="header">\n')
 		self.out.write('	<div class="title">')
@@ -335,7 +339,7 @@ class Generator(abstract_html.Generator):
 
 	def genContentEntry(self, node, indent):
 		"""Generate a content entry (including numbering, title and link)."""
-		self.out.write('%s<a href="%s">' % (indent, self.manager.get_link(node, self.get_out_path())))
+		self.out.write(f'{indent}<a href="{self.manager.get_link(node, self.get_out_path())}">')
 		self.out.write(self.get_number(node))
 		self.out.write(' ')
 		node.genTitle(self)
@@ -350,13 +354,13 @@ class Generator(abstract_html.Generator):
 			if child.getHeaderLevel() >= 0:
 				if not one:
 					one = True
-					self.out.write('%s<ul class="toc">\n' % indent)
-				self.out.write("%s<li>\n" % indent)
+					self.out.write(f'{indent}<ul class="toc">\n')
+				self.out.write(f"{indent}<li>\n")
 				self.genContentEntry(child, indent)
 				self.expandContent(child, level, indent + "  ")
-				self.out.write("%s</li>\n" % indent)
+				self.out.write(f"{indent}</li>\n")
 		if one:
-			self.out.write('%s</ul>\n' % indent)
+			self.out.write('{indent}</ul>\n')
 
 	def expandContentTo(self, node, path, level, indent):
 		"""Expand, not recursively, the content until reaching the end of the path.
@@ -369,27 +373,28 @@ class Generator(abstract_html.Generator):
 				if child.getHeaderLevel() >= 0:
 					if not one:
 						one = True
-						self.out.write('%s<ul class="toc">\n' % indent)
-					self.out.write("%s<li>\n" % indent)
+						self.out.write(f'{indent}<ul class="toc">\n')
+					self.out.write(f"{indent}<li>\n")
 					self.genContentEntry(child, indent)
 					if path[0] == child:
 						self.expandContentTo(child, path[1:], level, indent + '  ')
-					self.out.write("%s</li>\n" % indent)
+					self.out.write(f"{indent}</li>\n")
 			if one:
-				self.out.write('%s</ul>\n' % indent)
-				
+				self.out.write(f'{indent}</ul>\n')
+
 	def genContent(self, path, level):
 		"""Generate the content without expanding until ending the path
 		(of headers) with an expanding maximum level.
 		"""
 		self.out.write('<div class="toc">\n')
-		self.out.write('<h1><a name="toc">' + escape_cdata(self.trans.get(i18n.ID_CONTENT)) + '</name></h1>\n')
+		self.out.write('<h1><a name="toc">' +
+			escape_cdata(self.trans.get(i18n.ID_CONTENT)) + '</name></h1>\n')
 		self.expandContentTo(self.doc, path, level, '  ')
 		self.out.write('</div>\n')
 
 	def openPage(self, path):
 		self.out_path = os.path.abspath(path)
-		self.out = open(path, 'w')
+		self.out = open(path, 'w', encoding="utf8")
 		self.footnotes = []
 
 	def closePage(self):

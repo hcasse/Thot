@@ -14,28 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Abstract back-end for HTML generation from Thot."""
+
+import html
 import os
 import re
-import shutil
-import sys
-import urllib.parse as urlparse
 
-import thot.back as back
-import thot.common as common
-import thot.doc as doc
-import thot.doc as tdoc
-import thot.highlight as highlight
-import thot.i18n as i18n
+from thot import back
+from thot import common
+from thot import doc
 
 def escape_cdata(s):
 	"""Escape in the string s characters that are invalid in CDATA
 	of XML text."""
-	return common.escape(s)
+	return html.escape(s, True)
 
 def escape_attr(s):
 	"""Escape in the string s characters that are invalid in attribute
 	of XML elements."""
-	return common.escape(s, True)
+	return html.escape(s, True)
 
 LISTS = {
 	'ul': ('<ul %s>', '<li>', '</li>', '</ul>'),
@@ -79,11 +76,11 @@ class Relocator:
 	def move(self, spath, tpath, man):
 		"""Move the file from source path to the target path and
 		perform relocation of references in side the source file.
-		ref is the path of the resource  
+		ref is the path of the resource
 		If there is an error, must raise a BackException."""
-		output = open(tpath, "w")
+		output = open(tpath, "w", encoding="utf8")
 		self.move_to_stream(spath, tpath, output, man)
-		output.close()	
+		output.close()
 
 	def move_to_stream(self, spath, tpath, output, man):
 		"""Move file spath and relocates the content to the output
@@ -94,7 +91,7 @@ class Relocator:
 class CSSRelocator(Relocator):
 	"""Relocator for CSS files."""
 
-	CSS_URL_RE = re.compile('url\(([^)]*)\)')
+	CSS_URL_RE = re.compile(r'url\(([^)]*)\)')
 
 	def __init__(self):
 		Relocator.__init__(".css")
@@ -103,7 +100,7 @@ class CSSRelocator(Relocator):
 
 		# open files
 		try:
-			input = open(spath)
+			input = open(spath, encoding="utf8")
 		except FileNotFoundError as e:
 			raise common.BackException(str(e))
 
@@ -118,7 +115,7 @@ class CSSRelocator(Relocator):
 					path = os.path.join(dir, url)
 					rpath = man.use_resource(path)
 					url = man.get_resource_link(rpath, tpath)
-				output.write("url(%s)" % url)
+				output.write(f"url({url})")
 				line = line[m.end():]
 				m = CSSRelocator.CSS_URL_RE.search(line)
 			output.write(line)
@@ -137,12 +134,12 @@ class Manager(back.Manager):
 		back.Manager.__init__(self, mon = mon)
 		self.anchor_count = 0
 
-	def relocate(self, spath, tpath):
+	def relocate(self, spath, dpath):
 		try:
 			reloc = RELOCATORS[os.path.splitext(spath)[1]]
-			reloc.move(spath, tpath, self)
+			reloc.move(spath, dpath, self)
 		except KeyError:
-			back.Manager.relocate(self, spath, tpath)
+			back.Manager.relocate(self, spath, dpath)
 
 	def declare_number(self, node, number):
 		"""Record the assignment of a number to a node."""
@@ -157,9 +154,11 @@ class Manager(back.Manager):
 			return None
 
 	def declare_link(self, node, path, anchor = ""):
-		"""Declare a link to the given node with the given build path. If no anchor is given, a new anchor is created. If anchor is None, no anchor is used."""
+		"""Declare a link to the given node with the given build path. If no
+		anchor is given, a new anchor is created. If anchor is None, no anchor
+		is used."""
 		if anchor == "":
-			anchor = "thot-%d" % self.anchor_count
+			anchor = f"thot-{self.anchor_count}"
 			self.anchor_count += 1
 		node._thot_path = path
 		node._thot_anchor = anchor
@@ -180,14 +179,14 @@ class Manager(back.Manager):
 		except AttributeError:
 			return "<unlabelled node>"
 		if path == ref:
-			res = "#%s" % anchor
+			res = f"#{anchor}"
 		else:
 			path = self.get_resource_link(path, ref)
-			if anchor == None:
+			if anchor is None:
 				res = path
 			else:
-				res = "%s#%s" % (path, anchor)
-		return res	
+				res = f"{path}#{anchor}"
+		return res
 
 	def get_resource_link(self, path, ref):
 		"""Get the link to a resource relative to the ref resource."""
@@ -197,11 +196,13 @@ class Manager(back.Manager):
 		"""Assign a path and an anchor to a node."""
 		node._thot_path = path
 		node._thot_anchor = anchor
-		
+
 
 class Script:
-	"""Use of script in a produced HTML page. After allocation, it may be customized by setting its attributes: content, src, do_async, charset, defer and type. Look https://www.w3schools.com/Tags/tag_script.asp for more setails."""
-	
+	"""Use of script in a produced HTML page. After allocation, it may be
+	customized by setting its attributes: content, src, do_async, charset, defer
+	and type. Look https://www.w3schools.com/Tags/tag_script.asp for more details."""
+
 	def __init__(self):
 		self.content = None
 		self.src = None
@@ -209,23 +210,23 @@ class Script:
 		self.charset = None
 		self.defer = None
 		self.type = None
-	
+
 	def gen(self, gen):
 		write = gen.genVerbatim
 		write("\t<script")
-		if self.src != None:
+		if self.src is not None:
 			link = gen.get_manager().get_resource_link(self.src, gen.get_out_path())
-			write(" src=\"%s\"" % escape_attr(link))
-		if self.do_async != None and self.do_async:
+			write(f" src=\"{escape_attr(link)}\"")
+		if self.do_async is not None and self.do_async:
 			write(" async=\"async\"")
-		if self.defer != None and self.defer:
+		if self.defer is not None and self.defer:
 			write(" defer=\"defer\"")
-		if self.charset != None:
-			write(" charset=\"%s\"" % escape_attr(self.charset))
-		if self.type != None:
-			write(" type=\"%s\"" % escape_attr(self.type))
+		if self.charset is not None:
+			write(f" charset=\"{escape_attr(self.charset)}\"")
+		if self.type is not None:
+			write(f" type=\"{escape_attr(self.type)}\"")
 		write(">")
-		if self.content != None:
+		if self.content is not None:
 			write("\n")
 			write(self.content)
 			write("\n\t")
@@ -244,15 +245,15 @@ class TemplateHandler:
 	def gen_title(self, gen):
 		"""Called to generate the title."""
 		pass
-	
+
 	def gen_authors(self, gen):
 		"""Called to generate list of authors."""
 		pass
-		
+
 	def gen_menu(self, gen):
 		"""Called to generate the menu."""
 		pass
-	
+
 	def gen_content(self, gen):
 		"""Called to generate the content."""
 		pass
@@ -275,41 +276,42 @@ class Template:
 
 class PlainTemplate(Template):
 	"""Simple plain template."""
-	
-	def apply(self, handle, gen):
+
+	def apply(self, handler, gen):
 		out = gen.out
-		
+
 		# output header
 		out.write('<!DOCTYPE html>\n')
 		out.write('<html>\n')
 		out.write('<head>\n')
 		out.write("	<title>")
-		handle.gen_title(gen)
+		handler.gen_title(gen)
 		out.write("</title>\n")
 		out.write('	<meta name="AUTHOR" content="' + escape_attr(gen.doc.getVar('AUTHORS')) + '">\n')
-		out.write('	<meta name="GENERATOR" content="Thot - HTML">\n');
-		out.write('	<meta http-equiv="Content-Type" content="text/html; charset=' + escape_attr(gen.doc.getVar('ENCODING')) + '">\n')
-		handle.gen_header(gen)
+		out.write('	<meta name="GENERATOR" content="Thot - HTML">\n')
+		out.write('	<meta http-equiv="Content-Type" content="text/html; charset=' +
+			escape_attr(gen.doc.getVar('ENCODING')) + '">\n')
+		handler.gen_header(gen)
 		out.write('</head>\n<body>\n<div class="main">\n')
-		
+
 		# output the title
 		out.write('<div class="header">\n')
 		out.write('	<div class="title">')
-		handle.gen_title(gen)
+		handler.gen_title(gen)
 		out.write('</div>\n')
 		out.write('	<div class="authors">')
-		handle.gen_authors(gen)
+		handler.gen_authors(gen)
 		out.write('</div>\n')
 		out.write('</div>')
-		
+
 		# output the menu
-		handle.gen_menu(gen)
-		
+		handler.gen_menu(gen)
+
 		# output the content
 		out.write('<div class="page">\n')
-		handle.gen_content(gen)
+		handler.gen_content(gen)
 		gen.genFootNotes()
-		out.write('</div>\n')		
+		out.write('</div>\n')
 
 		# output the footer
 		out.write("</div>\n</body>\n</html>\n")
@@ -326,22 +328,21 @@ class FileTemplate(Template):
 	"""
 
 	RE = re.compile(r"<thot:([^/]+)\/>|<thot:text>(([^<]|<(?!/thot:text>)/)*)</thot:text>")
-	
+
 	def __init__(self, path, env = None, **defs):
 		self.path = path
 		self.defs = dict(defs)
 		self.env = env
 
 	def gen_text(self, text, gen):
-		if self.env != None:
+		if self.env is not None:
 			text = self.env.reduce(text)
 		gen.out.write(text)
-	
+
 	def apply(self, handler, gen):
 		"""Generate the page with standard thot:XXX are commands translated
 		as handle command and the outputs are performed on the given
 		generation gen."""
-		global template_re
 		self.defs["authors"] = handler.gen_authors
 		self.defs["content"] = handler.gen_content
 		self.defs["header"] =  handler.gen_header
@@ -350,7 +351,7 @@ class FileTemplate(Template):
 		self.defs["footnotes"] = lambda gen: gen.genFootNotes()
 
 		try:
-			tpl = open(self.path, "r")
+			tpl = open(self.path, "r", encoding="utf8")
 			n = 0
 			for line in tpl.readlines():
 				n = n + 1
@@ -359,20 +360,20 @@ class FileTemplate(Template):
 					gen.out.write(line[f:m.start()])
 					f = m.end()
 					kw = m.group(1)
-					if kw == None:
+					if kw is None:
 						self.gen_text(m.group(2), gen)
 					else:
 						try:
 							x = self.defs[kw]
-						except KeyError as e:
-							common.onWarning("unknown template element <thot:%s> at %s:%d" % (kw, self.path, n))
+						except KeyError:
+							common.onWarning(f"unknown template element <thot:{kw}> at {self.path}:{n}")
 							x = ""
 						if callable(x):
 							x(gen)
 						else:
-							self.gen_text(str(x), gen)	
+							self.gen_text(str(x), gen)
 				gen.out.write(line[f:])
-			
+
 		except IOError as e:
 			common.onError(str(e))
 
@@ -410,7 +411,7 @@ class Generator(back.Generator):
 
 	def getTemplate(self):
 		"""Get the template of page."""
-		if self.template == None:
+		if self.template is None:
 			self.template = self.doc.getVar('HTML_TEMPLATE')
 			if self.template:
 				self.template = FileTemplate(self.template)
@@ -434,7 +435,7 @@ class Generator(back.Generator):
 				out.write('	<link rel="stylesheet" type="text/css" href="' + style_link + '">\n')
 		short_icon = self.doc.getVar('HTML_SHORT_ICON')
 		if short_icon:
-			out.write('<link rel="shortcut icon" href="%s"/>' % short_icon)
+			out.write(f'<link rel="shortcut icon" href="{short_icon}"/>')
 		self.gen_header_embedded()
 
 	def newScript(self):
@@ -460,11 +461,11 @@ class Generator(back.Generator):
 		if note.kind != doc.FOOTNOTE_DEF:
 			if note.ref:
 				id = note.id
-				ref = "#footnote-custom-%s" % note.ref
+				ref = f"#footnote-custom-{note.ref}"
 			else:
 				id = str(len(self.footnotes))
-				ref = "#footnote-%s" % id
-			self.out.write('<a class="footnumber" href="%s">%s</a>' % (ref, id))
+				ref = f"#footnote-{id}"
+			self.out.write(f'<a class="footnumber" href="{ref}">{id}</a>')
 
 	def genFootNotes(self):
 		if not self.footnotes:
@@ -474,12 +475,12 @@ class Generator(back.Generator):
 		for note in self.footnotes:
 			self.out.write('<p class="footnote">\n')
 			if note.ref:
-				id = note.id 
-				ref = "footnote-custom-%s" % note.ref
+				id = note.id
+				ref = f"footnote-custom-{note.ref}"
 			else:
 				id = str(num)
-				ref = "footnote-%d" % num
-			self.out.write('<a class="footnumber" name="%s">%s</a> ' % (ref, id))
+				ref = f"footnote-{num}"
+			self.out.write(f'<a class="footnumber" name="{ref}">{id}</a> ')
 			num = num + 1
 			for item in note.content:
 				item.gen(self)
@@ -487,12 +488,12 @@ class Generator(back.Generator):
 		self.out.write('</div>')
 
 	def genQuoteBegin(self, level):
-		for i in range(0, level):
+		for _ in range(0, level):
 			self.out.write('<blockquote>')
 		self.out.write('\n')
 
 	def genQuoteEnd(self, level):
-		for i in range(0, level):
+		for _ in range(0, level):
 			self.out.write('</blockquote>')
 		self.out.write('\n')
 
@@ -546,28 +547,30 @@ class Generator(back.Generator):
 		"""Generate raw text."""
 		self.out.write(text)
 
-	def genOpenTag(self, tag, node = None, attrs = []):
+	def genOpenTag(self, tag, node = None, attrs = None):
 		"""Generate an opening tag using the information attributes of the
 		given node."""
-		self.out.write("<%s" % tag)
+		if attrs is None:
+			attrs = []
+		self.out.write(f"<{tag}")
 		if node:
 			cls = node.getInfo(doc.INFO_CLASS)
 			if cls:
-				self.out.write(" class=\"%s\"" % " ".join(cls))
+				self.out.write(f" class=\"{' '.join(cls)}\"")
 			css = node.getInfo(doc.INFO_CSS)
 			if css:
-				self.out.write(" style=\"%s\"" % css)
+				self.out.write(f" style=\"{css}\"")
 			lang = node.getInfo(doc.INFO_LANG)
 			if css:
-				self.out.write(" lang=\"%s\"" % lang)
+				self.out.write(f" lang=\"{lang}\"")
 		if attrs:
 			self.out.write(" ")
-			self.out.write(" ".join(["%s=\"%s\"" % p for p in attrs]))
+			self.out.write(" ".join([f"{p[0]}=\"{p[1]}\"" for p in attrs]))
 		self.out.write(">")
 
 	def genCloseTag(self, tag):
 		"""Generate a closing tag."""
-		self.out.write("</%s>" % tag)
+		self.out.write(f"</{tag}>")
 
 	def genParBegin(self):
 		self.out.write('<p>\n')
@@ -609,14 +612,14 @@ class Generator(back.Generator):
 		number = self.manager.get_number(header)
 		anchor = self.manager.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
-		if anchor != None:
+		if anchor is not None:
 			self.out.write('<a name="' + anchor + '"></a>')
-		if href != None:
-			self.out.write('<a href="%s">' % href)
-		if number != None:
+		if href is not None:
+			self.out.write(f'<a href="{href}">')
+		if number is not None:
 			self.out.write(number + " ")
 		header.genTitle(self)
-		if href != None:
+		if href is not None:
 			self.out.write('</a>')
 		self.out.write('</h' + str(header.getHeaderLevel() + 1) + '>\n')
 
@@ -631,14 +634,14 @@ class Generator(back.Generator):
 		# process the URL
 		if self.is_distant_url(url):
 			if url.startswith("mailto:"):
-				url = "mailto:" + "".join(["&#x%x;" % ord(c) for c in url[7:]])
+				url = "mailto:" + "".join([f"&#x{hex(ord(c))};" for c in url[7:]])
 		else:
 			url = self.manager.get_resource_link(url, self.get_out_path())
 
 		# generate the code
-		self.out.write('<a href="%s"' % url)
-		if title != None:
-			self.out.write(' title="%s"' % title)
+		self.out.write(f'<a href="{url}"')
+		if title is not None:
+			self.out.write(f' title="{title}"')
 		self.out.write('>')
 
 	def genLinkEnd(self, url):
@@ -651,23 +654,23 @@ class Generator(back.Generator):
 			self.manager.use_resource(url)
 			new_url = self.manager.get_resource_link(url, self.get_out_path())
 		self.out.write('<img src="' + new_url + '"')
-		if node.get_width() != None:
-			self.out.write(' width="%d"' % node.get_width())
-		if node.get_height() != None:
-			self.out.write(' height="%d"' % node.get_height())
-		if caption != None:
+		if node.get_width() is not None:
+			self.out.write(f' width="{node.get_width()}"')
+		if node.get_height() is not None:
+			self.out.write(f' height="{node.get_height()}"')
+		if caption is not None:
 			self.out.write(' alt="' + escape_attr(caption.toText()) + '"')
 		self.out.write('/>')
-		
+
 	def genImage(self, url, node, caption):
 		self.genImageTag(url, node, caption)
 
 	def genFigure(self, url, node, caption):
-		align = node.getInfo(tdoc.INFO_ALIGN)
+		align = node.getInfo(doc.INFO_ALIGN)
 		self.out.write('<div class="figure"')
-		if align == tdoc.ALIGN_LEFT:
+		if align == doc.ALIGN_LEFT:
 			self.out.write(' style="text-align:center;float:left"')
-		elif align == tdoc.ALIGN_RIGHT:
+		elif align == doc.ALIGN_RIGHT:
 			self.out.write(' style="text-align:center;float:right"')
 		else:
 			self.out.write(' style="text-align:center"')
@@ -697,7 +700,7 @@ class Generator(back.Generator):
 				self.out.write('<a href="mailto:' + escape_attr(email) + '">')
 			self.out.write(escape_cdata(author['name']))
 			if email:
-				self.out.write('</a>')		
+				self.out.write('</a>')
 
 	def genLabel(self, node):
 		caption = node.get_caption()
@@ -708,14 +711,14 @@ class Generator(back.Generator):
 				number = self.manager.get_number(node)
 				if number is None:
 					number = ""
-				self.out.write("<a name=\"%s\" class=\"label-ref\">%s</a>" % (anchor, number))
+				self.out.write(f"<a name=\"{anchor}\" class=\"label-ref\">{number}</a>")
 			if caption:
 				for item in caption.getContent():
 					item.gen(self)
 			self.out.write('</div>')
 
 	def genEmbeddedBegin(self, node):
-		self.out.write('<div class="%s">' % node.numbering())
+		self.out.write(f'<div class="{node.numbering()}">')
 		self.genLabel(node)
 
 	def genEmbeddedEnd(self, node):
@@ -726,10 +729,10 @@ class Generator(back.Generator):
 	def genRef(self, ref):
 		node = self.doc.getLabel(ref.label)
 		if not node:
-			common.onWarning("label\"%s\" cannot be resolved" % ref.label)
+			common.onWarning(f"label\"{ref.label}\" cannot be resolved")
 		else:
 			r = self.get_href(node)
-			self.out.write("<a href=\"%s\">%s</a>" % (r[0], r[1]))
+			self.out.write(f"<a href=\"{r[0]}\">{r[1]}</a>")
 
 	def gen_line_break(self):
 		self.out.write("<br/>")
@@ -738,7 +741,7 @@ class Generator(back.Generator):
 	#	"""Add a new reference to the given node represented by
 	#	the given anchor, possibly a number."""
 	#	self.refs[node] = (anchor, number)
-	
+
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
 		res = self.manager.get_link(node, self.get_out_path())

@@ -17,61 +17,58 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime
-import glob
-import locale
-import optparse
+"""Main command for Thot."""
+
+import argparse
 import os
 import os.path
-import re
 import sys
 
-import thot
-import thot.common as common
-import thot.doc as doc
-import thot.tparser as tparser
+from thot import common
+from thot import doc
+from thot import tparser
 
 
 def list_avail_modules(document):
 	"""List available modules."""
 	print("Available modules:")
 	paths = document.getVar("THOT_USE_PATH")
-	names = set([os.path.splitext(file)[0]
+	names = set({os.path.splitext(file)[0]
 		for path in paths.split(":") for file in os.listdir(path)
-			if os.path.splitext(file)[1] in { ".py" } and not file.startswith("__")])
+			if os.path.splitext(file)[1] in { ".py" } and not file.startswith("__")})
 	for name in names:
 		mod = common.loadModule(name, paths)
 		desc = ""
 		if "__short__" in mod.__dict__:
-			desc = " (%s)" % mod.__short__
-		print("- %s%s" % (name, desc))
+			desc = f" ({mod.__short__})"
+		print(f"- {name}{desc}")
 
 	print("\nAvailable back-ends:")
 	path = os.path.join(document.env["THOT_LIB"], "backs")
-	names = set([os.path.splitext(file)[0]
+	names = set({os.path.splitext(file)[0]
 		for file in os.listdir(path)
 			if os.path.splitext(file)[1] in { ".py" }
-			and not file.startswith("__")])
+			and not file.startswith("__")})
 	for name in names:
 		mod = common.loadModule(name, path)
 		desc = ""
 		if "__short__" in mod.__dict__:
-			desc = " (%s)" % mod.__short__
-		print("- %s%s" % (name, desc))
+			desc = f" ({mod.__short__})"
+		print(f"- {name}{desc}")
 
 
-def list_module(document, name):
+def list_module(document, name, mon = common.DEFAULT_MONITOR):
 	""""List the content of a particular module."""
 	paths = document.getVar("THOT_USE_PATH") + ":" + os.path.join(document.env["THOT_LIB"], "backs")
 	mod = common.loadModule(name, paths)
 	if not mod:
-		common.fatal("no module named %s" % options.list_mod)
+		mon.fatal(f"no module named {name}")
 	short = ""
 	if "__short__" in mod.__dict__:
-		short = " (%s)" % mod.__short__
-	print("Module: %s%s" % (name, short))
+		short = f" ({mod.__short__})"
+	print(f"Module: {name}{short}")
 	if "__description__" in mod.__dict__:
-		print("\n%s" % mod.__description__)
+		print(f"\n{mod.__description__}")
 	syn = []
 	if "__words__" in mod.__dict__:
 		for (_, word, desc) in mod.__words__:
@@ -87,14 +84,14 @@ def list_module(document, name):
 		common.display_syntax(syn)
 	has_output = False
 	for out in ["html", "latex", "docbook"]:
-		name = "__%s__" % out
+		name = f"__{out}__"
 		if name in mod.__dict__:
 			if not has_output:
 				has_output = True
 				print("\nOutput:")
-			print("\t%s:" % out)
+			print(f"\t{out}:")
 			for (form, desc) in mod.__dict__[name]:
-				print("\t%s\n\t\t%s" % (form, desc))
+				print(f"\t{form}\n\t\t{desc}" % (form, desc))
 
 
 def list_syntax(man):
@@ -103,7 +100,7 @@ def list_syntax(man):
 	for mod in man.used_mods + [tparser]:
 		#print("- %s" % ("thot" if mod == tparser else mod.__name__))
 		if "__words__" in mod.__dict__:
-			syn = syn + [(common.prepare_syntax(w), d) for (_, w, d) in mod.__words__] 
+			syn = syn + [(common.prepare_syntax(w), d) for (_, w, d) in mod.__words__]
 		if "__lines__" in mod.__dict__:
 			syn = syn + [(common.prepare_syntax(l), d) for (_, l, d) in mod.__words__]
 		if "__syntaxes__" in mod.__dict__:
@@ -117,11 +114,11 @@ def list_output(man, output):
 	"""List possible outputs."""
 	print("Available outputs:")
 	for mod in man.used_mods:
-		print("- %s" % mod.__name__)
-		name = "__%s__" % output
+		print(f"- {mod.__name__}")
+		name = f"__{output}__"
 		if name in mod.__dict__:
 			for (form, desc) in mod.__dict__[name]:
-				print("\t%s\n\t\t%s" % (form, desc))
+				print(f"\t{form}\n\t\t{desc}")
 
 
 def list_used_modules(man):
@@ -130,8 +127,8 @@ def list_used_modules(man):
 	for mod in man.used_mods:
 		desc = ""
 		if "__short__" in mod.__dict__:
-			desc = " (%s)" % mod.__short__
-		print("- %s%s" % (mod.__name__, desc))
+			desc = f" ({mod.__short__})"
+		print(f"- {mod.__name__}{desc}")
 
 
 def main():
@@ -140,63 +137,66 @@ def main():
 	mon = common.Monitor()
 
 	# Prepare arguments
-	oparser = optparse.OptionParser()
-	oparser.add_option("-t", "--type", action="store", dest="out_type",
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-t", "--type", action="store", dest="out_type",
 		default="html", help="output type (xml, html, latex, ...)")
-	oparser.add_option("-o", "--out", action="store", dest="out_path",
+	parser.add_argument("-o", "--out", action="store", dest="out_path",
 		help="output path")
-	oparser.add_option("-D", "--define", action="append", dest="defines",
+	parser.add_argument("-D", "--define", action="append", dest="defines",
 		help="add the given definition to the document environment.")
-	oparser.add_option("--dump", dest = "dump", action="store_true", default=False,
+	parser.add_argument("--dump", dest = "dump", action="store_true", default=False,
 		help="only for debugging purpose, dump the database of Thot")
-	oparser.add_option("-u", "--use", action="append", dest="uses",
+	parser.add_argument("-u", "--use", action="append", dest="uses",
 		help="given module is loaded before the generation.")
-	oparser.add_option("--verbose", "-v", dest = "verbose", action="store_true", default=False,
+	parser.add_argument("--verbose", "-v", dest = "verbose", action="store_true", default=False,
 		help="display verbose messages about the processing")
-	oparser.add_option("--encoding", "-e", dest="encoding", action="store",
-		type="string", help="select the encoding of the input files (default UTF-8)")
-	oparser.add_option("--list-mods", dest = "list_mods", action="store_true", default=False,
+	parser.add_argument("--encoding", "-e", dest="encoding", action="store",
+		help="select the encoding of the input files (default UTF-8)")
+	parser.add_argument("--list-mods", dest = "list_mods", action="store_true", default=False,
 		help="list used modules")
-	oparser.add_option("--list-syntax", dest = "list_syntax", action="store_true", default=False,
+	parser.add_argument("--list-syntax", dest = "list_syntax", action="store_true", default=False,
 		help="list available syntax in the document")
-	oparser.add_option("--list-output", action="store", dest="list_output",
+	parser.add_argument("--list-output", action="store", dest="list_output",
 		help="list all generation output for the current modules")
-	oparser.add_option("--list-mod", action="store", dest="list_mod",
+	parser.add_argument("--list-mod", action="store", dest="list_mod",
 		help="list the content of a module")
-	oparser.add_option("--list-avail", dest = "list_avail", action="store_true", default=False,
+	parser.add_argument("--list-avail", dest = "list_avail", action="store_true", default=False,
 		help="list available modules")
-	oparser.add_option("--version", action="store_true", default=False,
+	parser.add_argument("--version", action="store_true", default=False,
 		help="print version")
+	parser.add_argument("file", nargs="?", help="File to convert.")
 
 	# Parse arguments
-	(options, args) = oparser.parse_args()
-	common.IS_VERBOSE = options.verbose		# TO REMOVE when monitors will be used throughout the application
-	mon.set_verbosity(options.verbose)
-	if options.version:
+	args = parser.parse_args()
+	# TO REMOVE when monitors will be used throughout the application
+	common.IS_VERBOSE = args.verbose
+	mon.set_verbosity(args.verbose)
+	if args.version:
 		common.print_version()
-		exit()
-	if options.encoding:
-		common.ENCODING = options.encoding
-	env["THOT_OUT_TYPE"] = options.out_type
-	if not options.out_path:
+		sys.exit()
+	if args.encoding:
+		common.ENCODING = args.encoding
+	env["THOT_OUT_TYPE"] = args.out_type
+	if not args.out_path:
 		env["THOT_OUT_PATH"] = ""
 	else:
-		env["THOT_OUT_PATH"] = options.out_path
-	if args == []:
+		env["THOT_OUT_PATH"] = args.out_path
+	file = args.file
+	if file is None:
 		input = sys.__stdin__
 		env["THOT_FILE"] = "<stdin>"
 		env["THOT_DOC_DIR"] = "."
 	else:
 		try:
-			input = open(args[0])
+			input = open(file, encoding=common.ENCODING)
 		except FileNotFoundError:
-			mon.fatal("cannot open file '%s'" % args[0]) 
-		env["THOT_FILE"] = args[0]
-		env["THOT_DOC_DIR"] = os.path.dirname(args[0])
+			mon.fatal(f"cannot open file '{file}'")
+		env["THOT_FILE"] = file
+		env["THOT_DOC_DIR"] = os.path.dirname(file)
 		if not env["THOT_DOC_DIR"]:
 			env["THOT_DOC_DIR"] = "."
-	if options.defines:
-		for d in options.defines:
+	if args.defines:
+		for d in args.defines:
 			p = d.find('=')
 			if p == -1:
 				mon.fatal('-D' + d + ' must follow syntax -Didentifier=value')
@@ -209,42 +209,42 @@ def main():
 	out_path = os.path.join(document.env["THOT_LIB"], "backs")
 	out_driver = common.loadModule(out_name,  out_path)
 	if not out_driver:
-		mon.fatal('cannot find %s back-end' % out_name)
+		mon.fatal(f'cannot find {out_name} back-end')
 
 	# list available modules
-	if options.list_avail:
+	if args.list_avail:
 		list_avail_modules(document)
 		sys.exit(0)
 
 	# list a module
-	elif options.list_mod:
-		list_module(document, options.list_mod)
+	elif args.list_mod:
+		list_module(document, args.list_mod)
 		sys.exit(0)
 
 	# Parse the file
 	man = tparser.Manager(document, mon=mon)
 	if "init" in out_driver.__dict__:
 		out_driver.init(man)
-	if options.uses:
-		for u in options.uses:
+	if args.uses:
+		for u in args.uses:
 			man.use(u)
 	man.parse(input, env['THOT_FILE'])
 
 	# dump the parsed document
-	if options.dump:
+	if args.dump:
 		document.dump()
 
 	# list the syntax
-	elif options.list_syntax:
+	elif args.list_syntax:
 		print("Available syntax:")
 		list_syntax(man)
 
 	# list outputs
-	elif options.list_output:
-		list_output(man, options.list_output)
+	elif args.list_output:
+		list_output(man, args.list_output)
 
 	# list the involved modules
-	elif options.list_mods:
+	elif args.list_mods:
 		list_used_modules(man)
 
 	# Output the result

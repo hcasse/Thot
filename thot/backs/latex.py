@@ -14,15 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Latex back-end for Thot."""
+
 import codecs
 import os.path
 import subprocess
 import sys
 import unicodedata
 
-import thot.back as back
-import thot.common as common
-import thot.doc as doc
+from thot import back
+from thot import common
+from thot import doc
 
 
 KOMA_STYLES = [
@@ -41,16 +43,16 @@ ESCAPES = {
 	'^' : '\\^{}',
 	'{'	: '\\{',
 	'}'	: '\\}',
-	'~'	: '$\sim$',
+	'~'	: '$\\sim$',
 	'\\': '$\\backslash$',
-	'\U000021D0'	: '$\Leftarrow$'
+	'\U000021D0'	: '$\\Leftarrow$'
 }
 
 UNICODE_ESCAPES = {
 	0x2013: '--',
 	0x2014: '---',
-	0x22ef: '\ldots',
-	0x21D0: '$\Leftarrow$'
+	0x22ef: '\\ldots',
+	0x21D0: '$\\Leftarrow$'
 }
 
 LANGUAGES = {
@@ -144,15 +146,15 @@ class NonUnicodeEncoder(UnicodeEncoder):
 	def toText(self, code):
 		"""Transform the given code to text."""
 		try:
-			str, _ = self.encoder(unichr(code))
+			str, _ = self.encoder(chr(code))
 			return str
-		except UnicodeEncodeError as e:
+		except UnicodeEncodeError:
 			if code in UNICODE_ESCAPES:
 				return UNICODE_ESCAPES[code]
-			if not (code in self.escaped):
+			if code not in self.escaped:
 				self.escaped.append(code)
-				common.onWarning('encoding %s cannot support character %x' % (self.encoding, code))
-			return unicodedata.name(unichr(code))
+				common.onWarning(f'encoding {self.encoding} cannot support character {hex(code)}')
+			return unicodedata.name(chr(code))
 
 
 class Generator(back.Generator):
@@ -200,13 +202,13 @@ class Generator(back.Generator):
 			else:
 				pos = lang.find('_')
 				if pos < 0:
-					common.onError('cannot not support "%s"' % lang)
+					common.onError(f'cannot not support "{lang}"')
 				else:
 					lang = lang[:pos]
 					if lang in LANGUAGES:
 						lang = LANGUAGES[lang]
 					else:
-						common.onError('cannot not support "%s"' % lang)
+						common.onError('cannot not support "{lang}"')
 
 		# look for encoding
 		self.encoding = self.doc.getVar('ENCODING').lower().replace('-', '_')
@@ -219,7 +221,7 @@ class Generator(back.Generator):
 				preamble += '\\usepackage[latin1]{inputenc}\n'
 				self.encoder = NonUnicodeEncoder(self.encoding)
 			else:
-				common.onWarning('%s encoding is just ignored for latex' % self.encoding)
+				common.onWarning(f'{self.encoding} encoding is just ignored for latex')
 
 		# look paper size
 		paper = self.doc.getVar('LATEX_PAPER')
@@ -256,7 +258,7 @@ class Generator(back.Generator):
 			if is_koma and subtitle:
 				self.out.write("\\subtitle{%s}\n" % self.escape(subtitle))
 			# NOTE: \thanks{...} allows to give the owner organization of an author
-			self.out.write('\\author{%s}\n' % self.escape(self.doc.getVar('AUTHORS')).replace(",", " \\and "))
+			self.out.write(f'\\author{self.escape(self.doc.getVar("AUTHORS")).replace(",", " \\and ")}\n')
 			organization = self.doc.getVar("ORGANIZATION")
 			if is_koma and organization:
 				self.out.write("\\publishers{%s}\n" % self.escape(organization))
@@ -264,21 +266,25 @@ class Generator(back.Generator):
 		else:
 
 			self.out.write("\\begin{titlepage}\n")
-			self.out.write("\\newcommand{\\thotorganization}{%s}\n" % self.escape(self.doc.getVar("ORGANIZATION")))
-			self.out.write("\\newcommand{\\thottitle}{%s}\n" % self.escape(self.doc.getVar("TITLE")))
-			self.out.write("\\newcommand{\\thotsubtitle}{%s}\n" % self.escape(self.doc.getVar("SUBTITLE")))
-			self.out.write("\\newcommand{\\thotauthors}{%s}\n" % ("{" + self.escape(self.doc.getVar("AUTHORS")).replace(",", "} {") + "}"))
+			org = self.escape(self.doc.getVar('ORGANIZATION'))
+			self.out.write(f"\\newcommand{{\\thotorganization}}{{{org}}}\n")
+			title = self.escape(self.doc.getVar('TITLE'))
+			self.out.write(f"\\newcommand{{\\thottitle}}{{{title}}}\n")
+			subtitle = self.escape(self.doc.getVar('SUBTITLE'))
+			self.out.write(f"\\newcommand{{\\thotsubtitle}}{{{subtitle}}}\n")
+			authors = self.escape(self.doc.getVar('AUTHORS')).replace(',', '} {')
+			self.out.write(f"\\newcommand{{\\thotauthors}}{{{{{authors}}}}}\n")
 			logos = self.doc.getVar("LOGO")
 			text = ""
 			fst = True
 			for logo in logos.split(","):
 				if not fst:
-					text = text + " \\hfill ";
+					text = text + " \\hfill "
 				else:
 					fst = False
-				text = text + "\includegraphics{%s}" % logo.strip()
-			self.out.write("\\newcommand{\\thotlogos}{%s}\n" % text)
-			file = open(latex_title)
+				text = text + f"\\includegraphics{{{logo.strip()}}}"
+			self.out.write(f"\\newcommand{{\\thotlogos}}{text}\n")
+			file = open(latex_title, encoding='utf8')
 			for l in file:
 				self.out.write(l)
 			self.out.write("\\end{titlepage}\n")
@@ -297,13 +303,13 @@ class Generator(back.Generator):
 		# generate final format
 		output = self.doc.getVar('OUTPUT')
 		if not output or output == 'latex':
-			print("SUCCESS: result in %s" % self.get_out_path())
+			print(f"SUCCESS: result in {self.get_out_path()}")
 		elif output == 'pdf':
 
 			# perform compilation
-			for i in range(0, 2):	# two times for TOC (sorry)
+			for _ in range(2):	# two times for TOC (sorry)
 				dir, file = os.path.split(self.get_out_path())
-				cmd = 'pdflatex -halt-on-error %s' % file
+				cmd = f'pdflatex -halt-on-error {file}'
 				if dir == "":
 					dir = "."
 				process = subprocess.Popen(
@@ -326,9 +332,9 @@ class Generator(back.Generator):
 			else:
 				path = self.path
 			path = path + ".pdf"
-			print("SUCCESS: result in %s" % path)
+			print(f"SUCCESS: result in {path}")
 		else:
-			common.onError('unknown output: %s' % output)
+			common.onError(f'unknown output: {output}')
 
 	def genFootNote(self, note):
 		self.out.write('\\footnote{')
@@ -359,8 +365,7 @@ class Generator(back.Generator):
 		hlines = []
 		vlines = []
 		rows = table.getRows()
-		for i in range(0, len(rows)):
-			row = rows[i]
+		for i, row in enumerate(rows):
 			if i < len(rows) - 1 and row.kind != rows[i + 1].kind:
 				hlines += [i]
 			if row.kind != doc.TAB_HEADER:
@@ -372,9 +377,8 @@ class Generator(back.Generator):
 						pos += cells[i].get_hspan()
 
 		# generate the content
-		for irow in range(0, len(rows)):
+		for irow, row in enumerate(rows):
 			self.out.write('\\hline\n')
-			row = rows[irow]
 			icol = 0
 			for cell in row.getCells():
 
@@ -392,7 +396,8 @@ class Generator(back.Generator):
 				if cell.get_align() != doc.TAB_CENTER or cell.get_hspan() != 1:
 					multi = True
 				if multi:
-					self.out.write('\\multicolumn{%d}{%s%s|%s}{' % (cell.get_hspan(), lbar, ALIGNMENT[cell.get_align() + 1], rbar))
+					align = ALIGNMENT[cell.get_align() + 1]
+					self.out.write(f'\\multicolumn{{{cell.get_hspan()}}}{{{lbar}{align}|{rbar}}}{{')
 				icol += cell.get_hspan()
 				if cell.kind == doc.TAB_HEADER:
 					self.out.write('\\bf{')
@@ -414,7 +419,7 @@ class Generator(back.Generator):
 		self.out.write('\\vspace{4pt}\n')
 		if floatting:
 			self.genLabel(table)
-			self.out.write("\end{table}\n")
+			self.out.write("\\end{{table}}\n")
 		self.out.write("\n")
 
 	def genHorizontalLine(self):
@@ -440,7 +445,7 @@ class Generator(back.Generator):
 		elif list.kind == 'ol':
 			self.out.write('\\begin{enumerate}\n')
 		else:
-			self.unsupported('%s list' % list.kind)
+			self.unsupported(f'{list.kind} list')
 
 		for item in list.getItems():
 			self.out.write('\\item ')
@@ -454,7 +459,7 @@ class Generator(back.Generator):
 	def genDefList(self, deflist):
 		self.out.write("\\begin{itemize}\n")
 		for item in deflist.getItems():
-			self.out.write("\item[")
+			self.out.write("\\item[")
 			for text in item.get_term().getContent():
 				text.gen(self)
 			self.out.write("] ")
@@ -464,7 +469,7 @@ class Generator(back.Generator):
 
 	def genStyleBegin(self, kind):
 		if not kind in STYLES:
-			self.unsupported('%s style' % kind)
+			self.unsupported(f'{kind} style')
 		self.out.write(STYLES[kind])
 
 	def genStyleEnd(self, kind):
@@ -479,7 +484,7 @@ class Generator(back.Generator):
 		return True
 
 	def genLinkBegin(self, url, title = None):
-		self.out.write('\href{%s}{' % self.escape(url))
+		self.out.write(f'\\href{{{self.escape(url)}}}{{')
 
 	def genLinkEnd(self, url):
 		self.out.write('}')
@@ -496,22 +501,22 @@ class Generator(back.Generator):
 		else:
 			root, ext = os.path.splitext(url)
 			link = self.use_resource(os.path.abspath(root + ".png"))
-			res = subprocess.call(['convert %s %s' % (url, link)], shell = True)
+			res = subprocess.call([f'convert {url} {link}'], shell = True)
 			if res != 0:
-				common.onError('cannot convert image "%s" to "%s"' % (url, link))
-		link = self.get_resource_path(link, self.get_out_path())
+				common.onError(f'cannot convert image "{url}" to "{link}"')
+		link = self.get_resource_path(link)
 
 		# build the command
 		args = ''
 		if node.get_width():
 			if args:
 				args += ','
-			args += 'width=%dpx' % node.get_width()
+			args += f'width={node.get_width()}px'
 		if node.get_height():
 			if args:
 				args += ','
-			args += 'height=%dpx' % node.get_height()
-		if align != None:
+			args += f'height={node.get_height()}px'
+		if align is not None:
 			if args:
 				args += ','
 			if align == doc.ALIGN_LEFT:
@@ -521,8 +526,8 @@ class Generator(back.Generator):
 			else:
 				args += "center"
 		if args:
-			args = "[%s]" % args
-		self.out.write('\includegraphics%s{%s}' % (args, link))
+			args = f"[{args}]"
+		self.out.write(f'\\includegraphics{args}{{{link}}}')
 
 	def genFigure(self, url, node, caption):
 		self.out.write("\\begin{figure}[htbp!]\n")
@@ -537,8 +542,10 @@ class Generator(back.Generator):
 		label = self.doc.getLabelFor(node)
 		if label:
 			pref = node.numbering()
-			if pref in REF_PREFIXES:
+			try:
 				pref = REF_PREFIXES[pref]
+			except KeyError:
+				pass
 			self.out.write("\\label{%s:%s}\n" % (pref, label))
 		caption = node.get_caption()
 		if caption:
@@ -570,8 +577,10 @@ class Generator(back.Generator):
 	def genRef(self, ref):
 		node = self.doc.getLabel(ref.label)
 		pref = node.numbering()
-		if pref in REF_PREFIXES:
+		try:
 			pref = REF_PREFIXES[pref]
+		except KeyError:
+			pass
 		self.out.write("\\ref{%s:%s} " % (pref, ref.label))
 
 
