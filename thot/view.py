@@ -532,12 +532,16 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		path = unquote(self.path)
 		try:
 			file = self.server.manager.map[path]
+			self.server.disable_heartbeat()
 			file.prepare()
+			self.server.enable_heartbeat()
 		except KeyError:
+			self.server.enable_heartbeat()
 			msg = f"{path} not found"
 			self.send_error(404, msg)
 			return
 		except common.ThotException as e:
+			self.server.enable_heartbeat()
 			self.send_error(500)
 			self.error(f"error for {path}: {e}")
 			return
@@ -563,9 +567,11 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 		try:
 
 			# post the message
+			self.server.disable_heartbeat()
 			res = file.post(int(self.headers['content-length']), self.rfile)
 			if res is not None:
 				self.send_error(res[0], res[1])
+				self.server.enable_heartbeat()
 				return
 
 			# build answer
@@ -573,8 +579,10 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 			self.send_header("Content-type",  file.get_mime())
 			self.end_headers()
 			file.answer(self.wfile)
+			self.server.enable_heartbeat()
 
 		except common.ThotException as e:
+			self.server.enable_heartbeat()
 			self.send_error(500)
 			self.error(f"error for {path}:  {e}")
 			return
@@ -601,13 +609,15 @@ class MyServer(http.server.HTTPServer):
 		manager.link_resource(ActionResource("/heartbeat", self.record_heartbeat))
 		self.heartbeat_started = False
 		self.last_heartbeat = None
+		self.heartbeat_pause = False
 
 	def get_address(self):
 		return self.socket.getsockname()
 
 	def run_browser(self):
 		time.sleep(.5)
-		webbrowser.open_new_tab(f"http://{self.get_address()}")
+		addr = self.get_address()
+		webbrowser.open_new_tab(f"http://{addr[0]}:{addr[1]}")
 
 	def quit(self):
 		self.mon.say("Quit.")
@@ -625,7 +635,7 @@ class MyServer(http.server.HTTPServer):
 		while True:
 			time.sleep(HEARTBEAT_TIMEOUT)
 			delay = time.time() - self.last_heartbeat
-			if delay > HEARTBEAT_TIMEOUT:
+			if not self.heartbeat_pause and delay > HEARTBEAT_TIMEOUT:
 				self.quit()
 				break
 
@@ -634,6 +644,13 @@ class MyServer(http.server.HTTPServer):
 		if not self.heartbeat_started:
 			self.heartbeat_started = True
 			threading.Thread(target = self.check_heartbeat).start()
+
+	def disable_heartbeat(self):
+		self.heartbeat_pause = True
+
+	def enable_heartbeat(self):
+		self.last_heartbeat = time.time()
+		self.heartbeat_pause = False
 
 
 def main():

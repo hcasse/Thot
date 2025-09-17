@@ -438,6 +438,9 @@ class Generator(back.Generator):
 			out.write(f'<link rel="shortcut icon" href="{short_icon}"/>')
 		self.gen_header_embedded()
 
+	def gen_style(self, text):
+		self.out.write(f"<style>\n{text}\n</style>")
+
 	def newScript(self):
 		"""Create and record a new script for the header generation."""
 		s = Script()
@@ -453,7 +456,7 @@ class Generator(back.Generator):
 
 	def importCSS(self, spath, base = ""):
 		self.manager.add_resource(spath, self.doc)
-		return self.man.get_resource_loc(spath, self.doc)
+		return self.manager.get_resource_loc(spath, self.doc)
 
 	def genFootNote(self, note):
 		if note.kind != doc.FOOTNOTE_REF:

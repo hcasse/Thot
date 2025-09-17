@@ -51,9 +51,10 @@ class Option:
 	default = None
 	opt = None
 
-	def __init__(self, name, default = None):
+	def __init__(self, name, default = None, doc = None):
 		self.name = name
 		self.default = default
+		self.doc = doc
 
 	def parse(self, value):
 		"""Called when the option is found in text to build it
@@ -64,8 +65,8 @@ class Option:
 class SwitchOption(Option):
 	"""Option accepting on/off, true/false, yes, no, etc or no argument"""
 
-	def __init__(self, name, default = False):
-		Option.__init__(self, name, default)
+	def __init__(self, name, default = False, doc = None):
+		Option.__init__(self, name, default, doc=doc)
 
 	def parse(self, value):
 		value = value.lower()
@@ -80,8 +81,8 @@ class SwitchOption(Option):
 class IntOption(Option):
 	"""Option returning an integer."""
 
-	def __init__(self, name, default = 10):
-		Option.__init__(self, name, default)
+	def __init__(self, name, default = 10, doc = None):
+		Option.__init__(self, name, default, doc=doc)
 
 	def parse(self, value):
 		try:

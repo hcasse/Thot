@@ -95,7 +95,7 @@ def handle_head_under(man, match, level, hrule):
 			hd.set_title(title)
 			break
 		man.pop()
-		
+
 def handle_header(man, match):
 	level = len(match.group("level"))
 	title = match.group("title")
@@ -113,14 +113,14 @@ def handle_number_list(man, match):
 	man.send(doc.ItemEvent(doc.LIST_NUMBER, 1))
 	tparser.handleText(man, match.group("text"))
 
-END_CODE = re.compile("^\s*```\s*$")
+END_CODE = re.compile(r"^\s*```\s*$")
 def handle_code_block(man, match):
 	lang = match.group('lang')
 	tparser.BlockParser(man, highlight.CodeBlock(man, lang), END_CODE)
 
 def handle_hrule(man, match):
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, doc.HorizontalLine()))
-	
+
 def handle_link(man, match):
 	URL = man.fix_url(match.group('URL'))
 	text = match.group('text')
@@ -139,7 +139,7 @@ def handle_image_link(man, match):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
 		doc.Image(img, None, None, caption)))
 	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
-	
+
 
 def handle_ref(man, match):
 	label = match.group("id_ref")
@@ -147,7 +147,7 @@ def handle_ref(man, match):
 	set_ref_link(man, link, label)
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, link))
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word(match.group("text_ref"))))
-	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))		
+	man.send(doc.CloseEvent(doc.L_WORD, doc.ID_END_LINK, "link"))
 
 def handle_id_def(man, match):
 	url = match.group("URL")
@@ -233,7 +233,7 @@ class Row(doc.Row):
 		doc.Row.onEvent(self, man, event)
 		if event.id is doc.ID_NEW_CELL:
 			self.table.set_align(len(self.content) - 1, self.content[-1])
-		
+
 class Table(doc.Table):
 
 	def __init__(self):
@@ -261,7 +261,7 @@ class Table(doc.Table):
 	def set_align(self, i, cell):
 		if i < len(self.aligns) and self.aligns[i] != None:
 			cell.set_align(self.aligns[i])
-			
+
 
 def handle_table_header(man, match):
 	aligns = []
@@ -320,7 +320,7 @@ class DefList(doc.DefList):
 			return True
 		else:
 			return False
-	
+
 
 ID_MAKE_DEF = "make-event"
 
@@ -422,7 +422,7 @@ __words__ = [
 		"""insert image corresponding to id with alternate text alttext and with the given link"""
 	),
 	(handle_link,
-		'\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)\s]*)(\s+"(?P<title1>[^"]*)")?\)',
+		r'\[(?P<text>[^\]]*)\]\s*\((?P<URL>[^)\s]*)(\s+"(?P<title1>[^"]*)")?\)',
 		"""the text is marked with a link to the URL."""
 	),
 	(handle_image,
@@ -457,7 +457,7 @@ __lines__ = [
 		"""ends the current paragraph and starts a new one."""
 	),
 	(handle_line_break,
-		"^(.*\S)\s+$",
+		r"^(.*\S)\s+$",
 		"""insert a line-break."""
 	),
 	(lambda man, match: handle_head_under(man, match, 1, False),
@@ -469,7 +469,7 @@ __lines__ = [
 		"""header of level 2 which title is the preceding text."""
 	),
 	(handle_header,
-		"^(?P<level>#+)\s+(?P<title>.*)#*$",
+		r"^(?P<level>#+)\s+(?P<title>.*)#*$",
 		"""header which level corresponds to the number of '#'."""
 	),
 	(handle_hrule,
@@ -477,18 +477,18 @@ __lines__ = [
 		"""horizontal rule."""
 	),
 	(handle_item_list,
-		"^[*+-]\s+(?P<text>.*)$",
+		r"^[*+-]\s+(?P<text>.*)$",
 		"""start of item list or item."""),
 	(handle_number_list,
-		"^[0-9]+\.\s+(?P<text>.*)$",
+		r"^[0-9]+\.\s+(?P<text>.*)$",
 		"""start of numbered list or item (number is not meaningful)."""
 	),
 	(handle_id_def,
-		"^\[(?P<id>[^\]]+)\]:\s*(?P<URL>\S+)(\s+[\"'\(](?P<text>[^\)'\"]*)[\)'\"])?\s*$",
+		r"^\[(?P<id>[^\]]+)\]:\s*(?P<URL>\S+)(\s+[\"'\(](?P<text>[^\)'\"]*)[\)'\"])?\s*$",
 		"""define a link with an identifier that can be referenced later."""
 	),
 	(handle_code_block,
-		"^\s*```(?P<lang>\S*)\s*$",
+		r"^\s*```(?P<lang>\S*)\s*$",
 		"""Code with the given language."""
 	),
 	(handle_quote,
@@ -496,12 +496,12 @@ __lines__ = [
 		"""quoted text."""),
 
 	(handle_table_header,
-		"^\s*\|((\s*:?-*:?\s*\|)+)\s*$",
+		r"^\s*\|((\s*:?-*:?\s*\|)+)\s*$",
 		"""table header separator"""
 	),
 
 	(handle_row,
-		"^\s*\|(([^\\\\]|(\\\\.))*)\|\s*$",
+		r"^\s*\|(([^\\\\]|(\\\\.))*)\|\s*$",
 		"""table definition"""),
 
 	(handle_def,

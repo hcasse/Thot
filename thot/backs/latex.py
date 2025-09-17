@@ -129,7 +129,7 @@ class UTF8Encoder(UnicodeEncoder):
 
 	def toText(self, code):
 		"""Transform the given code to text."""
-		return chr(code)
+		return code.encode('utf8')
 
 
 class NonUnicodeEncoder(UnicodeEncoder):
@@ -213,9 +213,9 @@ class Generator(back.Generator):
 		# look for encoding
 		self.encoding = self.doc.getVar('ENCODING').lower().replace('-', '_')
 		if self.encoding:
-			if self.encoding == 'utf_8':
+			if self.encoding in {'utf_8', 'utf8'}:
 				preamble += '\\usepackage{ucs}\n'
-				preamble += '\\usepackage[utf8x]{inputenc}\n'
+				preamble += '\\usepackage[utf8]{inputenc}\n'
 				self.encoder = UTF8Encoder()
 			elif self.encoding == 'iso_8859_1':
 				preamble += '\\usepackage[latin1]{inputenc}\n'
@@ -258,7 +258,8 @@ class Generator(back.Generator):
 			if is_koma and subtitle:
 				self.out.write("\\subtitle{%s}\n" % self.escape(subtitle))
 			# NOTE: \thanks{...} allows to give the owner organization of an author
-			self.out.write(f'\\author{self.escape(self.doc.getVar("AUTHORS")).replace(",", " \\and ")}\n')
+			authors = self.escape(self.doc.getVar("AUTHORS")).replace(",", " \\and ")
+			self.out.write(f'\\author{{{authors}}}\n')
 			organization = self.doc.getVar("ORGANIZATION")
 			if is_koma and organization:
 				self.out.write("\\publishers{%s}\n" % self.escape(organization))
@@ -320,6 +321,7 @@ class Generator(back.Generator):
 					cwd = dir
 				)
 				out, err = process.communicate('')
+				print(out)
 				if process.returncode != 0:
 					sys.stdout.write(out)
 					sys.stderr.write(err)
@@ -330,7 +332,7 @@ class Generator(back.Generator):
 			if ext == ".tex":
 				path = file
 			else:
-				path = self.path
+				path = self.get_out_path()
 			path = path + ".pdf"
 			print(f"SUCCESS: result in {path}")
 		else:

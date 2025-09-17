@@ -7,7 +7,7 @@ Make `Hello World!` to be printed:
 
 
 Write a recursive function that computes recursively the sum of the 10 first integer starting from 0.
-<codeme language=ocaml,interpreter=ocaml,skip=3,skiplast=2>
+<codeme language=ocaml,interpreter=ocaml,skip=4,skiplast=1>
 let f n =
 ;;
 @@test:
@@ -50,4 +50,23 @@ And another one:
 With `set`, option test:
 <codeme>
 print_string "Ciao!";;
+</codeme>
+
+
+Test of `find` option:
+<codeme find, skip=2>
+let a = 3 ;;
+let b = 4 ;;
+@@test:
+a + b ;;
+@@expected:
+# - : int = 7
+</codeme>
+
+
+Timeout test:
+<codeme>
+let rec f n = f n ;;
+@@test:
+f 3 ;;
 </codeme>

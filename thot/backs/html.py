@@ -255,14 +255,14 @@ class PerSection(PerChapter):
 		PerChapter.__init__(self, gen, page)
 		self.header_stack = []
 
-	def enter_header(self, header):
+	def enter_header(self, node):
 		name = self.page_name(len(self.todo))
 		self.push_file(name)
-		self.todo.append((name, header))
-		self.header_stack.append(header)
-		header.header_stack = list(self.header_stack)
+		self.todo.append((name, node))
+		self.header_stack.append(node)
+		node.header_stack = list(self.header_stack)
 
-	def leave_header(self, header):
+	def leave_header(self, node):
 		self.pop_file()
 		self.header_stack.pop()
 

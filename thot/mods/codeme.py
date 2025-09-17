@@ -17,14 +17,16 @@
 #
 
 """This module allows interactive coding from a viewed page. The initial syntax is:
-	<codeme OPTIONS>...</codem>
+	<codeme OPTIONS>...</codeme>
 that displays a box where the user can type a program and launch it."""
 
+import os
 import re
+import signal
 import subprocess
 from thot import doc, block, communicate, view
 
-SPACE_RE = re.compile("\s{2,}")
+SPACE_RE = re.compile(r"\s{2,}")
 
 # Maps of used blocks
 MAP = {}
@@ -33,9 +35,10 @@ class Resource(view.Resource):
 
 	def __init__(self):
 		view.Resource.__init__(self, "/codeme/run")
-		self.interpreter = None
-		self.timeout = None
-		self.skip = None
+		self.msg = None
+		self.source = None
+		self.block = None
+		self.test = None
 
 	def get_mime(self):
 		return "text/plain"
@@ -51,12 +54,13 @@ class Resource(view.Resource):
 
 		# launch the process
 		try:
-			print("DEBUG: interpreter=", self.block.interpreter)
-			proc = subprocess.Popen(self.block.interpreter,
+			proc = subprocess.Popen(
+					self.block.interpreter,
 					stdin = subprocess.PIPE,
 					stdout = subprocess.PIPE,
 					stderr = subprocess.STDOUT,
-					shell = True
+					shell = True,
+					preexec_fn=os.setsid
 				)
 		except FileNotFoundError:
 			return "Bad interpreter!"
@@ -68,43 +72,21 @@ class Resource(view.Resource):
 				timeout = self.block.timeout)
 			out = outs.decode('utf8')
 		except subprocess.TimeoutExpired:
-			proc.kill()
+			os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 			return "Timeout expired!"
 
-		# skip if needed
-		skip = self.block.skip
-		if skip > 0:
-			p = 0
-			while skip > 0:
-				try:
-					p = out.index('\n', p)
-					p = p + 1
-					skip = skip - 1
-				except ValueError:
-					out = ""
-					break
-			out = out[p:]
-
-		# skip last if needed
-		skip = self.block.skiplast
-		if skip > 0:
-			p = len(out)
-			while skip > 0:
-				try:
-					p = out.rindex('\n', 0, p)
-					skip = skip - 1
-				except ValueError:
-					out = ""
-					break
-			out = out[:p+1]
-
-		# normalize spaces
+		# prepare text
+		lines = out.split('\n')
+		if lines[-1] == '':
+			lines = lines[:-1]
+		if self.block.skip > 0:
+			lines = lines[self.block.skip:]
+		if self.block.skiplast > 0:
+			lines = lines[:-self.block.skiplast]
 		if self.block.norm_spaces:
-			res = []
-			for line in out.split('\n'):
-				res.append(SPACE_RE.sub(' ', line.strip()))
-			out = "\n".join(res)
-
+			for (i, line) in enumerate(lines):
+				lines = [line.strip() for line in lines]
+		out = "\n".join(lines)
 		return out
 
 	def output(self, msg, test = None):
@@ -113,8 +95,7 @@ class Resource(view.Resource):
 		else:
 			id = "codeme-output-%d-%d" % (self.block.num, test)
 		self.msg.set_value(id, msg)
-		
-		
+
 	def answer(self, output):
 
 		# prepare execution
@@ -133,7 +114,11 @@ class Resource(view.Resource):
 			if test.expected != "":
 				add_cls = "success"
 				rem_cls = "fail"
-				if test.expected.strip() == result.strip():
+				if self.block.find:
+					success = test.expected.strip() in result.strip()
+				else:
+					success = test.expected.strip() == result.strip()
+				if success:
 					lab = "success!"
 				else:
 					lab = "failed."
@@ -160,6 +145,11 @@ class Feature(doc.Feature):
 		script = gen.newScript()
 		script.content = """
 function codeme_run(id, test) {
+	var out_id = "codeme-output-" + id;
+	if(test != 0)
+		out_id += "-" + test;
+	const result_comp = document.getElementById(out_id);
+	result_comp.value = "Running test...";
 	const source = document.getElementById("codeme-source-" + id);
 	const xhr = new XMLHttpRequest();
 	com_send("/codeme/run", {
@@ -258,7 +248,7 @@ class Block(block.Block):
 		"@@expected:":
 			lambda self: self.add_expected()
 	}
-	
+
 	def __init__(self, syntax, man):
 		block.Block.__init__(self, syntax, man)
 		self.num = self.new_num()
@@ -282,6 +272,7 @@ class Block(block.Block):
 		self.rows = self.get_option("rows")
 		self.testrows = self.get_option("testrows")
 		self.norm_spaces = self.get_option("norm-spaces")
+		self.find = self.get_option("find")
 
 	def add_content(self, content, line):
 		if content == "":
@@ -297,7 +288,7 @@ class Block(block.Block):
 
 	def add_test_line(self, line):
 		self.tests[-1].code = self.add_content(self.tests[-1].code, line)
-	
+
 	def add_test(self):
 		self.tests.append(Test(len(self.tests) + 1))
 		return self.add_test_line
@@ -313,7 +304,7 @@ class Block(block.Block):
 
 	def add_prolog(self, line):
 		self.prolog = self.add_content(self.prolog, line)
-	
+
 	def add_epilog(self, line):
 		self.epilog = self.add_content(self.epilog, line)
 
@@ -369,7 +360,7 @@ class Block(block.Block):
 	</div>""".format(**map))
 
 		else:
-			
+
 			for test in self.tests:
 				map["tnum"] = test.num
 				map["code"] = test.code
@@ -397,7 +388,7 @@ class Block(block.Block):
 	</div>""".format(**map))
 
 		gen.genVerbatim("</div>")
-			
+
 
 __short__ = """Interactive documentation and conding."""
 __description__ = \
@@ -409,15 +400,16 @@ __syntaxes__ = [
 		maker = Block,
 		set = True,
 		options=[
-			block.Option("language"),
-			block.Option("interpreter"),
-			block.SwitchOption("norm-spaces"),
-			block.IntOption("timeout", 4),
-			block.IntOption("skip", 0),
-			block.IntOption("skiplast", 0),
-			block.IntOption("cols", 80),
-			block.IntOption("rows", 10),
-			block.IntOption("testrows", 4)
+			block.Option("language", doc="used programming language"),
+			block.Option("interpreter", doc="interpreter command to run"),
+			block.SwitchOption("norm-spaces", doc="remove leading and trailing spaces"),
+			block.IntOption("timeout", 4, doc="timeout in s before the command is aborted"),
+			block.IntOption("skip", 0, doc="number of lines to skip at the start"),
+			block.IntOption("skiplast", 0, doc="number of lines to skip at end"),
+			block.IntOption("cols", 80, doc="number of columns for the editor area"),
+			block.IntOption("rows", 10, doc="number of rows for the editor area"),
+			block.IntOption("testrows", 4, doc="number of rows in the result area"),
+			block.SwitchOption("find", doc="find the result in output instead of perfect match")
 		])
 ]
 
