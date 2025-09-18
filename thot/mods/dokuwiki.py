@@ -14,12 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Module providing dokuwiki syntax."""
+
 import re
 
-import thot.common as common
-import thot.doc as doc
-import thot.highlight as highlight
-import thot.tparser as tparser
+from thot import common, doc, highlight, tparser
 
 def computeDepth(text):
 	depth = 0
@@ -105,7 +104,7 @@ class FileBlock(doc.Block):
 		doc.Block.__init__(self, "file")
 
 	def dumpHead(self, out, tab):
-		out.write("%sblock.file(\n" % tab)
+		out.write(f"{tab}block.file(\n")
 
 	def gen(self, gen):
 		gen.genEmbeddedBegin(self)
@@ -126,7 +125,7 @@ class FileBlock(doc.Block):
 				gen.genText(line + "\n")
 			gen.genVerbatim('</screen>\n')
 		else:
-			common.onWarning('%s back-end is not supported by file block' % type)
+			common.onWarning(f'{type} back-end is not supported by file block')
 		gen.genEmbeddedEnd(self)
 
 
@@ -136,7 +135,7 @@ class NonParsedBlock(doc.Block):
 		doc.Block.__init__(self, "raw")
 
 	def dumpHead(self, out, tab):
-		out.write("%sblock.nonparsed(\n" % tab)
+		out.write(f"{tab}block.nonparsed(\n")
 
 	def gen(self, gen):
 		gen.genEmbeddedBegin(self)
@@ -155,16 +154,16 @@ class NonParsedBlock(doc.Block):
 				gen.genText(line + "\n")
 			gen.genVerbatim('</para>\n')
 		else:
-			common.onWarning('%s back-end is not supported by file block' % type)
+			common.onWarning(f'{type} back-end is not supported by file block')
 		gen.genEmbeddedEnd(self)
 
 
 ### code parse ###
-END_CODE = re.compile("^\s*<\/code>\s*$")
-END_FILE = re.compile("^\s*<\/file>\s*$")
-END_NOWIKI = re.compile("^\s*<\/nowiki>\s*$")
+END_CODE = re.compile(r"^\s*<\/code>\s*$")
+END_FILE = re.compile(r"^\s*<\/file>\s*$")
+END_NOWIKI = re.compile(r"^\s*<\/nowiki>\s*$")
 
-INDENT_RE = re.compile("  \s*(.*)$")
+INDENT_RE = re.compile(r"  \s*(.*)$")
 class IndentParser:
 	old = None
 	block = None
@@ -230,13 +229,13 @@ def handleLink(man, match):
 def handleFigure(man, match):
 	image = man.fix_url(match.group("image"))
 	width = match.group("image_width")
-	if width != None:
+	if width is not None:
 		width = int(width)
 	height = match.group("image_height")
-	if height != None:
+	if height is not None:
 		height = int(height)
 	label = match.group("image_label")
-	if label == None:
+	if label is None:
 		caption = None
 	else:
 		caption = doc.Par()
@@ -258,13 +257,13 @@ def handleImage(man, match):
 	else:
 		image = man.fix_url(match.group("image"))
 		width = match.group("image_width")
-		if width != None:
+		if width is not None:
 			width = int(width)
 		height = match.group("image_height")
-		if height != None:
+		if height is not None:
 			height = int(height)
 		label = match.group("image_label")
-		if label == None:
+		if label is None:
 			caption = None
 		else:
 			caption = doc.Par()
@@ -316,7 +315,7 @@ def handleCode(man, match):
 				try:
 					line = int(opt[5:])
 				except ValueError:
-					raise common.ParseException("bad line number: %s" % opt)
+					raise common.ParseException(f"bad line number: {opt}")
 			else:
 				lang = opt
 	tparser.BlockParser(man, highlight.CodeBlock(man, lang, line), END_CODE)
@@ -327,7 +326,7 @@ def handleFile(man, match):
 def handleNoWiki(man, match):
 	tparser.BlockParser(man, NonParsedBlock(), END_NOWIKI)
 
-TABLE_SEP = re.compile('\^|\||%%')
+TABLE_SEP = re.compile(r'\^|\||%%')
 def handleRow(man, match):
 	table = doc.Table()
 	if match.group(4) == '^':
@@ -374,7 +373,7 @@ def handleRow(man, match):
 			continue
 		if object:
 			man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_CELL, object))
-			tparser.handleText(man, text)
+			tparser.handleText(man, cell)
 
 		# strip and find align
 		total = len(cell)
@@ -419,10 +418,10 @@ __syntax__ = True
 
 __words__ = [
 	(lambda man, match: handleStyle(man, "bold"),
-		"\*\*",
+		r"\*\*",
 		"""open and close bold text."""),
 	(lambda man, match: handleStyle(man, "italic"),
-		"\/\/",
+		r"\/\/",
 		"""open and close italic text."""),
 	(lambda man, match: handleStyle(man, "underline"),
 		"__",
@@ -434,41 +433,43 @@ __words__ = [
 		"<sub>",
 		"""open subscript text."""),
 	(lambda man, match: handleCloseStyle(man, "subscript"),
-		"<\/sub>",
+		r"<\/sub>",
 		"""close subscript text."""),
 	(lambda man, match: handleOpenStyle(man, "superscript"),
 		"<sup>",
 		"""open superscript text."""),
 	(lambda man, match: handleCloseStyle(man, "superscript"),
-		"<\/sup>",
+		r"<\/sup>",
 		"""close superscript text."""),
 	(lambda man, match: handleOpenStyle(man, "deleted"),
 		"<del>",
 		"""open deleted text."""),
 	(lambda man, match: handleCloseStyle(man, "deleted"),
-		"<\/del>",
+		r"<\/del>",
 		"""close deleted text."""),
 	(handleFootNote,
-		'\(\(',
+		r'\(\(',
 		"""open footnote."""),
 	(lambda man, match: handleCloseStyle(man, "footnote"),
-		"\)\)",
+		r"\)\)",
 		"""close footnote;"""),
 	(handlePercent,
 		'%%(?P<percent>([^%]|%[^%])*)%%',
 		"""text area without formatting."""),
 	(handleURL,
-		"(http|ftp|mailto|sftp|https):\S+",
+		r"(http|ftp|mailto|sftp|https):\S+",
 		"""URL inserted in the text (producing an hyper-reference)."""),
 	(handleEMail,
 		"([a-zA-Z0-9!#$%&'*+-/=?^_`{|}~.]+@[-a-zA-Z0-9.]+[-a-zA-Z0-9])",
 		"""EMail address inserted in the text (producing an hyper-reference)."""),
 	(handleLink,
-		"\[\[(?P<target>[^\]|]*)(\|(?P<label>[^\]]*))?\]\]",
+		r"\[\[(?P<target>[^\]|]*)(\|(?P<label>[^\]]*))?\]\]",
 		"""link to the given target displaying the given label (if any)."""),
 	(handleImage,
-		"{{(?P<left>\s*)(?P<image>[^}?\s]+)(\?(?P<image_width>[0-9]+)?(x(?P<image_height>[0-9]+))?)?(?P<right>\s*)(\|(?P<image_label>[^}]*))?}}",
-		"""insertion of an image with possible width, height, label and aligned according spaces at left or at right."""),
+		r"{{(?P<left>\s*)(?P<image>[^}?\s]+)(\?(?P<image_width>[0-9]+)?(x("
+		r"?P<image_height>[0-9]+))?)?(?P<right>\s*)(\|(?P<image_label>[^}]*))?}}",
+		"insertion of an image with possible width, height, label and aligned"
+			"according spaces at left or at right."),
 	(handleSmiley,
 		SMILEYS_RE,
 		"""insertion of smileys."""),
@@ -491,38 +492,40 @@ __lines__ = [
 		"^$",
 		"""begin of a new paragraph."""),
 	(lambda man, match: handleList(man, "ul", match),
-		"^((  |\t)\s*)\*(.*)",
+		r"^((  |\t)\s*)\*(.*)",
 		"""bulleted list item (number of blank characters gives the depth)."""),
 	(lambda man, match: handleList(man, "ol", match),
-		"^((  |\t)\s*)-(.*)",
+		r"^((  |\t)\s*)-(.*)",
 		"""numbered list item (number of blank characters gives the depth)."""),
 	(handle_def,
-		"^((  |\t)\s*)\?([^:]*):(.*)",
+		r"^((  |\t)\s*)\?([^:]*):(.*)",
 		"""definition item."""),
 	(handleCode,
-		"^\s*<code(\s+(\S+))?\s*>\s*",
+		r"^\s*<code(\s+(\S+))?\s*>\s*",
 		"""code area (ended by </code>)."""),
 	(handleFile,
-		"^\s*<file>\s*",
+		r"^\s*<file>\s*",
 		"""file content area (ended by </file>)."""),
 	(handleNoWiki,
-		"^\s*<nowiki>\s*",
+		r"^\s*<nowiki>\s*",
 		"""area without markup (ended by </nowiki>)"""),
 	(handleRow,
-		"^((\^|\|)(.*))(\^|\|)\s*$",
+		r"^((\^|\|)(.*))(\^|\|)\s*$",
 		"""row of a table (cells introduced by '^' are considered as headers)."""),
 	(handleHLine,
-		"^-----*\s*$",
+		r"^-----*\s*$",
 		"""horizontal bar."""),
 	(handleIndent,
-		"  \s*(.*)$",
+		r"  \s*(.*)$",
 		"""text considered as excerpt."""),
 	(handleQuote,
 		"^(>+)(.*)$",
 		"""quoted text."""),
 	(handleFigure,
-		"^\s*{{(?P<left>\s*)(?P<image>[^}?\s|]+)(\?(?P<image_width>[0-9]+)?(x(?P<image_height>[0-9]+))?)?(?P<right>\s*)(\|(?P<image_label>[^}]*))?}}\s*$",
-		"""insertion of an image as a a figure with possible width, height, label and aligned according spaces at left or at right.""")
+		r"^\s*{{(?P<left>\s*)(?P<image>[^}?\s|]+)(\?(?P<image_width>[0-9]+)?(x("
+		r"?P<image_height>[0-9]+))?)?(?P<right>\s*)(\|(?P<image_label>[^}]*))?}}\s*$",
+		"""insertion of an image as a a figure with possible width, height, label and
+			aligned according spaces at left or at right.""")
 ]
 
 def init(man):

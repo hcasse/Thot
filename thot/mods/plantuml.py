@@ -21,27 +21,26 @@ PLANTUML_JAR, or the environment variable PLANTUML_JAR  to retrieve
 the .jar of PlantUML.
 """
 
-import glob
 import os
 import shutil
 
-import thot.common as common
-import thot.extern as extern
+from thot import extern
 
 class PlantUMLBlock(extern.ExternalBlock):
-	
+
 	def __init__(self, meta):
 		extern.ExternalBlock.__init__(self, meta)
+		self.out_path = None
 
 	def prepare_input(self, gen, opts, input):
-		tmp = self.dump_temporary("@startuml\n%s\n@enduml\n" % self.toText())
+		tmp = self.dump_temporary(f"@startuml\n{self.toText()}\n@enduml\n")
 		if gen.getType() == "latex":
 			opts.append("-tpdf")
 			self.out_path = tmp[:-4] + ".pdf"
 		else:
 			opts.append("-tpng")
 			self.out_path = tmp[:-4] + ".png"
-		opts.append(tmp);
+		opts.append(tmp)
 
 	def finalize_output(self, gen):
 		try:
@@ -52,13 +51,13 @@ class PlantUMLBlock(extern.ExternalBlock):
 my_cmds = ["java net.sourceforge.plantuml.Run"]
 #jar = man.get_var("PLANTUML_JAR")
 #if jar:
-#my_cmds = my_cmds + ["java -jar %s" % jar]		
+#my_cmds = my_cmds + ["java -jar %s" % jar]
 try:
 	jar = os.environ["PLANTUML_JAR"]
 except KeyError:
 	jar = None
 if jar:
-	my_cmds = my_cmds + ["java -jar %s" % jar]		
+	my_cmds = my_cmds + [f"java -jar {jar}"]
 
 __short__ = """integration of AAFig figures"""
 __description__ = \
@@ -71,7 +70,7 @@ __syntaxes__ = [
 		name = "plantuml",
 		ext=".png",
 		cmds=my_cmds,
-		maker = PlantUMLBlock, 
+		maker = PlantUMLBlock,
 		options=[
 		]
 	)

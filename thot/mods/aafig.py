@@ -17,17 +17,17 @@
 """A block containing aafig diagram.
 See https://launchpad.net/aafigure for more details."""
 
-import thot.extern as extern
+from thot import extern
 
 class AafigBlock(extern.ExternalBlock):
-	
+
 	def __init__(self, meta):
 		extern.ExternalBlock.__init__(self, meta)
 
 	def prepare_input(self, gen, opts, input):
-		opts.append("-o '%s'" % self.get_path(gen))
+		opts.append(f"-o '{self.get_path(gen)}'")
 		input.append(self.toText())
-		
+
 
 __short__ = """integration of AAFig figures"""
 __description__ = \

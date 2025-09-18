@@ -14,15 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Module for syntax for including Latex math."""
+
 import re
 import subprocess
 import sys
 
-import thot.common as common
-import thot.doc as doc
-import thot.tparser as tparser
+from thot import common, doc, tparser
 
-mimetex = common.CommandRequirement("mimetex", 'mimetex not found but required by latexmath module: ignoring latexmath tags')
+mimetex = common.CommandRequirement("mimetex",
+	'mimetex not found but required by latexmath module: ignoring latexmath tags')
 
 count = 0
 formulae = { }
@@ -32,11 +33,11 @@ BUILDER = None
 
 class Builder(doc.Feature):
 	"""Builder for math expression and feature"""
-	
+
 	def genWord(self, man, w):
 		"""Generate the HTML for a word formula."""
 		pass
-	
+
 	def genBlock(self, man, b):
 		"""Generate the HTML for a block formula."""
 		pass
@@ -67,40 +68,40 @@ MathJax.Hub.Register.StartupHook("End Jax",function () {
 """
 
 class MathWord(doc.Word):
-	
+
 	def __init__(self, text, builder):
 		doc.Word.__init__(self, text)
 		self.builder = builder
 
 	def dump(self, out=sys.stdout, tab = ""):
-		out.write("%slatexmath(%s)\n" % (tab, self.text))
+		out.write(f"{tab}latexmath({self.text})\n")
 
 	def gen(self, gen):
 		if gen.getType() == "latex":
-			gen.genVerbatim("$%s$" % self.text)
+			gen.genVerbatim(f"${self.text}$")
 		elif gen.getType() == "html":
 			self.builder.genWord(gen, self)
 		else:
 			gen.genText(self.text)
 
 class MathBlock(doc.Block):
-	
+
 	def __init__(self, builder):
 		doc.Block.__init__(self, "eq")
 		self.builder = builder
-		#man.doc.addFeature(FEATURE)
+		self.text = None
 
 	def dumpHead(self, out, tab):
-		out.write(tab + "eq(" + self.lang + ",\n")
-	
-	def kind(self):
+		out.write(tab + "eq(" + self.text + ",\n")
+
+	def getKind(self):
 		return "equation"
 
 	def numbering(self):
 		return "equation"
 
 	def gen(self, gen):
-		
+
 		if gen.getType() == "latex":
 			gen.genVerbatim("\\begin{multiline*}")
 			f = True
@@ -112,7 +113,7 @@ class MathBlock(doc.Block):
 				gen.genVerbatim("\n\t")
 				gen.genVerbatim(line)
 			gen.genVerbatim("\n\\end{multiline*}\n")
-		
+
 		elif gen.getType() == "html":
 			self.builder.genBlock(gen, self)
 
@@ -121,23 +122,23 @@ class MathBlock(doc.Block):
 
 
 class L2MLBuilder(Builder):
-	
+
 	def __init__(self, f):
 		self.f = f
-	
-	def genWord(self, gen, w):
-		gen.genVerbatim(self.f(w.text))
-	
-	def genBlock(self, gen, b):
-		gen.genOpenTag("center")
+
+	def genWord(self, man, w):
+		man.genVerbatim(self.f(w.text))
+
+	def genBlock(self, man, b):
+		man.genOpenTag("center")
 		f = True
 		for line in b.content:
 			if f:
 				f = False
 			else:
-				gen.genVerbatim("<br/>")
-			gen.genVerbatim(self.f(line))
-		gen.genCloseTag("center")
+				man.genVerbatim("<br/>")
+			man.genVerbatim(self.f(line))
+		man.genCloseTag("center")
 
 try:
 	import latex2mathml.converter as m
@@ -148,7 +149,7 @@ except ImportError as e:
 
 
 class MathJAXBuilder(Builder):
-	
+
 	def prepare(self, gen):
 		if gen.getType() == "html":
 			gen.doc.setVar("LATEXMATH_SCRIPT", "yes")
@@ -158,43 +159,41 @@ class MathJAXBuilder(Builder):
 			s = gen.newScript()
 			s.content = MATHJAX_SELECTOR
 			s.type = "text/x-mathjax-config"
-	
-	def genWord(self, gen, w):
-		gen.genVerbatim("\\(%s\\)" % w.text)
-	
-	def genBlock(self, gen, b):
-		gen.genVerbatim("$$")
+
+	def genWord(self, man, w):
+		man.genVerbatim(f"\\({w.text}\\)")
+
+	def genBlock(self, man, b):
+		man.genVerbatim("$$")
 		f = True
 		for line in b.content:
 			if f:
 				f = False
 			else:
-				gen.genVerbatim("\\\\\n")
-			gen.genVerbatim(line)
-		gen.genVerbatim("$$")
-	
+				man.genVerbatim("\\\\\n")
+			man.genVerbatim(line)
+		man.genVerbatim("$$")
+
 BUILDERS["mathjax"] = MathJAXBuilder()
 if DEFAULT is None:
 	DEFAULT = "mathjax"
 
 class MimetexMath(doc.Word):
-	
+
 	def __init__(self, text):
 		doc.Word.__init__(self, text)
-	
-	def dump(self, tab = ""):
-		print("%slatexmath(%s)" % (tab, self.text))
+
+	def dump(self, out=sys.stdout, tab = ""):
+		out.write(f"{tab}latexmath({self.text})\n")
 
 	def prepare(self, man):
 		pass
 
 	def gen(self, gen):
-		global mimetex
 		global count
-		global formulae
-		
+
 		if gen.getType() == "latex":
-			gen.genVerbatim("$%s$" % self.text)
+			gen.genVerbatim(f"${self.text}$")
 		else:
 			cmd = mimetex.get()
 			if not cmd:
@@ -203,11 +202,11 @@ class MimetexMath(doc.Word):
 			if self.text in formulae:
 				rpath = formulae[self.text]
 			else:
-				rpath = gen.new_friend("latexmath/latexmath-%s.gif" % count);
+				rpath = gen.new_friend(f"latexmath/latexmath-{count}.gif")
 				count += 1
 				try:
 					proc = subprocess.Popen(
-						["%s -d '%s' -e %s" % (cmd, self.text, rpath)],
+						[f"{cmd} -d '{self.text}' -e {rpath}"],
 						stdout = subprocess.PIPE,
 						stderr = subprocess.PIPE,
 						shell = True
@@ -219,8 +218,8 @@ class MimetexMath(doc.Word):
 						self.onWarning("bad latexmath formula.")
 					else:
 						formulae[self.text] = rpath
-				except OSError as e:
-					MIMETEX_AVAILABLE = False
+				except OSError:
+					#MIMETEX_AVAILABLE = False
 					self.onWarning("mimetex is not available: no latexmath !")
 			if rpath:
 				gen.genImage(rpath, None, self)
@@ -228,10 +227,8 @@ class MimetexMath(doc.Word):
 class MimetexBuilder(Builder):
 
 	def gen(self, gen, text, part):
-		global mimetex
 		global count
-		global formulae
-		
+
 		cmd = mimetex.get()
 		if not cmd:
 			return
@@ -239,11 +236,11 @@ class MimetexBuilder(Builder):
 		if text in formulae:
 			rpath = formulae[text]
 		else:
-			rpath = gen.new_resource("latexmath/latexmath-%s.gif" % count);
+			rpath = gen.new_resource(f"latexmath/latexmath-{count}.gif")
 			count += 1
 			try:
 				proc = subprocess.Popen(
-					["%s -d '%s' -e %s" % (cmd, text, rpath)],
+					[f"{cmd} -d '{text}' -e {rpath}"],
 					stdout = subprocess.PIPE,
 					stderr = subprocess.PIPE,
 					shell = True
@@ -255,43 +252,41 @@ class MimetexBuilder(Builder):
 					self.onWarning("bad latexmath formula.")
 				else:
 					formulae[text] = rpath
-			except OSError as e:
-				MIMETEX_AVAILABLE = False
-				self.onWarning("mimetex is not available: no latexmath !")
+			except OSError:
+				#MIMETEX_AVAILABLE = False
+				gen.onWarning("mimetex is not available: no latexmath !")
 		if rpath:
 			gen.genImage(rpath, part, None)
-	
-	def genWord(self, gen, t):
-		self.gen(gen, t.text, t)
-	
-	def genBlock(self, gen, b):
-		gen.genOpenTag("center")
+
+	def genWord(self, man, w):
+		self.gen(man, w.text, w)
+
+	def genBlock(self, man, b):
+		man.genOpenTag("center")
 		f = True
 		for line in b.content:
 			if f:
 				f = False
 			else:
-				gen.genVerbatim("<br/>")
-			self.gen(gen, line, b)
-		gen.genCloseTag("center")
+				man.genVerbatim("<br/>")
+			self.gen(man, line, b)
+		man.genCloseTag("center")
 
 
 BUILDERS["mimetex"] = MimetexBuilder()
-if DEFAULT == None:
+if DEFAULT is None:
 	DEFAULT = "mimetex"
 
 def selectBuilder(man):
-	global DEFAULT
 	global BUILDER
-	global BUILDERS
 	try:
 		n = man.doc.getVar("LATEXMATH", DEFAULT)
 		BUILDER = BUILDERS[n]
 	except KeyError:
-		man.onWarning("unknown mathlatex output: %s. Reverting to use mimetex." % v)
+		man.onWarning(r"unknown mathlatex output: {v}. Reverting to use mimetex.")
 
-END_BLOCK = re.compile("^\s*<\/eq>\s*$")
-		
+END_BLOCK = re.compile(r"^\s*<\/eq>\s*$")
+
 def handleMath(man, match):
 	text = match.group("latexmath")
 	if text == "":
@@ -301,26 +296,26 @@ def handleMath(man, match):
 		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, MathWord(text, BUILDER)))
 
 def handleBlock(man, match):
-	global BUILDER
 	man.doc.addFeature(BUILDER)
 	tparser.BlockParser(man, MathBlock(BUILDER), END_BLOCK)
 
 # module declaration
 __short__ = "Use of Latex math formuilae in Thot."
-__description__ = __short__ + """
+builders = ('\n').join([f'- {k}' for k in BUILDERS.keys()])
+__description__ = __short__ + f"""
 
 A quick summary of Latex math syntax is available at https://en.wikibooks.org/wiki/LaTeX/Mathematics .
 
 Variable LATEXMATH select one of the back-end among:
-%s
-""" % ("\n").join(["- %s" % k for k in BUILDERS.keys()])
+{builders}
+"""
 __version__ = "1.3"
 __words__ = [
-	(handleMath, "\$(?P<latexmath>[^$]*)\$",
+	(handleMath, r"\$(?P<latexmath>[^$]*)\$",
 		"Insert the given formula in the text.")
 ]
 __lines__ = [
-	(handleBlock, "^\s*<eq\s*>\s*$",
+	(handleBlock, r"^\s*<eq\s*>\s*$",
 		"Insert the given formula as a stand-alone equation (ended by </eq>.")
 ]
 

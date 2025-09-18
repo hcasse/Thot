@@ -14,14 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Module implementing markdown syntax."""
+
 import re
 
-from thot import common, doc, emoji, highlight, tparser
+from thot import doc, emoji, highlight, tparser
 
 def get_ref_map(man):
 	"""Get the reference map."""
 	map = man.get_info("markdown-map")
-	if map == None:
+	if map is None:
 		map = {}
 		man.set_info("markdown-map", map)
 		man.add_completer(complete_ref_map)
@@ -254,24 +256,24 @@ class Table(doc.Table):
 	def update_headers(self):
 		for row in self.content:
 			row.kind = doc.TAB_HEADER
-			for i in range(0, len(row.content)):
-				row.content[i].kind = doc.TAB_HEADER
-				self.set_align(i, row.content[i])
+			for (i, x) in enumerate(row.content):
+				x.kind = doc.TAB_HEADER
+				self.set_align(i, x)
 
 	def set_align(self, i, cell):
-		if i < len(self.aligns) and self.aligns[i] != None:
+		if i < len(self.aligns) and self.aligns[i] is not None:
 			cell.set_align(self.aligns[i])
 
 
 def handle_table_header(man, match):
 	aligns = []
-	for bar in [s.strip() for s in match.group(1).split('|')]:
-		if bar.startswith(':'):
-			if bar.endswith(':'):
+	for x in [s.strip() for s in match.group(1).split('|')]:
+		if x.startswith(':'):
+			if x.endswith(':'):
 				align = doc.TAB_CENTER
 			else:
 				align = doc.TAB_LEFT
-		elif bar.endswith(':'):
+		elif x.endswith(':'):
 			align = doc.TAB_RIGHT
 		else:
 			align = None
@@ -365,7 +367,8 @@ class Factory(doc.Factory):
 __short__ = "syntax for MarkDown format"
 
 __description__ = \
-"""This modules provides syntax for [Markdown wiki format](https://daringfireball.net/projects/markdown/).
+"""This modules provides syntax for
+[Markdown wiki format](https://daringfireball.net/projects/markdown/).
 
 Codes for emoji's can be found [here](https://gist.github.com/rxaviers/7360908).
 
@@ -442,7 +445,7 @@ __words__ = [
 		"""rough HTML code (may only be compatible with html back-end)"""
 	),
 	(handle_ref,
-		"\[(?P<text_ref>[^\]]*)\]\s*\[(?P<id_ref>[^\]]*)\]",
+		r"\[(?P<text_ref>[^\]]*)\]\s*\[(?P<id_ref>[^\]]*)\]",
 		"""the text is marked with a link to reference id."""
 	),
 	(handle_emoji,
@@ -473,7 +476,7 @@ __lines__ = [
 		"""header which level corresponds to the number of '#'."""
 	),
 	(handle_hrule,
-		"^(\* \* \*|\*\*\*|\*\*\*\*\*|- - -)$",
+		r"^(\* \* \*|\*\*\*|\*\*\*\*\*|- - -)$",
 		"""horizontal rule."""
 	),
 	(handle_item_list,
