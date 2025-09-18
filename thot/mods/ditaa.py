@@ -17,17 +17,17 @@
 """A block containing aafig diagram.
 See https://launchpad.net/aafigure for more details."""
 
-import thot.extern as extern
+from thot import extern
 
 
 class DitaaBlock(extern.ExternalBlock):
-	
+
 	def __init__(self, meta):
 		extern.ExternalBlock.__init__(self, meta)
 
 	def prepare_input(self, gen, opts, input):
 		tmp = self.dump_temporary(self.toText())
-		opts.append(tmp);
+		opts.append(tmp)
 		opts.append(self.get_path(gen))
 
 
@@ -42,7 +42,7 @@ __syntaxes__ = [
 		name = "ditaa",
 		ext=".png",
 		cmds=['ditaa'],
-		maker = DitaaBlock, 
+		maker = DitaaBlock,
 		options=[
 			extern.SwitchOption("no-antilias", "-A"),
 			extern.SwitchOption("no-separation", "-E"),

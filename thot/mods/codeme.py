@@ -48,7 +48,6 @@ class Resource(view.Resource):
 		self.source = self.msg.get_attr('source')
 		self.block = MAP[self.msg.get_attr("id")]
 		self.test = self.msg.get_attr('test')
-		return None
 
 	def run(self, sources):
 
@@ -67,7 +66,7 @@ class Resource(view.Resource):
 
 		# perform communication
 		try:
-			outs, errs = proc.communicate(
+			outs, _ = proc.communicate(
 				input = bytes("\n".join(sources), 'utf8'),
 				timeout = self.block.timeout)
 			out = outs.decode('utf8')
@@ -84,16 +83,15 @@ class Resource(view.Resource):
 		if self.block.skiplast > 0:
 			lines = lines[:-self.block.skiplast]
 		if self.block.norm_spaces:
-			for (i, line) in enumerate(lines):
-				lines = [line.strip() for line in lines]
+			lines = [line.strip() for line in lines]
 		out = "\n".join(lines)
 		return out
 
 	def output(self, msg, test = None):
-		if test == None:
-			id = "codeme-output-%d" % self.block.num
+		if test is None:
+			id = f"codeme-output-{self.block.num}"
 		else:
-			id = "codeme-output-%d-%d" % (self.block.num, test)
+			id = f"codeme-output-{self.block.num}-{test}"
 		self.msg.set_value(id, msg)
 
 	def answer(self, output):
@@ -123,11 +121,11 @@ class Resource(view.Resource):
 				else:
 					lab = "failed."
 					add_cls, rem_cls = rem_cls, add_cls
-				id = "codeme-lab-%s-%s" % (self.block.num, test.num)
+				id = f"codeme-lab-{self.block.num}-{test.num}"
 				self.msg.set_content(id, lab)
 				self.msg.add_class(id, add_cls)
 				self.msg.remove_class(id, rem_cls)
-				id = "codeme-output-%s-%s" % (self.block.num, test.num)
+				id = f"codeme-output-{self.block.num}-{test.num}"
 				self.msg.add_class(id, add_cls)
 				self.msg.remove_class(id, rem_cls)
 
@@ -259,10 +257,20 @@ class Block(block.Block):
 		self.init = ""
 		self.tests = []
 		self.state = self.add_init
+		self.interpreter = None
+		self.language = None
+		self.timeout = None
+		self.skip = None
+		self.skiplast = None
+		self.cols = None
+		self.rows = None
+		self.testrows = None
+		self.norm_spaces = None
+		self.find = None
 
 	def check_args(self, man):
 		self.interpreter = self.get_option("interpreter")
-		if self.interpreter == None:
+		if self.interpreter is None:
 			man.error("No interpeter defined!")
 		self.language = self.get_option("language")
 		self.timeout = self.get_option("timeout")
@@ -297,7 +305,7 @@ class Block(block.Block):
 		self.tests[-1].expected = self.add_content(self.tests[-1].expected, line)
 
 	def add_expected(self):
-		if self.tests == []:
+		if not self.tests:
 			return lambda line: None
 		else:
 			return self.add_expected_line
@@ -323,7 +331,7 @@ class Block(block.Block):
 			return
 
 		# non-interactive
-		if not gen.get_manager().is_interactive() or self.interpreter == None:
+		if not gen.get_manager().is_interactive() or self.interpreter is None:
 			if self.init != "":
 				gen.genQuoteBegin(1)
 				gen.genStyleBegin(doc.STYLE_CODE)
@@ -334,24 +342,26 @@ class Block(block.Block):
 
 		# interactive
 		MAP[self.num] = self
-		map = dict(
-			num = self.num,
-			cols = self.cols,
-			tcols = self.cols/2,
-			rows = self.rows,
-			trows = self.testrows,
-			init = self.init
-		)
+		map = {
+			"num": self.num,
+			"cols": self.cols,
+			"tcols": self.cols/2,
+			"rows": self.rows,
+			"trows": self.testrows,
+			"init": self.init
+		}
 
 		# interactive
 		gen.genVerbatim("""
 <div class="codeme">
 	<div class="codeme-source">
-		<textarea id="codeme-source-{num}" cols="{cols}" rows="{rows}" placeholder="Type your source here." onkeydown="codeme_onkeydown(this, event)"
+		<textarea id="codeme-source-{num}" cols="{cols}" rows="{rows}"
+			placeholder="Type your source here."
+			onkeydown="codeme_onkeydown(this, event)"
 		>{init}</textarea>
 	</div>""".format(**map))
 
-		if self.tests == []:
+		if not self.tests:
 			gen.genVerbatim("""
 	<div class="output">
 		<button onclick="codeme_run({num}, 0)">Run!</button>
@@ -372,19 +382,23 @@ class Block(block.Block):
 
 				if test.expected != "":
 					gen.genVerbatim("""
-		<input onchange="codeme_show_result(this.checked, {num}, {tnum});" type="checkbox">show expected</input>""".format(**map))
+		<input onchange="codeme_show_result(this.checked, {num}, {tnum});"
+			type="checkbox">show expected</input>""".format(**map))
 
 				gen.genVerbatim("""
 	</div>
 	<div>
-		<textarea id="codeme-test-{num}-{tnum}" cols="{tcols}" rows="{trows}" readonly>{code}</textarea>""".format(**map))
+		<textarea id="codeme-test-{num}-{tnum}" cols="{tcols}" rows="{trows}"
+			readonly>{code}</textarea>""".format(**map))
 
 				if test.expected != "":
 					gen.genVerbatim("""
-		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;" cols="{tcols}" rows="{trows}" readonly>{expected}</textarea>""".format(**map))
+		<textarea id="codeme-result-{num}-{tnum}" class="result" style="display: none;"
+			cols="{tcols}" rows="{trows}" readonly>{expected}</textarea>""".format(**map))
 
 				gen.genVerbatim("""
-		<textarea id="codeme-output-{num}-{tnum}" cols="{tcols}" rows="{trows}" readonly placeholder="Result of test {tnum}."></textarea>
+		<textarea id="codeme-output-{num}-{tnum}" cols="{tcols}" rows="{trows}"
+			readonly placeholder="Result of test {tnum}."></textarea>
 	</div>""".format(**map))
 
 		gen.genVerbatim("</div>")

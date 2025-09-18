@@ -14,17 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Mopdule supporting unicode character escapes."""
+
 import re
 
-import thot.doc as doc
-import thot.tparser as tparser
+from thot import doc
+from thot import tparser
 
-line_re = re.compile("^\s*"
-	"(?P<end><\\/unicode>)|"
-	"(0x(?P<hex>[0-9a-fA-F]+)\s*:\s*(?P<hex_val>.+))|"
-	"((?P<dec>[0-9]+)\s*:\s*(?P<dec_val>.+))|"
-	"((?P<chr>[^\s]+)\s*:\s*(?P<chr_val>.+))"
-	"\s*$")
+line_re = re.compile(r"^\s*"
+	r"(?P<end><\\/unicode>)|"
+	r"(0x(?P<hex>[0-9a-fA-F]+)\s*:\s*(?P<hex_val>.+))|"
+	r"((?P<dec>[0-9]+)\s*:\s*(?P<dec_val>.+))|"
+	r"((?P<chr>[^\s]+)\s*:\s*(?P<chr_val>.+))"
+	r"\s*$")
 
 esc_re = re.compile("([+*./()|\\\\])")
 
@@ -33,14 +35,14 @@ def escape(t):
 	return r
 
 class UnicodeParser:
-	
+
 	def __init__(self, man):
 		self.defs = []
 		self.old = man.getParser()
-	
+
 	def parse(self, man, line):
 		m = line_re.match(line)
-		if m == None:
+		if m is None:
 			man.error("unsupported syntax")
 		elif m.group("end"):
 			man.setParser(self.old)
@@ -58,16 +60,16 @@ class UnicodeParser:
 			g = doc.Word(m.group("chr"))
 			self.defs.append((escape(m.group("chr_val")),
 				lambda man, match: man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, g))))
-			
+
 
 class UnicodeSyntax(tparser.Syntax):
-	
+
 	def get_doc(self):
 		return [("<unicode>CODE:TEXT*</unicode>", "define several escapes for Unicode characters.")]
 
 	def get_lines(self):
 		"""Get the pairs (function, RE) to parse lines."""
-		return [(self.handle, "^\s*<unicode>\s*$")]
+		return [(self.handle, r"^\s*<unicode>\s*$")]
 
 	def handle(self, man, match):
 		man.setParser(UnicodeParser(man))

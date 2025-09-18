@@ -14,13 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Module supporting block with .dot graph code."""
+
 import re
 import subprocess
 import sys
 
-import thot.common as common
-import thot.doc as doc
-import thot.tparser as tparser
+from thot import common
+from thot import doc
+from thot import tparser
 
 count = 0
 
@@ -37,13 +39,13 @@ class DotBlock(doc.Block):
 			self.kind = kind
 
 	def dumpHead(self, out, tab):
-		out.write("%sblock.dot(\n" % tab)
+		out.write(f"{tab}block.dot(\n")
 
 	def gen(self, gen):
 		global count
-		path = gen.new_resource('dot/graph-%s.png' % count)
-		cmd = '%s -Tpng -o %s' % (self.kind, path)
-		common.onVerbose(lambda _: "CMD: %s" % cmd)
+		path = gen.new_resource(f'dot/graph-{count}.png')
+		cmd = f'{self.kind} -Tpng -o {path}'
+		common.onVerbose(lambda _: f"CMD: {cmd}")
 		count += 1
 		try:
 			process = subprocess.Popen(
@@ -56,20 +58,20 @@ class DotBlock(doc.Block):
 					encoding='utf8'
 				)
 			text = self.toText()
-			(out, err) = process.communicate(text)
+			(_, err) = process.communicate(text)
 			if process.returncode != 0:
 				sys.stderr.write(err)
-				self.onError('error during dot call on %s' % text)
+				self.onError(f'error during dot call on {text}')
 			if err:
-				self.onError('error during dot call: %son %s' % (err, text))
+				self.onError(f'error during dot call: {err} on {text}')
 			gen.genFigure(path, self, self.caption)
 		except OSError as e:
-			self.onError('can not process dot graph: %s' % str(e))
+			self.onError(f'can not process dot graph: {e}')
 
-	def kind(self):
+	def getKind(self):
 		return "figure"
-	
-	def numerating(self):
+
+	def numbering(self):
 		return "figure"
 
 
@@ -91,9 +93,9 @@ Dot syntax available at https://www.graphviz.org/doc/info/lang.html.
 """
 __version__ = "1.1"
 __lines__ = [
-	(handleDot, "^<dot(\s+(dot|neato|twopi|circo|fdp))?>",
+	(handleDot, r"^<dot(\s+(dot|neato|twopi|circo|fdp))?>",
 		"Insert the provided Dot graph (ended by </dot>)."),
-	(handleDotOld, "^@<dot(\s+(dot|neato|twopi|circo|fdp))?>",
+	(handleDotOld, r"^@<dot(\s+(dot|neato|twopi|circo|fdp))?>",
 		"Insert the provided Dot graph (ended by @</dot>.")
 ]
 

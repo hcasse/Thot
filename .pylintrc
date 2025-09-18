@@ -117,7 +117,8 @@ disable=raw-checker-failed,
 		too-many-statements,
 		consider-iterating-dictionary,
 		no-else-raise,
-		too-many-locals
+		too-many-locals,
+		subprocess-popen-preexec-fn
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

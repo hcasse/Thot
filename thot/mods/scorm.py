@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import thot.tparser
-import thot.common
+"""SCORM support for Thot (deprecated)"""
+
 import re
 
 PREFIX = "@scorm:"
@@ -43,39 +43,39 @@ class Test:
 		self.inv = inv
 		self.attr = attr
 		self.arg = arg
-		
+
 	def gen(self, indent, out):
 		args = ""
 		if self.obj:
-			args = '%s referencedObjective="%s"' % (args, self.obj)
+			args = f'{args} referencedObjective="{self.obj}"'
 		if self.inv:
-			args = '%s operator="not"' % args
+			args = f'{args} operator="not"'
 		if self.arg:
-			args = '%s measureThreshold="%s"' % (args, self.arg)
-		out.write('%s\t\t<imsss:ruleCondition condition ="%s"%s/>\n' % (indent, self.attr, args))
-		
+			args = f'{args} measureThreshold="{self.arg}"'
+		out.write(f'{indent}\t\t<imsss:ruleCondition condition ="{self.attr}"{args}/>\n')
+
 
 class Condition:
-	
+
 	def __init__(self, type, any, tests, action):
 		self.type = type
 		self.any = any
 		self.tests = tests
 		self.action = action
-	
+
 	def gen(self, indent, out):
-		out.write("%s<imsss:%sConditionRule>\n" % (indent, self.type))
+		out.write(f"{indent}<imsss:{self.type}ConditionRule>\n")
 		if self.any:
 			arg = ' conditionCombination="any"'
 		else:
 			arg = ''
-		out.write("%s\t<imsss:ruleConditions%s>\n" % (indent, arg))
+		out.write(f"{indent}\t<imsss:ruleConditions{arg}>\n")
 		for test in self.tests:
 			test.gen(indent, out)
-		out.write("%s\t</imsss:ruleConditions>\n" % (indent))
-		out.write('%s\t<imsss:ruleAction action="%s"/>\n' % (indent, self.action))
-		out.write("%s</imsss:%sConditionRule>\n" % (indent, self.type))
-	
+		out.write(f"{indent}\t</imsss:ruleConditions>\n")
+		out.write(f'{indent}\t<imsss:ruleAction action="{self.action}"/>\n')
+		out.write(f"{indent}</imsss:{self.type}ConditionRule>\n")
+
 
 def getHeader(man):
 	last = None
@@ -85,8 +85,8 @@ def getHeader(man):
 		last = item
 	return last
 
-IF_RE = re.compile("\s*if(\s+(all|any))?\s(.*)\s+then\s(.*)")
-TEST_RE = re.compile("(\s*(\S+)\s+is(\s+not)?\s+)?([^( \t]+)(\(([^)]+)\))?\s*")
+IF_RE = re.compile(r"\s*if(\s+(all|any))?\s(.*)\s+then\s(.*)")
+TEST_RE = re.compile(r"(\s*(\S+)\s+is(\s+not)?\s+)?([^( \t]+)(\(([^)]+)\))?\s*")
 
 TESTS = {
 	"satisfied": False,
@@ -128,7 +128,7 @@ def handleCondition(man, type, header, line):
 	test = match.group(3)
 	action = match.group(4)
 	if action not in ACTIONS:
-		man.warn("action '%s' unknown" % action)
+		man.warn(f"action '{action}' unknown")
 		return
 	tests = []
 	for t in test.split(","):
@@ -145,11 +145,11 @@ def handleCondition(man, type, header, line):
 		try:
 			has_args = TESTS[attr]
 			if (has_args and not arg) or (not has_args and arg):
-				man.warn("test '%s' bad argument" % attr)
+				man.warn(f"test '{attr}' bad argument")
 				return
 			tests.append(Test(obj, inv, attr, arg))
 		except KeyError:
-			man.warn("test '%s' unknown" % attr)
+			man.warn(f"test '{attr}' unknown")
 			return
 	header.appendInfo("scorm:conds", Condition(type, any, tests, action))
 
@@ -158,7 +158,7 @@ LIMITS = [
 	"attemptLimit",
 	"attemptAbsoluteDurationLimit"
 ]
-DEF_RE = re.compile("\s*(\S+)\s*=\s*(\S+)\s*")
+DEF_RE = re.compile(r"\s*(\S+)\s*=\s*(\S+)\s*")
 
 def handleCommand(man, match):
 	header = getHeader(man)
@@ -169,7 +169,7 @@ def handleCommand(man, match):
 			try:
 				attrs.append(CONTROL_MODES[arg])
 			except KeyError:
-				man.warn("bad controlMode %s" % arg)
+				man.warn(f"bad controlMode {arg}")
 		header.setInfo("scorm:controlMode", attrs)
 	elif args.startswith("pre:"):
 		handleCondition(man, "pre", header, args[4:])
@@ -184,12 +184,12 @@ def handleCommand(man, match):
 			if not match or match.group(1) not in LIMITS:
 				man.warn("bad limit value")
 				return
-			limits.append('%s="%s"' % (match.group(1), match.group(2)))
+			limits.append(f'{match.group(1)}="{match.group(2)}"')
 		header.setInfo("scorm:limits", limits)
-			
+
 	else:
-		man.error("unknown SCORM command: %s" % args)
-	
+		man.error(f"unknown SCORM command: {args}")
+
 
 def init(man):
 	man.addLine((handleCommand, re.compile(PREFIX + "(.*)")))

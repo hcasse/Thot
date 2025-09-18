@@ -26,19 +26,18 @@
 #
 #	Normal text is modified when a terml is used.
 
-import re
-import sys
+"""Module to support lexicon and gast term identification with #."""
 
-import thot.common as common
-import thot.doc as doc
+from thot import common
+from thot import doc
 
 def label(s):
 	"""Computes a label for the given term."""
-	return "__lex_%s" % s
+	return f"__lex_{s}"
 
 
 class LexPar(doc.Par):
-	
+
 	def __init__(self, id):
 		doc.Par.__init__(self)
 		self.id = id
@@ -52,7 +51,7 @@ class LexPar(doc.Par):
 
 
 class Lexicon(doc.Node):
-	
+
 	def __init__(self, map):
 		doc.Node.__init__(self)
 		self.map = map
@@ -76,39 +75,39 @@ class Lexicon(doc.Node):
 
 	def gen_latex(self, gen):
 		pass
-	
+
 	def gen_docbook(self, gen):
 		pass
-	
+
 	def gen(self, gen):
 		if gen.getType() == "html":
 			self.gen_html(gen)
 		else:
-			common.onWarning("lexicon cannot be generated for %s" % gen.getType())
+			common.onWarning(f"lexicon cannot be generated for {gen.getType()}")
 
 
 class Term(doc.Word):
-	
+
 	def __init__(self, text):
 		doc.Word.__init__(self, text)
 		self.appendInfo(doc.INFO_CLASS, "lexicon")
 
 	def gen_html(self, gen):
-		node = gen.doc.getLabel(label(self.text))
+		#node = gen.doc.getLabel(label(self.text))
 		href = gen.get_href(gen.doc.getLabel(label(self.text)))
 		gen.genOpenTag("a", self, [("href", href)])
 		doc.Word.gen(self, gen)
 		gen.genCloseTag("a")
-	
+
 	def gen(self, gen):
 		if gen.getType() == "html":
 			self.gen_html(gen)
 		else:
-			common.onWarning("lexicon term cannot be generated for %s" % gen.getType())
+			common.onWarning(f"lexicon term cannot be generated for {gen.getType()}")
 
 
 class Source:
-	
+
 	def __init__(self):
 		self.lexicon = { }
 
@@ -124,20 +123,20 @@ class Source:
 
 	def add(self, id, desc):
 		"""Add a new term."""
-		self.lexicon[id] = desc 
-		
+		self.lexicon[id] = desc
+
 
 def handleTerm(man, match):
-	
+
 	# record the term
 	id = match.group("termid")
 	de = match.group("termdef")
 	if man.lexicon.exists(id):
-		common.onError(man.message("term \"%s\" already defined!" % id))
+		common.onError(man.message(f"term \"{id}\" already defined!"))
 		return
 	term = LexPar(id)
 	man.lexicon.add(id, term)
-	
+
 	# finalize the parsing
 	man.doc.addLabel(label(id), term)
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, term))
@@ -161,10 +160,10 @@ __version__ = "1.0"
 
 __lines__ = [
 	(handleLexicon,
-		"^@lexicon\s*(?P<garbage>.*)$",
+		r"^@lexicon\s*(?P<garbage>.*)$",
 		"generate the lexicon at this point"),
 	(handleTerm,
-		"^@term\s+(?P<termid>\S+)\s+(?P<termdef>.*)$",
+		r"^@term\s+(?P<termid>\S+)\s+(?P<termdef>.*)$",
 		"create a new term and its definition")
 ]
 
