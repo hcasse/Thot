@@ -14,66 +14,69 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Module providing linking with Doxygen documentation."""
+
 import os.path
 import xml.etree.ElementTree as ET
 
-import thot.common as common
-import thot.doc as doc
+from thot import common, doc
 
 
 def read_tags(name, map, sep, ref):
 	"""Read the tags contained in the named file and fill the map.
 	If the file cannont be opened or is badly formatted, display a
 	warning and return."""
-	
+
 	try:
-		
+
 		# open the file
 		tree = ET.parse(name)
 		root = tree.getroot()
 		if root.tag != "tagfile":
-			common.onWarning("%s does not contains doxygen tags" % name)
-		
+			common.onWarning(f"{name} does not contains doxygen tags")
+
 		# read the compound
 		for comp in root.iter("compound"):
-			
+
 			# read compound information
 			name = comp.find("name")
 			filename = comp.find("filename")
-			if name == None or filename == None:
+			if name is None or filename is None:
 				continue
-				
+
 			# create the compond
 			map[name.text] = os.path.join(ref, filename.text)
-			
+
 			# read the members
 			for member in comp.iter("member"):
-				
+
 				# read the information
 				memname = member.find("name")
 				anchorfile = member.find("anchorfile")
 				anchor = member.find("anchor")
-				if memname == None or anchorfile == None or anchor == None:
+				if memname is None or anchorfile is None or anchor is None:
 					continue
-				
+
 				# create the entry
-				map[name.text + sep + memname.text] = os.path.join(ref, "%s#%s" % (anchorfile.text, anchor.text))
-			
+				map[name.text + sep + memname.text] = os.path.join(ref,
+					f"{anchorfile.text}#{anchor.text}")
+
 	except IOError as e:
-		common.onWarning("cannot read %s: %s" % (name, e))
+		common.onWarning(f"cannot read {name}: {e}")
 
 
 class Source:
 	"""Term source to retrieve the code sumbols."""
-	
+
 	def __init__(self, man):
 		self.man = man
 		self.prefixes = [""]
 		self.map = { }
+		self.ref = None
 
 	def add_use(self, path, sep, ref):
 		"""Add a code documentation entry."""
-		if ref == None:
+		if ref is None:
 			self.ref = os.path.dirname(ref)
 		read_tags(path, self.map, sep, ref)
 
@@ -85,10 +88,10 @@ class Source:
 				found.append(self.map[p + word])
 			except KeyError:
 				pass
-		if found == []:
+		if not found:
 			return None
 		if len(found) > 1:
-			self.man.warn("'#%s' is ambiguous!" % word)
+			self.man.warn(f"'#{word}' is ambiguous!")
 		link = doc.Link(found[0])
 		link.append(doc.Word(word))
 		return link
@@ -100,7 +103,7 @@ class Source:
 	def remove_prefix(self, prefix):
 		"""Remove a lookup prefix."""
 		self.prefixes.remove(prefix)
-		
+
 
 def handle_use(man, match):
 	options = common.parse_options(man, match.group("options"),
@@ -122,16 +125,16 @@ __short__ = """Include Doxygen references in the documentation"""
 
 __lines__ = [
 	(handle_use,
-		"^@doxy-use(\((?P<options>[^)]*)\))?\s*(?P<path>.*)$",
+		r"^@doxy-use(\((?P<options>[^)]*)\))?\s*(?P<path>.*)$",
 		"""Specify a Doxygen tag file to provide referenced program items.
 		Options includes sep to define a namespace / item separator
 		and ref to specify path/URL of the Doxygen documentation"""),
 	(handle_prefix,
-		"^@doxy-prefix\s+(?P<prefix>\S+)\s*$",
+		r"^@doxy-prefix\s+(?P<prefix>\S+)\s*$",
 		"""Specify a prefix that will be prepended to hashed word to resolve
 		them. Several prefixes may be specified."""),
 	(handle_remove,
-		"^@doxy-remove\s+(?P<prefix>\S+)\s*$",
+		r"^@doxy-remove\s+(?P<prefix>\S+)\s*$",
 		"""Remove a prefix previously added with @doxy-prefix."""),
 ]
 

@@ -30,8 +30,10 @@
 # for rounded boxes.
 #
 
+"""Module allowing to displat colored boxes with messages."""
+
 from os import path
-import thot.doc as doc
+from thot import doc
 
 ID = "box"
 
@@ -54,7 +56,7 @@ class BoxFeature(doc.Feature):
 			base = gen.doc.getVar("THOT_BASE")
 			css = path.join(base, "box", "style.css")
 			gen.doc.setVar("HTML_STYLES",
-				"%s:%s" % (css, gen.doc.getVar("HTML_STYLES")))
+				f"{css}:{gen.doc.getVar("HTML_STYLES")}")
 
 FEATURE = BoxFeature()
 
@@ -69,7 +71,7 @@ class BoxBlock(doc.Container):
 		self.color = None
 		self.text = None
 		self.icon = None
-		
+
 		for opt in options.split():
 			if opt in TYPES:
 				self.type = opt
@@ -95,28 +97,27 @@ class BoxBlock(doc.Container):
 		# generate open tag
 		atts = []
 
-		cls = ["box", "box-%s" % self.type]
+		cls = ["box", f"box-{self.type}"]
 		if self.rounded:
 			cls.append("box-rounded")
 		atts.append(("class", " ".join(cls)))
 
 		styles = []
-		if self.color != None:
+		if self.color is not None:
 			if self.type == "content":
-				styles.append("border-color: %s;" % self.color)
+				styles.append(f"border-color: {self.color};")
 			else:
-				styles.append("background-color: %s;" % self.color)
-		if self.icon != None:
-			styles.append("background-image: url(%s);"
-				% gen.use_friend(self.icon))
-		if styles != []:
+				styles.append(f"background-color: {self.color};")
+		if self.icon is not None:
+			styles.append(f"background-image: url({gen.use_friend(self.icon)});")
+		if not styles:
 			atts.append(("style", " ".join(styles)))
 		gen.genOpenTag("div", self, atts)
 
 		# generate the title
 		atts = [("class", "title")]
-		if self.type == "content" and self.color != None:
-			atts.append(("style", "background-color: %s;" % self.color))
+		if self.type == "content" and self.color is not None:
+			atts.append(("style", f"background-color: {self.color};"))
 		gen.genOpenTag("div", self, atts)
 		if self.title:
 			gen.genText(self.title[1:])
@@ -127,28 +128,28 @@ class BoxBlock(doc.Container):
 		# generate the body
 		atts = [("class", "body")]
 		styles = []
-		if self.text != None:
-			styles.append("color: %s;" % self.text)
-		if self.color != None and self.type == "content":
+		if self.text is not None:
+			styles.append("color: {self.text};")
+		if self.color is not None and self.type == "content":
 			if self.color.startswith('#'):
-				styles.append("background-color: %s80;" % self.color)
+				styles.append(f"background-color: {self.color}80;")
 			else:
 				styles.append("background-color: white;")
-		if styles != []:
+		if not styles:
 			atts.append(("style", " ".join(styles)))
 		gen.genOpenTag("div", self, atts)
 		doc.Container.gen(self, gen)
 		gen.genCloseTag("div")
-			
+
 		gen.genCloseTag("div")
 
 	def gen(self, gen):
 		if gen.getType() == "html":
 			self.gen_html(gen)
 		else:
-			common.onWarning("boxes cannot be generated for %s" % gen.getType())
-		
-	
+			gen.onWarning(f"boxes cannot be generated for {gen.getType()}")
+
+
 def handleBoxBegin(man, match):
 	man.get_doc().addFeature(FEATURE)
 	man.send(doc.ObjectEvent(doc.L_PAR, ID,
@@ -167,7 +168,7 @@ __version__ = "1.0"
 
 __lines__ = [
 	(handleBoxBegin,
-		"^<box\s(?P<box_options>[^|]*)(?P<box_title>\|[^>]*)?>$",
+		r"^<box\s(?P<box_options>[^|]*)(?P<box_title>\|[^>]*)?>$",
 		""""Make a new box with options info, help, alert, important,
 		tip, download, todo, content, rounded, color=COLOR, text=COLOR,
 		icon=IMAGE."""),
