@@ -112,9 +112,16 @@ class ExternalBlock(doc.Block):
 		self.args = []
 		self.temps = []
 
+	def getKind(self):
+		return "figure"
+
 	def is_ready(self):
 		"""Test if the module is ready for generation."""
 		return self.meta.command_found()
+
+	def put_caption(self, caption):
+		self.set_caption(caption)
+		return True
 
 	def new_num(self):
 		"""Return a unique number."""
@@ -142,7 +149,7 @@ class ExternalBlock(doc.Block):
 	def gen_output(self, gen):
 		"""Called to generate the output document itself."""
 		gen.genEmbeddedBegin(self)
-		gen.genImage(self.get_path(gen), self, self.caption)
+		gen.genImage(self.get_path(gen), self, self.get_caption())
 		gen.genEmbeddedEnd(self)
 
 	def cleanup(self):

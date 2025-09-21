@@ -18,4 +18,4 @@ aafig examples below are extracted and gracefully provided by [[https://launchpa
 | aafigure  +----+
 \-----------+
 </aafig>
-@label This is my first aafig.
+@caption This is my first //aafig//.

@@ -32,7 +32,7 @@ DICT = {
 }
 
 class FrTranslator(i18n.DictTranslator):
-	
+
 	def __init__(self):
 		i18n.DictTranslator.__init__(self, DICT)
 
@@ -42,6 +42,8 @@ class FrTranslator(i18n.DictTranslator):
 		else:
 			return "%s %s: " % (numbering, number)
 
+	def get_lang(self):
+		return "fr"
 
 def getTranslator(doc, lang):
 	return FrTranslator()

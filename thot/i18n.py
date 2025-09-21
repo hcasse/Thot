@@ -53,10 +53,20 @@ class Translator:
 	"""Class providing translation to generate document
 	according to a selected language."""
 
+	def get_lang(self):
+		"""Get the current language."""
+		return None
+
 	def get(self, text):
 		"""Get translation for the given text that may be one
-		of GLYPH_xxx or CAPTION_xxx."""
+		of GLYPH_xxx or CAPTION_xxx or any free text. If the text cannot be
+		translated, the text is returned as is."""
 		return ""
+
+	def get_raw(self, text):
+		"""Look for a translation of the text or return none. Default
+		implementation returns None."""
+		return None
 
 
 class DictTranslator(Translator):
@@ -67,11 +77,16 @@ class DictTranslator(Translator):
 		self.dict = dict
 
 	def get(self, text):
-		if text in self.dict:
+		res = self.get_raw(text)
+		if res is None:
+			res = text
+		return res
+
+	def get_raw(self, text):
+		try:
 			return self.dict[text]
-		else:
-			sys.stderr.write("WARNING: no translation for '" + text + "'")
-			return text
+		except KeyError:
+			return None
 
 
 class DefaultTranslator(DictTranslator):
@@ -79,6 +94,9 @@ class DefaultTranslator(DictTranslator):
 
 	def __init__(self):
 		DictTranslator.__init__(self, ALL)
+
+	def get(self, text, default=None):
+		return text
 
 
 def getTranslator(doc):
@@ -100,7 +118,7 @@ def getTranslator(doc):
 	# look for the global version
 	comps = nlang.split('_')
 	if comps[0] == 'en':
-		return DefaultTranslator()
+		return DictTranslator(ALL)
 	else:
 		mod = common.loadModule(comps[0], path)
 		if mod:

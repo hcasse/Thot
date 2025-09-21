@@ -68,3 +68,4 @@ The pages and sections provide a detailed documentation including tutorial, writ
 * [how to write a front-end module?](dev/frontend.doku)
 * [how to write a back-end module?](dev/backend.doku)
 * [how to write a language support?](dev/lang.doku)
+* [how to use additional facilities?](dev/addon.md)

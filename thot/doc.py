@@ -422,8 +422,9 @@ class Node(Info):
 		"""Set the caption of the node."""
 		self.set_info(INFO_CAPTION, caption)
 
-	def accepts_caption(self):
-		"""Test if the node accepts caption (default return False)."""
+	def put_caption(self, caption):
+		"""Called by the parser to put a caption on this. Return True if the
+		caption is supported, False else (default implementation)."""
 		return False
 
 	def complete(self):
@@ -779,9 +780,13 @@ class Par(Container):
 	def dumpHead(self, out, tab):
 		out.write(tab + "par(\n")
 
+	def gen_content(self, gen):
+		"""Generate the content of the paragraph."""
+		Container.gen(self, gen)
+
 	def gen(self, gen):
 		gen.genParBegin()
-		Container.gen(self, gen)
+		self.gen_content(gen)
 		gen.genParEnd()
 
 	def visit(self, visitor):
@@ -822,7 +827,6 @@ class Embedded(Node):
 	"""Class representing document part not part of the main
 	text like figures, listing, tables, etc.
 	It defines mainly a label."""
-	caption = None
 
 	def __init__(self):
 		Node.__init__(self)
@@ -839,6 +843,10 @@ class Embedded(Node):
 
 	def numbering(self):
 		return "figure"
+
+	def put_caption(self, text):
+		self.set_caption(text)
+		return True
 
 
 class Block(Embedded):
@@ -878,7 +886,8 @@ class Block(Embedded):
 			text += line + '\n'
 		return text
 
-	def accepts_caption(self):
+	def put_caption(self, text):
+		self.set_caption(text)
 		return True
 
 
@@ -915,7 +924,8 @@ class Figure(Block):
 	def acceptLabel(self):
 		return True
 
-	def accepts_caption(self):
+	def put_caption(self, text):
+		self.set_caption(text)
 		return True
 
 
@@ -1209,7 +1219,8 @@ class Table(Container):
 	def acceptLabel(self):
 		return True
 
-	def accepts_caption(self):
+	def put_caption(self, text):
+		self.set_caption(text)
 		return True
 
 

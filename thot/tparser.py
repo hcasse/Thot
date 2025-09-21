@@ -47,10 +47,6 @@ def handleDouble(man, match):
 
 def handle_term(man, word):
 	"""Handle a hashed word."""
-	#res = man.doc.resolve_hash(word)
-	#if res == None:
-	#	man.warn("hash term '#%s' is unknown!" % word)
-	#	res = doc.Word(word)
 	res = doc.Tag(word, man.doc)
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, res))
 
@@ -139,9 +135,9 @@ def handleCaption(man, match):
 		man.pop()
 	man.pop()
 	for item in man.iter():
-		if item.setCaption(par):
+		if item.put_caption(par):
 			return
-	raise common.ParseException("caption unsupported here")
+	man.error("caption unsupported here")
 
 
 def handleLabel(man, match):

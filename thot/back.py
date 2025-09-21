@@ -336,8 +336,6 @@ class Generator:
 		"""Generate a line break."""
 		pass
 
-	# error management
-
 	def get_prefix(self, node):
 		if node is None:
 			return ""
@@ -359,6 +357,10 @@ class Generator:
 	def run(self):
 		"""Perform the generation of the document."""
 		pass
+
+	def translate(self, text):
+		"""Ask for a translation in the current language of the document."""
+		return self.trans.get(text)
 
 
 def get_output(doc):

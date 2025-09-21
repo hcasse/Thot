@@ -20,9 +20,12 @@ import html
 import os
 import re
 
-from thot import back
-from thot import common
-from thot import doc
+from thot import back, common, doc, i18n
+
+EMBED_LABELS = {
+	"figure": i18n.CAPTION_FIGURE
+}
+
 
 def escape_cdata(s):
 	"""Escape in the string s characters that are invalid in CDATA
@@ -714,8 +717,13 @@ class Generator(back.Generator):
 				number = self.manager.get_number(node)
 				if number is None:
 					number = ""
-				self.out.write(f"<a name=\"{anchor}\" class=\"label-ref\">{number}</a>")
+				try:
+					label = self.translate(EMBED_LABELS[node.getKind()])
+				except KeyError:
+					label = f"{node.getKind()} %s"
+				self.out.write(f"<a name=\"{anchor}\" class=\"label-ref\">{label % number}</a>")
 			if caption:
+				self.out.write(': ')
 				for item in caption.getContent():
 					item.gen(self)
 			self.out.write('</div>')
