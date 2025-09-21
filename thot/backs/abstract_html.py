@@ -23,7 +23,9 @@ import re
 from thot import back, common, doc, i18n
 
 EMBED_LABELS = {
-	"figure": i18n.CAPTION_FIGURE
+	"figure":	i18n.CAPTION_FIGURE,
+	"table":	i18n.CAPTION_TABLE,
+	"listing":	i18n.CAPTION_LISTING
 }
 
 
@@ -709,24 +711,34 @@ class Generator(back.Generator):
 				self.out.write('</a>')
 
 	def genLabel(self, node):
-		caption = node.get_caption()
+
+		# get information
 		anchor = self.manager.get_anchor(node)
-		if caption or anchor:
+		caption = node.get_caption()
+		number = self.manager.get_number(node)
+
+		# generate the code
+		if caption or anchor or number:
 			self.out.write('<div class="label">')
+
+			# generate action
 			if anchor:
-				number = self.manager.get_number(node)
-				if number is None:
-					number = ""
+				self.out.write(f"<a name=\"{anchor}\" class=\"label-ref\"></a>")
+
+			# generate number
+			if number:
 				try:
-					label = self.translate(EMBED_LABELS[node.getKind()])
+					label = self.translate(EMBED_LABELS[node.numbering()])
 				except KeyError:
-					label = f"{node.getKind()} %s"
-				self.out.write(f"<a name=\"{anchor}\" class=\"label-ref\">{label % number}</a>")
+					label = f"{node.numbering()} %s"
+				self.out.write(label % number)
+
+			# generate caption
 			if caption:
-				self.out.write(': ')
-				for item in caption.getContent():
-					item.gen(self)
-			self.out.write('</div>')
+				print("DEBUG: caption!")
+				if number:
+					self.out.write(" : ")
+				caption.gen_content(self)
 
 	def genEmbeddedBegin(self, node):
 		self.out.write(f'<div class="{node.numbering()}">')

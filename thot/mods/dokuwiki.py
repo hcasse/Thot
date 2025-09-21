@@ -363,17 +363,20 @@ def handleRow(man, match):
 			last = match.start()
 		else:
 			last = len(row)
-		cell = pref + row[:last]
+		new_cell = pref + row[:last]
 		row = row[last:]
 
-		# dump object if required
-		if cell == '' and object:
-			#object.span += 1
+		# manage horizontal span
+		if new_cell == '' and object:
 			object.setInfo(doc.INFO_HSPAN, object.getInfo(doc.INFO_HSPAN, 0) + 1)
+			cell = new_cell
 			continue
+
+		# issue cell to pass to next
 		if object:
 			man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW_CELL, object))
 			tparser.handleText(man, cell)
+		cell = new_cell
 
 		# strip and find align
 		total = len(cell)

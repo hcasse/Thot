@@ -535,6 +535,9 @@ class Word(Node):
 	def toText(self):
 		return self.text
 
+	def __str__(self):
+		return self.text
+
 
 class Ref(Node):
 	label = None
@@ -791,6 +794,9 @@ class Par(Container):
 
 	def visit(self, visitor):
 		visitor.onPar(self)
+
+	def __str__(self):
+		return f"par({' '.join(str(x) for x in self.getContent())})"
 
 
 class Quote(Par):
@@ -1136,6 +1142,9 @@ class Cell(Par):
 
 	def visit(self, visitor):
 		visitor.onCell(self)
+
+	def __str__(self):
+		return f"cell({Par.__str__(self)})"
 
 
 class Row(Container):
