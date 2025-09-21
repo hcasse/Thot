@@ -109,7 +109,8 @@ class BoxBlock(doc.Container):
 			else:
 				styles.append(f"background-color: {self.color};")
 		if self.icon is not None:
-			styles.append(f"background-image: url({gen.use_friend(self.icon)});")
+			icon_path = gen.get_manager().get_resource_path(self.icon)
+			styles.append(f"background-image: url({icon_path});")
 		if not styles:
 			atts.append(("style", " ".join(styles)))
 		gen.genOpenTag("div", self, atts)
