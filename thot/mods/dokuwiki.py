@@ -260,7 +260,6 @@ def handleFigure(man, match):
 			doc.Figure(image, width, height, caption, align)))
 
 def handleImage(man, match):
-	print(f'DEBUG: left={match.group("left")}, right={match.group("right")}')
 	if match.group("left") or match.group("right"):
 		handleFigure(man, match)
 	else:

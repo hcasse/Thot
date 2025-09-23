@@ -28,6 +28,17 @@ EMBED_LABELS = {
 	"listing":	i18n.CAPTION_LISTING
 }
 
+def obfuscate_ascii(text):
+	"""Rewrite a version of text with character replaced by HTML escape
+	on ASCII code."""
+	return "".join([f"&#{ord(c)};" for c in text])
+
+def obfuscate_url(url):
+	"""Obfuscate URL if required: for now, only mailto:."""
+	if url.startswith("mailto:"):
+		return url[:7] + obfuscate_ascii(url[7:])
+	else:
+		return url
 
 def escape_cdata(s):
 	"""Escape in the string s characters that are invalid in CDATA
@@ -633,8 +644,7 @@ class Generator(back.Generator):
 
 		# process the URL
 		if self.is_distant_url(url):
-			if url.startswith("mailto:"):
-				url = "mailto:" + "".join([f"&#x{hex(ord(c))};" for c in url[7:]])
+			url = obfuscate_url(url)
 		else:
 			url = self.manager.get_resource_link(url, self.get_out_path())
 
@@ -696,8 +706,8 @@ class Generator(back.Generator):
 				self.out.write(', ')
 			email = ""
 			if 'email' in author:
-				email = author['email']
-				self.out.write('<a href="mailto:' + escape_attr(email) + '">')
+				url = f"mailto:{author['email']}"
+				self.out.write(f'<a href="{obfuscate_url(url)}">')
 			self.out.write(escape_cdata(author['name']))
 			if email:
 				self.out.write('</a>')

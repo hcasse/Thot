@@ -360,7 +360,7 @@ class Generator(abstract_html.Generator):
 				self.expandContent(child, level, indent + "  ")
 				self.out.write(f"{indent}</li>\n")
 		if one:
-			self.out.write('{indent}</ul>\n')
+			self.out.write(f'{indent}</ul>\n')
 
 	def expandContentTo(self, node, path, level, indent):
 		"""Expand, not recursively, the content until reaching the end of the path.
