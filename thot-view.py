@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # thot.py -- Deprecated Thot entry point.
 # Copyright (C) 2023  <hug.casse@gmail.com>
 #

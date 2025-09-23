@@ -22,14 +22,8 @@ import sys
 
 from thot import common, doc, tparser
 
-mimetex = common.CommandRequirement("mimetex",
-	'mimetex not found but required by latexmath module: ignoring latexmath tags')
-
 count = 0
 formulae = { }
-DEFAULT = None
-BUILDERS = { }
-BUILDER = None
 
 class Builder(doc.Feature):
 	"""Builder for math expression and feature"""
@@ -140,13 +134,6 @@ class L2MLBuilder(Builder):
 			man.genVerbatim(self.f(line))
 		man.genCloseTag("center")
 
-try:
-	import latex2mathml.converter as m
-	BUILDERS["latex2mathml"] = L2MLBuilder(m.convert)
-	DEFAULT = "latex2mathml"
-except ImportError as e:
-	pass
-
 
 class MathJAXBuilder(Builder):
 
@@ -174,9 +161,6 @@ class MathJAXBuilder(Builder):
 			man.genVerbatim(line)
 		man.genVerbatim("$$")
 
-BUILDERS["mathjax"] = MathJAXBuilder()
-if DEFAULT is None:
-	DEFAULT = "mathjax"
 
 class MimetexMath(doc.Word):
 
@@ -273,6 +257,25 @@ class MimetexBuilder(Builder):
 		man.genCloseTag("center")
 
 
+# Alternative management
+
+DEFAULT = None
+BUILDERS = { }
+BUILDER = None
+
+try:
+	import latex2mathml.converter as m
+	BUILDERS["latex2mathml"] = L2MLBuilder(m.convert)
+	DEFAULT = "latex2mathml"
+except ImportError as e:
+	pass
+
+BUILDERS["mathjax"] = MathJAXBuilder()
+if DEFAULT is None:
+	DEFAULT = "mathjax"
+
+mimetex = common.CommandRequirement("mimetex",
+	'mimetex not found but required by latexmath module: ignoring latexmath tags')
 BUILDERS["mimetex"] = MimetexBuilder()
 if DEFAULT is None:
 	DEFAULT = "mimetex"
@@ -283,7 +286,10 @@ def selectBuilder(man):
 		n = man.doc.getVar("LATEXMATH", DEFAULT)
 		BUILDER = BUILDERS[n]
 	except KeyError:
-		man.onWarning(r"unknown mathlatex output: {v}. Reverting to use mimetex.")
+		man.onWarning(f"unknown mathlatex output: {v}. Reverting to use mimetex.")
+
+
+# Syntax
 
 END_BLOCK = re.compile(r"^\s*<\/eq>\s*$")
 
@@ -298,6 +304,7 @@ def handleMath(man, match):
 def handleBlock(man, match):
 	man.doc.addFeature(BUILDER)
 	tparser.BlockParser(man, MathBlock(BUILDER), END_BLOCK)
+
 
 # module declaration
 __short__ = "Use of Latex math formuilae in Thot."
