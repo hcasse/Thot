@@ -153,12 +153,12 @@ class MathJAXBuilder(Builder):
 	def prepare(self, gen):
 		if gen.getType() == "html":
 			gen.doc.setVar("LATEXMATH_SCRIPT", "yes")
-			s = gen.newScript()
-			s.do_async = True
-			s.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"
-			s = gen.newScript()
-			s.content = MATHJAX_SELECTOR
-			s.type = "text/x-mathjax-config"
+			script = gen.newScript()
+			script.do_async = True
+			script.src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"
+			script = gen.newScript()
+			script.content = MATHJAX_SELECTOR
+			script.type = "text/x-mathjax-config"
 
 	def genWord(self, man, w):
 		man.genVerbatim(f"\\({w.text}\\)")

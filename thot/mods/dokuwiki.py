@@ -128,6 +128,12 @@ class FileBlock(doc.Block):
 			common.onWarning(f'{type} back-end is not supported by file block')
 		gen.genEmbeddedEnd(self)
 
+	def numbering(self):
+		if self.get_caption() or self.get_labels():
+			return "figure"
+		else:
+			return None
+
 
 class NonParsedBlock(doc.Block):
 
@@ -156,6 +162,12 @@ class NonParsedBlock(doc.Block):
 		else:
 			common.onWarning(f'{type} back-end is not supported by file block')
 		gen.genEmbeddedEnd(self)
+
+	def numbering(self):
+		if self.get_caption() or self.get_labels():
+			return "figure"
+		else:
+			return None
 
 
 ### code parse ###

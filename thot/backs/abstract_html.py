@@ -223,7 +223,10 @@ class Script:
 		write = gen.genVerbatim
 		write("\t<script")
 		if self.src is not None:
-			link = gen.get_manager().get_resource_link(self.src, gen.get_out_path())
+			if gen.is_distant_url(self.src):
+				link = self.src
+			else:
+				link = gen.get_manager().get_resource_link(self.src, gen.get_out_path())
 			write(f" src=\"{escape_attr(link)}\"")
 		if self.do_async is not None and self.do_async:
 			write(" async=\"async\"")
