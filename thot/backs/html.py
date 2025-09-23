@@ -340,7 +340,7 @@ class Generator(abstract_html.Generator):
 	def genContentEntry(self, node, indent):
 		"""Generate a content entry (including numbering, title and link)."""
 		self.out.write(f'{indent}<a href="{self.manager.get_link(node, self.get_out_path())}">')
-		self.out.write(self.get_number(node))
+		self.out.write(node.get_number())
 		self.out.write(' ')
 		node.genTitle(self)
 		self.out.write('</a>\n')

@@ -242,16 +242,25 @@ def handleFigure(man, match):
 		caption.append(doc.Word(label))
 	left = len(match.group("left"))
 	right = len(match.group("right"))
-	if left == right:
-		align = doc.ALIGN_CENTER
-	elif left > right:
-		align = doc.ALIGN_RIGHT
+
+	# image as a word
+	if left == 0 and right == 0:
+		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW,
+			doc.Image(image, width, height, caption)))
+
+	# image as a figure
 	else:
-		align = doc.ALIGN_LEFT
-	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW,
-		doc.Figure(image, width, height, caption, align)))
+		if left == right:
+			align = doc.ALIGN_CENTER
+		elif left > right:
+			align = doc.ALIGN_RIGHT
+		else:
+			align = doc.ALIGN_LEFT
+		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW,
+			doc.Figure(image, width, height, caption, align)))
 
 def handleImage(man, match):
+	print(f'DEBUG: left={match.group("left")}, right={match.group("right")}')
 	if match.group("left") or match.group("right"):
 		handleFigure(man, match)
 	else:

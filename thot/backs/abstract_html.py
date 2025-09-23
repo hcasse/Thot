@@ -148,15 +148,7 @@ class Manager(back.Manager):
 
 	def declare_number(self, node, number):
 		"""Record the assignment of a number to a node."""
-		node._thot_number = number
-
-	def get_number(self, node):
-		"""Get the number for a node that can support it. Return number
-		if there is one or None."""
-		try:
-			return node._thot_number
-		except AttributeError:
-			return None
+		node.set_number(number)
 
 	def declare_link(self, node, path, anchor = ""):
 		"""Declare a link to the given node with the given build path. If no
@@ -617,7 +609,7 @@ class Generator(back.Generator):
 
 	def genHeaderTitle(self, header, href=None):
 		"""Generate the title of a header."""
-		number = self.manager.get_number(header)
+		number = header.get_number()
 		anchor = self.manager.get_anchor(header)
 		self.out.write('<h' + str(header.getHeaderLevel() + 1) + '>')
 		if anchor is not None:
@@ -715,7 +707,7 @@ class Generator(back.Generator):
 		# get information
 		anchor = self.manager.get_anchor(node)
 		caption = node.get_caption()
-		number = self.manager.get_number(node)
+		number = node.get_number()
 
 		# generate the code
 		if caption or anchor or number:
@@ -735,10 +727,11 @@ class Generator(back.Generator):
 
 			# generate caption
 			if caption:
-				print("DEBUG: caption!")
 				if number:
 					self.out.write(" : ")
 				caption.gen_content(self)
+
+			self.out.write("</div>")
 
 	def genEmbeddedBegin(self, node):
 		self.out.write(f'<div class="{node.numbering()}">')
@@ -769,10 +762,6 @@ class Generator(back.Generator):
 		"""Get the hypertext reference corresponding to the given node."""
 		res = self.manager.get_link(node, self.get_out_path())
 		return res
-
-	def get_number(self, node):
-		"""Get the reference number corresponding to the given node."""
-		return self.manager.get_number(node)
 
 	def get_manager(self):
 		"""Get the file manager for the generator."""

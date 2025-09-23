@@ -130,6 +130,7 @@ INFO_PERCENT_SIZE = "thot:percent_size"	# real (percent)
 INFO_WIDTH = "thot:width"				# integer (pixels)
 INFO_HEIGHT = "thot:height"				# integer (pixels)
 INFO_CAPTION = "thot:caption"			# formatted text
+INFO_NUMBER = "thot:number"				# number for a node (header, figure, etc)
 
 
 # supported events
@@ -275,6 +276,8 @@ class CustomizeEvent(Event):
 
 
 class Info:
+	LABELS = "thot:labels"
+
 	info = None
 
 	def setInfo(self, id, val):
@@ -437,6 +440,19 @@ class Node(Info):
 		Must return True is aggregation arises. This function is
 		allowed to update the stack."""
 		return False
+
+	def set_number(self, number):
+		"""Record number for the node."""
+		self.set_info(INFO_NUMBER, number)
+
+	def get_number(self):
+		"""Get the number associated with a node. Return None if there is no number."""
+		return self.get_info(INFO_NUMBER)
+
+	def get_labels(self):
+		"""Get the list of labels, if any, for the node.
+		Return [] if there is no label."""
+		return self.get_info(Info.LABELS, [])
 
 
 class Container(Node):
@@ -1423,25 +1439,40 @@ class Document(Container):
 		for feature in self.features:
 			feature.prepare(gen)
 
-	def addLabel(self, label, node):
+	def add_label(self, label, node):
 		"""Add a label for the given node."""
 		self.labels[label] = node
 		self.inv_labels[node] = label
+		labels = node.get_info(Info.LABELS)
+		if labels is None:
+			labels = [label]
+			node.set_info(Info.LABELS, labels)
+		else:
+			labels.append(label)
 
-	def getLabel(self, label):
+	def addLabel(self, label, node):
+		"""Deprecated."""
+		self.add_label(label, node)
+
+	def get_label(self, label):
 		"""Find the node matching the given label.
 		Return None if there is no node matching the label."""
-		if label in self.labels:
+		try:
 			return self.labels[label]
-		else:
+		except KeyError:
 			return None
 
+	def getLabel(self, label):
+		"""Deprecated."""
+		return self.get_label(label)
+
+	def get_label_for(self, node):
+		"""Get the labels, if any, for the given node."""
+		return node.get_info(Info.LABELS, [])
+
 	def getLabelFor(self, node):
-		"""Get the label, if any, for the given node."""
-		if node in self.inv_labels:
-			return self.inv_labels[node]
-		else:
-			return None
+		"""Deprecated."""
+		return self.get_label_for(node)
 
 	def get_labels(self):
 		"""Get the labels defined in this document."""

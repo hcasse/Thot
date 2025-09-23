@@ -369,4 +369,8 @@ class CodeBlock(doc.Block):
 			common.onWarning(f'backend {type} unsupported for code block')
 
 	def numbering(self):
-		return "listing"
+		if self.get_caption() or self.get_labels():
+			return "listing"
+		else:
+			return None
+
