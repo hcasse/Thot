@@ -83,7 +83,10 @@ class GnuPlotBlock(doc.Block):
 			self.onError(f'can not process gnuplot: {e}')
 
 	def numbering(self):
-		return "figure"
+		if self.get_caption() or self.get_labels():
+			return "figure"
+		else:
+			return None
 
 
 GNUPLOT_CLOSE = re.compile("^</gnuplot>")
