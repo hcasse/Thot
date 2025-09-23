@@ -17,7 +17,7 @@ digraph mine {
 </dot>
 
 Another one with neato:
-@<dot neato>
+<dot neato>
 digraph mine {
 	1 -> 2 ;
 	1 -> 3 ;
@@ -25,4 +25,4 @@ digraph mine {
 	4 -> 5 ;
 	2 -> 5 ;
 }
-@</dot>
+</dot>

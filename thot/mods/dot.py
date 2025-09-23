@@ -72,7 +72,10 @@ class DotBlock(doc.Block):
 		return "figure"
 
 	def numbering(self):
-		return "figure"
+		if self.get_caption() or self.get_labels():
+			return "figure"
+		else:
+			return None
 
 
 DOT_CLOSE = re.compile("^</dot>")
