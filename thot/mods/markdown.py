@@ -80,6 +80,7 @@ def handle_html(man, match):
 	man.warn("Markdown  HTML inclusion is not supported.")
 
 def handle_new_par(man, match):
+	man.set_info("md_lists", [])
 	man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_END, Par()))
 
 def handle_head_under(man, match, level, hrule):
@@ -107,12 +108,42 @@ def handle_header(man, match):
 	tparser.handleText(man, title)
 	man.send(doc.Event(doc.L_HEAD, doc.ID_TITLE))
 
+def compute_level(man, match):
+	"""Depending on the depth, compute the level of the list."""
+	depth = match.group("depth")
+
+	# no depth
+	if depth is None:
+		depth = 0
+		lists = []
+
+	# increase/decrease
+	else:
+		depth = len(depth)
+		lists = man.get_info("md_lists", [])
+		if lists:
+			if lists[-1][0] < depth:
+				lists.append((depth, lists[-1][1] + 1))
+			else:
+				while lists and lists[-1][0] > depth:
+					lists.pop()
+
+	# no list case
+	if not lists:
+		lists = [(depth, 1)]
+		man.set_info("md_lists", lists)
+
+	# return level
+	return lists[-1][1]
+
 def handle_item_list(man, match):
-	man.send(doc.ItemEvent(doc.LIST_ITEM, 1))
+	level = compute_level(man, match)
+	man.send(doc.ItemEvent(doc.LIST_ITEM, level))
 	tparser.handleText(man, match.group("text"))
 
 def handle_number_list(man, match):
-	man.send(doc.ItemEvent(doc.LIST_NUMBER, 1))
+	level = compute_level(man, match)
+	man.send(doc.ItemEvent(doc.LIST_NUMBER, level))
 	tparser.handleText(man, match.group("text"))
 
 END_CODE = re.compile(r"^\s*```\s*$")
@@ -480,10 +511,10 @@ __lines__ = [
 		"""horizontal rule."""
 	),
 	(handle_item_list,
-		r"^[*+-]\s+(?P<text>.*)$",
+		r"^(?P<depth>  +)?[*+-]\s+(?P<text>.*)$",
 		"""start of item list or item."""),
 	(handle_number_list,
-		r"^[0-9]+\.\s+(?P<text>.*)$",
+		r"^(?P<depth>  +)?[0-9]+\.\s+(?P<text>.*)$",
 		"""start of numbered list or item (number is not meaningful)."""
 	),
 	(handle_id_def,
@@ -511,3 +542,7 @@ __lines__ = [
 		"^:(.*)$",
 		"list of definitions")
 ]
+
+def __setup__(parser):
+	self._list_spaces = ""
+	self._list_level = 0

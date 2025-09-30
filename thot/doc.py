@@ -1438,7 +1438,6 @@ class Document(Container):
 	def pregen(self, gen):
 		"""Call the prepare method of features of the document."""
 		for feature in self.features:
-			print("DEBUG:", feature)
 			feature.prepare(gen)
 
 	def add_label(self, label, node):

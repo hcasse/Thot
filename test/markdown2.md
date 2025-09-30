@@ -53,12 +53,27 @@ And a numbered list:
 1. number 2
 33. number 3
 
-## Embedded
+## Multiline item
 
+* one line
+* multi-line
+ok?
+* last line
+
+## Nested lists
+
+Nested item list:
+* first line
+* second line
+  * embedded one
+  * embedded two
+* last line
+
+Nested numbered list:
 1. item 1
 2. item 2
-	1. sub-item 1
-	2. sub-item 2
+  1. sub-item 1
+  2. sub-item 2
 3. item 3
 
 

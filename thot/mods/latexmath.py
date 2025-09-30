@@ -284,7 +284,6 @@ def selectBuilder(man):
 	global BUILDER
 	try:
 		n = man.doc.getVar("LATEXMATH", DEFAULT)
-		print("DEBUG: LATEXMATH=", n)
 		BUILDER = BUILDERS[n]
 	except KeyError as e:
 		man.warn(f"unknown mathlatex output: {e}. Reverting to use mimetex.")
