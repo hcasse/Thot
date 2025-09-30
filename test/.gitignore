@@ -3,3 +3,6 @@
 *.synctex.gz
 *.tex
 *.toc
+**/*-imports
+**/*.html
+

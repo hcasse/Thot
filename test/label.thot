@@ -13,7 +13,7 @@ int main(void) {
 	return 0;
 }
 </code>
-@label a simple C //program//
+@caption a simple C //program//
 
 And now, a dot example.
 
@@ -26,5 +26,5 @@ digraph mine {
 	2 -> 5 ;
 }
 </dot>
-@label A fine graph ! Isn't it ?
+@caption A fine graph ! Isn't it ?
 

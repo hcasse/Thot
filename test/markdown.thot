@@ -73,6 +73,6 @@ This is an automatic link <http://www.google.fr>.
 
 This is an automatic email address: <me@here.somewhere>.
 
-[google]: http://www.google.fr	This is Google!
+[google]: http://www.google.fr	"This is Google!"
 
 This is a [reference link] [google].

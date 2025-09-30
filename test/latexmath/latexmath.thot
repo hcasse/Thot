@@ -4,7 +4,9 @@
 @LANG=en_EN
 
 @use dokuwiki
+@LATEXMATH=latexmath
 @use latexmath
+
 
 This is a an equation $x \ne 0$.
 

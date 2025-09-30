@@ -1427,6 +1427,7 @@ class Document(Container):
 
 	def addFeature(self, feature):
 		"""Add a feature to the document."""
+		assert feature is not None
 		if feature not in self.features:
 			self.features.append(feature)
 
@@ -1437,6 +1438,7 @@ class Document(Container):
 	def pregen(self, gen):
 		"""Call the prepare method of features of the document."""
 		for feature in self.features:
+			print("DEBUG:", feature)
 			feature.prepare(gen)
 
 	def add_label(self, label, node):
