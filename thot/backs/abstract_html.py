@@ -756,20 +756,27 @@ class Generator(back.Generator):
 		self.out.write('</div>')
 
 	def genRef(self, ref):
+		"""Generate code for an internal reference."""
 		node = self.doc.getLabel(ref.label)
 		if not node:
 			common.onWarning(f"label\"{ref.label}\" cannot be resolved")
 		else:
-			r = self.get_href(node)
-			self.out.write(f"<a href=\"{r[0]}\">{r[1]}</a>")
+			label = self.get_ref_label(node)
+			url = self.get_href(node)
+			self.out.write(f"<a href=\"{url}\">{label}</a>")
 
 	def gen_line_break(self):
 		self.out.write("<br/>")
 
-	#def add_ref(self, node, anchor, number = ""):
-	#	"""Add a new reference to the given node represented by
-	#	the given anchor, possibly a number."""
-	#	self.refs[node] = (anchor, number)
+	def get_ref_label(self, node):
+		"""Get the label for a reference to the node."""
+		if isinstance(node, doc.Header):
+			return node.get_number()
+		type = node.numbering()
+		fmt = self.translate(type)
+		if fmt == type:
+			fmt = f"{type} %d"
+		return fmt % node.get_number()
 
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""
