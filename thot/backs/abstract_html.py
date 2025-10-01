@@ -664,8 +664,12 @@ class Generator(back.Generator):
 		if ":" in url:
 			new_url = url
 		else:
-			self.manager.use_resource(url)
-			new_url = self.manager.get_resource_link(url, self.get_out_path())
+			try:
+				self.manager.use_resource(url)
+				new_url = self.manager.get_resource_link(url, self.get_out_path())
+			except common.BackException as e:
+				self.error(str(e))
+				new_url = ""
 		self.out.write('<img src="' + new_url + '"')
 		if node.get_width() is not None:
 			self.out.write(f' width="{node.get_width()}"')

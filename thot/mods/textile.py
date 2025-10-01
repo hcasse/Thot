@@ -376,9 +376,11 @@ def new_image(man, match):
 	# beginning link if any
 	link = tmatch.group('iurl')
 	if link:
+		link = man.fix_url(link)
 		man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW_LINK, doc.Link(link)))
 
 	# build the image
+	image = man.fix_url(image)
 	if info.getInfo(doc.INFO_ALIGN):
 		node = doc.Image(image, None, None, alt)
 	else:
@@ -397,7 +399,7 @@ def new_spec(man, match):
 def new_link(man, match, ltag, utag):
 	target = match.group(utag)
 	label = match.group(ltag)
-	link = doc.Link(target)
+	link = doc.Link(man.fix_url(target))
 
 	# peal label
 	if label and label[0] == '(':
@@ -496,9 +498,13 @@ def new_definition(man, match):
 	man.send(doc.DefEvent(doc.ID_END_TERM, 0))
 	tparser.handleText(man, match.group(3), '')
 
-def new_multi_def(man, match):
+def new_term(man, match):
 	man.send(MyDefEvent(doc.ID_NEW_DEF, 1))
 	tparser.handleText(man, match.group(1), '')
+	man.send(doc.DefEvent(doc.ID_END_TERM, 0))
+
+def new_def(man, match):
+	tparser.handleText(man, match.group(1))
 
 def new_styled_table(man, match):
 	table = doc.Table()
@@ -707,9 +713,12 @@ __lines__ = [
 	(new_definition,
 		r"^-(([^:]|:[^=])*):=(.*)",
 		"""definition term item."""),
-	(new_multi_def,
+	(new_term,
 		r"^;(.*)",
-		"""definition item text."""),
+		"""term for a definition."""),
+	(new_def,
+		r"^:(.*)",
+		"""definition for a term."""),
 	(new_row,
 		r"^" + PS_DEF + r"\|(?P<row>.*)\|\s*",
 		"""row of an array."""),

@@ -3,7 +3,7 @@
 @AUTHORS=H. Cassé <hugues.casse@laposte.net>
 @VERSION=0.1
 @LANG=en_EN
-@HTML_STYLES=@(THOT_BASE)/css/minima/green.css
+@HTML_STYLES=@(THOT_BASE)/doc-styles/minima-green.css
 
 h1. Basic Text
 
@@ -92,11 +92,11 @@ h2. Definitions
 
 Another definition kind:
 ; HTML
-; HyperText Markup Language
+: HyperText Markup Language
 ; HTTP
-; HyperText Transfer Protocol
+: HyperText Transfer Protocol
 ; WCET
-; Worst Case Execution Time
+: Worst Case Execution Time
 
 
 h1. Other items

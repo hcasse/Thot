@@ -3,7 +3,7 @@
 @AUTHORS=H. Cassé <hugues.casse@laposte.net>
 @VERSION=0.1
 @LANG=en_EN
-@HTML_STYLES=@(THOT_BASE)/css/minima/style_green.css
+@HTML_STYLES=@(THOT_BASE)/doc-styles/minima-green.css
 
 introduction 0
 

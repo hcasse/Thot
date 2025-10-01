@@ -57,9 +57,13 @@ class Manager:
 
 	def relocate(self, spath, dpath):
 		"""Called to relocate a used path (spath) )into the current build path (dpath).
-		The default implementation just copies the file."""
-		shutil.copyfile(spath, dpath)
-		shutil.copystat(spath, dpath)
+		The default implementation just copies the file. Raise BackException
+		if there is an error."""
+		try:
+			shutil.copyfile(spath, dpath)
+			shutil.copystat(spath, dpath)
+		except FileNotFoundError:
+			raise common.BackException(f"file not found: {spath}")
 
 	def get_resource_path(self, path, ref = None):
 		"""Get a resource path to be used in the given reference source
@@ -74,10 +78,9 @@ class Manager:
 			try:
 				os.makedirs(dir)
 			except OSError as e:
-				raise common.BackException(f"cannot creare {dir}: {e}")
+				raise common.BackException(f"cannot create {dir}: {e}")
 		elif not os.path.isdir(dir):
 			raise common.BackException(f"{dir} is not a directory")
-
 
 
 class LocalManager(Manager):
