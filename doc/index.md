@@ -49,6 +49,7 @@ The pages and sections provide a detailed documentation including tutorial, writ
 * [gnuplot](mods/gnuplot.doku)
 * [latexmath](mods/latexmath.doku)
 * [lexicon](mods/lexicon.doku)
+* [unicode](mods/unicode.md)
 
 ## Backends
 

@@ -22,7 +22,7 @@ from thot import doc
 from thot import tparser
 
 line_re = re.compile(r"^\s*"
-	r"(?P<end><\\/unicode>)|"
+	r"(?P<end><\/unicode>)|"
 	r"(0x(?P<hex>[0-9a-fA-F]+)\s*:\s*(?P<hex_val>.+))|"
 	r"((?P<dec>[0-9]+)\s*:\s*(?P<dec_val>.+))|"
 	r"((?P<chr>[^\s]+)\s*:\s*(?P<chr_val>.+))"

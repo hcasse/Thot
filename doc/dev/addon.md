@@ -44,5 +44,38 @@ and `get_caption()`  that uses in turn the _Generic Information_ system.
 
 ## Labels
 
+Labels can hooked to headers and figures (images, listings, table, etc) that then
+can referenced later (or event earlier) in the document. Labels are maintained
+at the document level (in a dictionnary) for access any other point in the document
+and on the node. A node may support several labels.
+
+A label is usually declared with syntax:
+
+```
+@label label-name
+```
+
+The following functions can be used to manage labels:
+
+* `Node.numbering()` get the numbering type supported by a a `Node`. Returns None
+	if numbering is not supported and therefore cannot be referenced through
+	a label.
+* `Node.get_labels()` to get the list of labels on the node,
+* `Document.add_label(label, node)` used to record a new label to a node,
+* `Document.get_label(label)` to get the node associated with the label.
+
+Then it can be referred with syntax
+
+```
+... @ref:label-name@ ...
+```
+
+The `@ref@` is, at generation time, replaced by a text designing the label
+(in the locale of the document) and, when supported by the back-end, a link
+to the actual node representation.
+
+
+
+
 
 
