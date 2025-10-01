@@ -765,22 +765,11 @@ class Generator(back.Generator):
 		if not node:
 			common.onWarning(f"label\"{ref.label}\" cannot be resolved")
 		else:
-			label = self.get_ref_label(node)
 			url = self.get_href(node)
-			self.out.write(f"<a href=\"{url}\">{label}</a>")
+			self.out.write(f"<a href=\"{url}\">{node.get_number()}</a>")
 
 	def gen_line_break(self):
 		self.out.write("<br/>")
-
-	def get_ref_label(self, node):
-		"""Get the label for a reference to the node."""
-		if isinstance(node, doc.Header):
-			return node.get_number()
-		type = node.numbering()
-		fmt = self.translate(type)
-		if fmt == type:
-			fmt = f"{type} %d"
-		return fmt % node.get_number()
 
 	def get_href(self, node):
 		"""Get the hypertext reference corresponding to the given node."""

@@ -10,12 +10,12 @@
 ====== My title ======
 @label my-title
 
-Un saut là-bas à @ref:labas@.
+Un saut là-bas à la sous-section @ref:labas@.
 
 Reference au listing @ref:simple-code@.
 
 ===== Subtitle 1 =====
-Je fais référence à @ref:my-title@.
+Je fais référence à la section @ref:my-title@.
 
 <code c>
 if(tr[0] == 'a')
@@ -28,7 +28,7 @@ if(tr[0] == 'a')
 ===== Subtitle 2 =====
 
 ====== Big title 2 ======
-Nouvelle référence à @ref:my-title@!
+Nouvelle référence à la section @ref:my-title@!
 
 {{ gravure-thot.gif |image de thot}}
 @label image-thot
@@ -42,7 +42,7 @@ And an image with caption:
 ===== Subtitle 2.1 =====
 @label labas
 
-Et puis là à @ref:simple-code@.
+Et puis là au listing @ref:simple-code@.
 
 ===== Subtitle 2.2 =====
 
