@@ -33,6 +33,7 @@ Notice that **Thot** does not need to be installed to look to the documentation.
 ## Modules
 
 **Thot** comes with 3 wiki syntaxes but more will be added later:
+* [creole](http://www.wikicreole.org/wiki/Home)
 * [dokuwiki](https://www.dokuwiki.org/fr:wiki:syntax)
 * [markdown](https://www.markdownguide.org/)
 * [textile](https://textile-lang.com/)
@@ -67,6 +68,15 @@ displays the list of all extensions and back-ends.
 	$ thot-gen DOCUMENT --list-syntax
 
 displays the syntax available in the document according to the used modules.
+
+New with this version of **Thot**, you do need any more to generate the documentation.
+You can view it on-line with `thot-view` in your browser:
+
+	$ thot-view any-document
+
+For example, the documentation of **Thot** can be examined with:
+
+	$ thot-view doc/index.md
 
 
 For any problem, you can contact me to [hug.casse@gmail.com](mailto:hug.casse@gmail.com).
