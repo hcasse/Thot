@@ -28,7 +28,9 @@ PARSERS = {
 	".md": "markdown",
 	".thot": None,
 	".doku": "dokuwiki",
-	".textile": "textile"
+	".textile": "textile",
+	".creole": "creole",
+	".wiki": "wiki"
 }
 
 
@@ -173,6 +175,9 @@ INITIAL_LINES = [(f, re.compile(e)) for (f, e, _) in __lines__]
 
 class LineParser:
 	"""Abstract class of line parser."""
+
+	def __init__(self):
+		self.prev = None
 
 	def parse(self, manager, line):
 		"""Parse the given line using the given manager."""
@@ -509,8 +514,23 @@ class Manager:
 		"""Parse the given line as usual text line."""
 		self.parser.parse(self, line)
 
+	def push_parser(self, parser):
+		"""Push a different line parser (recalling the previous one)."""
+		parser.prev = self.parser
+		self.parser = parser
+
+	def pop_parser(self):
+		"""Re-install the previous parser."""
+		self.parser = self.parser.prev
+
+	def parse_block(self, block, parser):
+		"""Parse a block with a special parser."""
+		self.push_parser(parser)
+		self.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, block))
+
 
 class BlockParser(LineParser):
+	"""Deprecated. Use RawParser instead."""
 	old = None
 	block = None
 	re = None
@@ -527,6 +547,18 @@ class BlockParser(LineParser):
 			manager.setParser(self.old)
 		else:
 			self.block.add(line)
+
+
+class RawParser(LineParser):
+
+	def __init__(self, re):
+		self.re = re
+
+	def parse(self, manager, line):
+		if self.re.match(line):
+			manager.pop_parser()
+		else:
+			manager.top().add(line)
 
 
 

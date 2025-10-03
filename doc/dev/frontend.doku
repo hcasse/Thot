@@ -61,11 +61,11 @@ The ''__syntax__'' is used to inform @(THOT) that the module is not a simple mod
 ===== Using Event to Generate the Document =====
 
 In @(THOT), the document is represented as a tree of its different
-parts from the top-level header through the paragraph words and style
+parts from the top-level header through the paragraph, words and style
 passing by lists, etc. During the analysis the @(THOT) parser maintains
 the root node of the document and the current processing node. Yet,
 the document tree building depends on text and tags found in the read file.
-They acts as event saying "ok, now, we start a new paragraph" or 
+They acts as events saying "ok, now, we start a new paragraph" or
 "we are starting a new list item" while the manager current node is
 a word or is inside a styling area.
 
@@ -92,7 +92,7 @@ in reverse importance order:
 
 For each element of the document (plain text, lightweight tag for line
 or word), an event is issued on the manager to place it in the document
-tree. The event is passed to the manager with ''send'' method.
+tree. The event is passed to the manager with ''send()'' method.
 
 The most common event is the one that creates a new object in the document,
 ''doc.ObjectEvent'' that takes as parameter the level of the created object,

@@ -864,7 +864,10 @@ class Embedded(Node):
 		return "none"
 
 	def numbering(self):
-		return "figure"
+		if self.get_caption() or self.get_labels():
+			return "figure"
+		else:
+			return None
 
 	def put_caption(self, text):
 		self.set_caption(text)
@@ -1102,23 +1105,21 @@ class DefList(Container):
 
 
 # Table
-TAB_CENTER = 0
-TAB_LEFT = -1
-TAB_RIGHT = 1
-TAB_NORMAL = 0
-TAB_HEADER = 1
-
-TABLE_KINDS = [ 'normal', 'header' ]
-TABLE_ALIGNS = [ 'left', 'center', 'right' ]
 
 class Cell(Par):
+	"""A cell in a table defined by:
+	* kind -- one of Table.NORMAL or Table.HEADER.
+	* align -- one of Table.LEFT, Table.CENTER, Table.RIGHT.
+	* span -- number of cells for horizontal span.
+	* vspan -- number of row for vertical span.
+	"""
 	kind = None
 
 	def __init__(self, kind, align = None, span = None, vspan = None):
 		Par.__init__(self)
 		self.kind = kind
 		if align:
-			self.setInfo(INFO_ALIGN, align)
+			self.set_align(align)
 		if span:
 			self.setInfo(INFO_HSPAN, span)
 		if vspan:
@@ -1129,7 +1130,7 @@ class Cell(Par):
 		self.set_info(INFO_ALIGN, align)
 
 	def get_align(self):
-		return self.get_info(INFO_ALIGN, TAB_CENTER)
+		return self.get_info(INFO_ALIGN, Table.CENTER)
 
 	def get_hspan(self):
 		return self.get_info(INFO_HSPAN, 1)
@@ -1141,14 +1142,14 @@ class Cell(Par):
 		return False
 
 	def dumpHead(self, out, tab):
-		s = tab + 'cell(' + TABLE_KINDS[self.kind]
-		align = self.getInfo(INFO_ALIGN)
+		s = tab + 'cell(' + Table.KINDS[self.kind]
+		align = self.get_align()
 		if align is not None:
-			s += f", align={TABLE_ALIGNS[align + 1]}"
-		hspan = self.getInfo(INFO_HSPAN)
+			s += f", align={Table.ALIGNS[align + 1]}"
+		hspan = self.get_hspan()
 		if hspan is not None:
 			s += f", hspan={hspan}"
-		vspan = self.getInfo(INFO_VSPAN)
+		vspan = self.get_vspan()
 		if vspan is not None:
 			s += f", vspan={vspan}"
 		out.write(s + "\n")
@@ -1203,10 +1204,20 @@ class Row(Container):
 class Table(Container):
 	"""Repreentation of a table, that is composed or Rows that are
 	composed, in turn, of cells."""
-	width = None
+
+	NORMAL = 0
+	HEADER = 1
+
+	CENTER = 0
+	LEFT = -1
+	RIGHT = 1
+
+	KINDS = [ 'normal', 'header' ]
+	ALIGNS = [ 'left', 'center', 'right' ]
 
 	def __init__(self):
 		Container.__init__(self)
+		self.width = None
 
 	def getWidth(self):
 		if self.width is None:
@@ -1239,7 +1250,10 @@ class Table(Container):
 		visitor.onTable(self)
 
 	def numbering(self):
-		return "table"
+		if self.get_caption() or self.get_labels():
+			return "table"
+		else:
+			return None
 
 	def acceptLabel(self):
 		return True
@@ -1247,6 +1261,14 @@ class Table(Container):
 	def put_caption(self, text):
 		self.set_caption(text)
 		return True
+
+
+# Deprecated
+TAB_NORMAL = Table.NORMAL
+TAB_HEADER = Table.HEADER
+TAB_CENTER = Table.CENTER
+TAB_LEFT = Table.LEFT
+TAB_RIGHT = Table.RIGHT
 
 
 # main family
@@ -1379,6 +1401,36 @@ class HashSource:
 		not known by the source, a None is returned. Else a document word
 		must be returned."""
 		return None
+
+
+class RawBlock(Block):
+	"""A block with non-parsed content."""
+
+	def __init__(self):
+		Block.__init__(self, "raw")
+
+	def dumpHead(self, out, tab):
+		out.write(f"{tab}raw-block(\n")
+
+	def gen(self, gen):
+		gen.genEmbeddedBegin(self)
+		type = gen.getType()
+		if type == 'html':
+			gen.genVerbatim('<p>\n')
+			for line in self.content:
+				gen.genText(line + "\n")
+			gen.genVerbatim('</>\n')
+		elif type == 'latex':
+			for line in self.content:
+				gen.genText(line + "\n")
+		elif type == 'docbook':
+			gen.genVerbatim('<para>\n')
+			for line in self.content:
+				gen.genText(line + "\n")
+			gen.genVerbatim('</para>\n')
+		else:
+			common.onWarning(f'{type} back-end is not supported by file block')
+		gen.genEmbeddedEnd(self)
 
 
 class Document(Container):

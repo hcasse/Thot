@@ -34,6 +34,7 @@ The pages and sections provide a detailed documentation including tutorial, writ
 
 ## Syntaxes
 
+* [creole](syntax/creole.md)
 * [dokuwiki](syntax/dokuwiki.doku)
 * [markdown](syntax/markdown.md)
 * [textile](syntax/textile.doku)

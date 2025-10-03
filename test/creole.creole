@@ -1,0 +1,65 @@
+@TITLE = Creole Syntax Test
+@AUTHOR = Hugues Cassé <hugues.casse@ici.labas.fr>
+@LANG=en
+
+
+== Word-level
+
+This **bold**.
+
+And now //Italic//.
+
+And an [[internal link]]!
+
+And an [[http://www.gnu.org|external link]]...
+
+A paragraph with a line \\ break.
+
+
+== Lists
+
+Bulletted list:
+* item 1
+* item 2
+** item 21
+** item 22
+* item 3
+
+Number list:
+# item 1
+# item 2
+## item 21
+## item 22
+# item 3
+
+
+== Paragraph
+
+Below a rule:
+----
+Under the rule.
+
+Now a non-parsed content:
+{{{
+No line \\ break should happen here!
+}}}
+
+And a table:
+|= Header 1 |= Header 2 |
+| Cell 11	| Cell 12	|
+| Cell 21	| Cell 22	|
+
+
+
+== Header
+
+Level 1.
+
+=== Sub-header 1
+
+==== Sub-sub-header 1
+
+==== Sub-sub-header 2
+
+
+=== Sub-header 2
