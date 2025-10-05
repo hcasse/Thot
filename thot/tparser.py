@@ -380,7 +380,9 @@ class Manager:
 				# manage the wiki parsing
 				ext = os.path.splitext(name)[1]
 				try:
-					self.use(PARSERS[ext])
+					parser = PARSERS[ext]
+					if parser is not None:
+						self.use(parser)
 				except KeyError:
 					pass
 
@@ -443,6 +445,7 @@ class Manager:
 
 	def use(self, name):
 		"""Use a module in the current parser."""
+		assert name is not None
 		if name in self.used_mods:
 			return
 		path = self.doc.getVar("THOT_USE_PATH")
