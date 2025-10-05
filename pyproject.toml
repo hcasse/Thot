@@ -1,0 +1,21 @@
+[project]
+name = "thot"
+version = "2.2"
+authors = [
+	{ name="Hugues Cassé", email="hug.casse@gmail.com" }
+]
+description = "Document generator from wiki-like syntax"
+readme = "README.md"
+requires-python = ">=3.0"
+license = "GPL-2.0"
+license-files = ["COPYING.md"]
+
+[project.urls]
+Homepage = "https://github.com/hcasse/Thot"
+
+[project.scripts]
+thot-gen 	= "thot.command:main"
+thot-view	= "thot.view:main"
+
+[tool.setuptools]
+py-modules = ["thot"]
