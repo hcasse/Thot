@@ -17,5 +17,10 @@ Homepage = "https://github.com/hcasse/Thot"
 thot-gen 	= "thot.command:main"
 thot-view	= "thot.view:main"
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
-py-modules = ["thot"]
+#py-modules = ["thotx"]
+packages = ["thot", "thot.mods", "thot.backs", "thot.langs"]

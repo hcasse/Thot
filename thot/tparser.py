@@ -379,9 +379,10 @@ class Manager:
 
 				# manage the wiki parsing
 				ext = os.path.splitext(name)[1]
-				mod = PARSERS[ext]
-				if mod is not None:
-					self.use(mod)
+				try:
+					self.use(PARSERS[ext])
+				except KeyError:
+					pass
 
 				# perform the parse
 				self.parseInternal(file, name)
