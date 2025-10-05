@@ -26,7 +26,7 @@ import subprocess
 import sys
 import traceback
 
-VERSION = "2.1"
+VERSION = "2.2"
 
 def print_version():
 	print("Thot", VERSION)
