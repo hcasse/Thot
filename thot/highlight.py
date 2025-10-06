@@ -333,6 +333,7 @@ class CodeBlock(doc.Block):
 		self.lang = lang
 		self.line_number = line
 		man.doc.addFeature(FEATURE)
+		self.set_info(doc.INFO_HTML_CLASSES, ["listing"])
 
 	def dumpHead(self, out, tab):
 		out.write(tab + "code(" + self.lang + ",\n")

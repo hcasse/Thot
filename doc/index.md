@@ -65,6 +65,7 @@ The pages and sections provide a detailed documentation including tutorial, writ
 ## Development
 
 * [architecture](dev/arch.doku)
+* [as a library](dev/using.md)
 * [document parsing](dev/parsing.md)
 * [how to write a module?](dev/mod.doku)
 * [how to write a front-end module?](dev/frontend.doku)

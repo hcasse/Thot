@@ -131,6 +131,7 @@ INFO_WIDTH = "thot:width"				# integer (pixels)
 INFO_HEIGHT = "thot:height"				# integer (pixels)
 INFO_CAPTION = "thot:caption"			# formatted text
 INFO_NUMBER = "thot:number"				# number for a node (header, figure, etc)
+INFO_HTML_CLASSES = "thot:html:classes"	# classes to put with HTML output
 
 
 # supported events

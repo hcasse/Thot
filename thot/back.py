@@ -186,6 +186,10 @@ class Generator:
 					self.out_path = os.path.splitext(in_path)[0] + self.get_out_ext()
 		return self.out_path
 
+	def set_out_path(self, path):
+		"""Set the out path for the generated file."""
+		self.out_path = path
+
 	def get_base_path(self):
 		"""Get the base path, that is, the directory that contains the input.
 		If input is <stdin>, the current directory."""
@@ -366,14 +370,22 @@ class Generator:
 		return self.trans.get(text)
 
 
+def get_back(name, dir=None):
+	"""Get the back-end by its name. Looking in the default directory or in
+	the passed directory. Raise ThotException in case of failure."""
+	if dir is None:
+		parent = os.path.dirname(__file__)
+		dir = os.path.join(parent, "backs")
+	back = common.loadModule(name,  dir)
+	if back is None:
+		raise common.ThotException(f"cannot load back-end  {name} at {dir}")
+	return back
+
+
 def get_output(doc):
 	"""Get the output for the passed document.
 	Raises a ThotException if there is an error."""
 	out_name = doc.env["THOT_OUT_TYPE"]
 	out_path = os.path.join(doc.env["THOT_LIB"], "backs")
-	back = common.loadModule(out_name,  out_path)
-	if back is None:
-		raise common.ThotException(f"cannot load back-end  {out_name} at {out_path}")
-	else:
-		return back
+	return get_back(out_name, out_path)
 

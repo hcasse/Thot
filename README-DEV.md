@@ -3,11 +3,6 @@
 
 ## Development
 
-For developing Thot, use instead the command below:
-```
-	$ PYTHON ./setup.py develop --user
-```
-
 To perform testing,
 ```
 	$ PYTHON ./test/test.py
@@ -53,7 +48,7 @@ $ pydoc3 -b
 
 Just add `.py` in `thot/mods`.
 
-Put data in `thot/data` and complete `MANIFEST.in`.
+Put data in `thot/data`.
 
 
 ## Resource management

@@ -751,7 +751,11 @@ class Generator(back.Generator):
 			self.out.write("</div>")
 
 	def genEmbeddedBegin(self, node):
-		self.out.write(f'<div class="{node.numbering()}">')
+		self.out.write("<div")
+		classes = node.get_info(doc.INFO_HTML_CLASSES)
+		if classes:
+			self.out.write(f" class=\"{' '.join(classes)}\"")
+		self.out.write(">")
 		self.genLabel(node)
 
 	def genEmbeddedEnd(self, node):
