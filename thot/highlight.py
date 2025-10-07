@@ -16,247 +16,65 @@
 
 """Thot module generating source content."""
 
+import importlib
 import os.path
 import subprocess
 import sys
 
-from thot import doc
-from thot import common
+from thot import doc, common
 
-LANGS=[
-  '4gl',
-  'abp',
-  'ada',
-  'agda',
-  'ampl',
-  'amtrix',
-  'applescript',
-  'arm',
-  'as',
-  'asm',
-  'asp',
-  'aspect',
-  'au3',
-  'avenue',
-  'awk',
-  'bat',
-  'bb',
-  'bib',
-  'bms',
-  'c',
-  'cb',
-  'cfc',
-  'clipper',
-  'clp',
-  'cob',
-  'cs',
-  'css',
-  'd',
-  'dot',
-  'dylan',
-  'e',
-  'erl',
-  'euphoria',
-  'exp',
-  'f77',
-  'f90',
-  'flx',
-  'frink',
-  'haskell',
-  'hcl',
-  'html',
-  'httpd',
-  'icn',
-  'idl',
-  'ini',
-  'inp',
-  'io',
-  'j',
-  'java',
-  'js',
-  'jsp',
-  'lbn',
-  'ldif',
-  'lisp',
-  'lotos',
-  'ls',
-  'lua',
-  'm',
-  'make',
-  'mel',
-  'mib',
-  'ml',
-  'mo',
-  'mod3',
-  'mpl',
-  'ms',
-  'mssql',
-  'n',
-  'nas',
-  'nice',
-  'nsi',
-  'nut',
-  'oberon',
-  'objc',
-  'octave',
-  'os',
-  'pas',
-  'php',
-  'pike',
-  'pl',
-  'pl1',
-  'pov',
-  'pro',
-  'progress',
-  'ps',
-  'psl',
-  'py',
-  'pyx',
-  'q',
-  'qu',
-  'r',
-  'rb',
-  'rexx',
-  'rnc',
-  's',
-  'sas',
-  'sc',
-  'scala',
-  'scilab',
-  'sh',
-  'sma',
-  'sml',
-  'snobol',
-  'spec',
-  'spn',
-  'sql',
-  'sybase',
-  'tcl',
-  'tcsh',
-  'test_re',
-  'tex',
-  'ttcn3',
-  'txt',
-  'vb',
-  'verilog',
-  'vhd',
-  'xml',
-  'xpp',
-  'y'
-]
+FEATURE = "highlight:feature"
 
-BACKS = {
-	'html'	: '',
-	'ansi'	: '--out-format=ansi',
-	'latex'	: '--out-format=latex',
-	'rtf'	: '--out-format=rtf',
-	'tex'	: '--out-format=tex',
-	'xhtml'	: '--out-format=xhtml'
-}
+# highlight command class
 
-DOCBOOK_LANGS = {
-	'py': 'python',
-	'c': 'c',
-	'c++': 'c++'
-}
+class Highlight(doc.Feature):
 
-CSS_BACKS = [ 'html', 'xhtml' ]
+	BACKS = {
+		'html'	: '',
+		'ansi'	: '--out-format=ansi',
+		'latex'	: '--out-format=latex',
+		'rtf'	: '--out-format=rtf',
+		'tex'	: '--out-format=tex',
+		'xhtml'	: '--out-format=xhtml'
+	}
+	DOCBOOK_LANGS = {
+		'py': 'python',
+		'c': 'c',
+		'c++': 'c++'
+	}
+	CSS_BACKS = [ 'html', 'xhtml' ]
+	LANGS = []
 
-unsupported = []
-unsupported_backs = []
-checked = False
-command = None
+	unsupported = []
+	unsupported_backs = []
+	checked = False
+	command = None
 
-def getCommand():
-	global command
-	global checked
-	if not checked:
-		checked = True
-		(id, _) = common.getLinuxDistrib()
-		if id == "LinuxMint":
-			command = "/usr/bin/highlight"
-			common.onWarning("LinuxMint detected. Workaround to find 'highlight' command in /usr/bin/")
-		else:
-			command = common.which("highlight")
-			if not command:
-				common.onWarning("no highlight command found: code will not be colored.")
-	return command
-
-
-def genCode(gen, lang, text, type, line):
-	"""Generate colorized code.
-	gen -- back-end generator
-	lang -- code language
-	lines -- lines of the code"""
-
-	type = gen.getType()
-	if lang in LANGS and type in BACKS:
-		command = getCommand()
-
-		# default behaviour if no command
-		if not command:
-			if type == 'html':
-				gen.genText(text)
-			elif type == 'latex':
-				gen.genVerbatim("\\begin{verbatim}\n")
-				gen.genTex(text)
-				gen.genVerbatim("\n\\end{verbatim}\n")
-			return
-
-		# other options
-		opts = ""
-		if line is not None:
-			opts = opts + " -l"
-			if line != 1:
-				opts = f"{opts} -m {line}"
-
-		# perform the command
-		try:
-			cfd = True
-			if os.name == "nt":
-				cfd = False
-			process = subprocess.Popen(
-				[f'{command} -f --syntax={lang} {BACKS[type]} {opts}'],
-				stdin = subprocess.PIPE,
-				stdout = subprocess.PIPE,
-				close_fds = cfd,
-				shell = True
-			)
-			res, _ = process.communicate(text.encode('utf-8'))
-
-			# generate the source
-			gen.genVerbatim(res.decode('utf-8'))
-
-		except OSError:
-			sys.stderr.write("ERROR: can not call 'highlight'\n")
-			sys.exit(1)
-	else:
-		if lang and lang not in LANGS and lang not in unsupported:
-			sys.stderr.write('WARNING: ' + lang + ' unsupported highglight language\n')
-			unsupported.append(lang)
-		if gen.getType() not in BACKS and gen.getType() not in unsupported_backs:
-			sys.stderr.write('WARNING: ' + gen.getType() + ' unsupported highlight back-end\n')
-			unsupported.append(lang)
-		if type == 'latex':
-			gen.genVerbatim('\\begin{verbatim}\n')
-		gen.genText(text)
-		if type == 'latex':
-			gen.genVerbatim('\\end{verbatim}\n\n')
-
-
-class Feature(doc.Feature):
+	@staticmethod
+	def getCommand():
+		if not Highlight.checked:
+			Highlight.checked = True
+			(id, _) = common.getLinuxDistrib()
+			if id == "LinuxMint":
+				Highlight.command = "/usr/bin/highlight"
+				common.onWarning("LinuxMint detected. Workaround to find 'highlight' command in /usr/bin/")
+			else:
+				Highlight.command = common.which("highlight")
+				if not command:
+					common.onWarning("no highlight command found: code will not be colored.")
+		return Highlight.command
 
 	def prepare(self, gen):
+		gen.doc.set_info(INFO, "highlight")
 		type = gen.getType()
-		command = getCommand()
+		command = Highlight.getCommand()
 		if not command:
 			return
 
 		# parse list of languages
 		try:
-			global LANGS
 			ans = subprocess.check_output(f"{command} --list-scripts=langs", shell = True).decode('utf-8')
-			LANGS = []
+			Highlight.LANGS = []
 			for line in ans.split("\n"):
 				try:
 					p = line.index(":")
@@ -264,7 +82,7 @@ class Feature(doc.Feature):
 						line = line[p+1:]
 						for w in line.split():
 							if w not in ('(', ')'):
-								LANGS.append(w)
+								Highlight.LANGS.append(w)
 				except ValueError:
 					pass
 		except subprocess.CalledProcessError:
@@ -272,7 +90,7 @@ class Feature(doc.Feature):
 					"falling back to default list.")
 
 		# build the CSS file
-		if type in CSS_BACKS:
+		if type in Highlight.CSS_BACKS:
 			if not gen.getTemplate().use_listing('highlight'):
 
 				# generate the highlight file
@@ -323,16 +141,16 @@ class Feature(doc.Feature):
 			preamble += '\\input {%s}\n' % gen.get_resource_path(css)
 			gen.doc.setVar('LATEX_PREAMBLE', preamble)
 
-FEATURE = Feature()
 
-class CodeBlock(doc.Block):
+class HighlightCodeBlock(doc.Block):
 	lang = None
+	feature = None
 
 	def __init__(self, man, lang, line = None):
 		doc.Block.__init__(self, "code")
 		self.lang = lang
 		self.line_number = line
-		man.doc.addFeature(FEATURE)
+		man.doc.addFeature(HighlightCodeBlock.feature)
 		self.set_info(doc.INFO_HTML_CLASSES, ["listing"])
 
 	def dumpHead(self, out, tab):
@@ -352,12 +170,12 @@ class CodeBlock(doc.Block):
 		if type == 'html':
 			gen.genEmbeddedBegin(self)
 			gen.genVerbatim('<pre class="code">\n')
-			genCode(gen, self.lang, text, type, self.line_number)
+			self.genCode(gen, text)
 			gen.genVerbatim('</pre>')
 			gen.genEmbeddedEnd(self)
 		elif type == 'latex':
 			gen.genEmbeddedBegin(self)
-			genCode(gen, self.lang, text, type, self.line_number)
+			self.genCode(gen, text)
 			gen.genEmbeddedEnd(self)
 		elif type == 'docbook':
 			gen.genVerbatim('<programlisting xml:space="preserve" ')
@@ -374,4 +192,293 @@ class CodeBlock(doc.Block):
 			return "listing"
 		else:
 			return None
+
+	def genCode(self, gen, text):
+		"""Generate colorized code.
+		gen -- back-end generator
+		lang -- code language
+		lines -- lines of the code"""
+
+		type = gen.getType()
+		if self.lang in Highlight.LANGS and type in Highlight.BACKS:
+			command = Highlight.getCommand()
+
+			# default behaviour if no command
+			if not command:
+				self.gen_asis(gen, text)
+				return
+
+			# other options
+			opts = ""
+			if self.line_number is not None:
+				opts = opts + " -l"
+				if self.line_number != 1:
+					opts = f"{opts} -m {line}"
+
+			# perform the command
+			try:
+				cfd = True
+				if os.name == "nt":
+					cfd = False
+				process = subprocess.Popen(
+					[f'{command} -f --syntax={self.lang} {Highlight.BACKS[type]} {opts}'],
+					stdin = subprocess.PIPE,
+					stdout = subprocess.PIPE,
+					close_fds = cfd,
+					shell = True
+				)
+				res, _ = process.communicate(text.encode('utf-8'))
+
+				# generate the source
+				gen.genVerbatim(res.decode('utf-8'))
+
+			except OSError:
+				gen.error("error during call of 'highlight'\n")
+		else:
+			if self.lang and self.lang not in Highlight.LANGS and self.lang not in Highlight.unsupported:
+				gen.warn(f"{lang} unsupported highglight language")
+				Highlight.unsupported.append(lang)
+			if gen.getType() not in Highlight.BACKS and gen.getType() not in Highlight.unsupported_backs:
+				gen.warn(f"{gen.getType()} unsupported highlight back-end")
+				Highlight.unsupported.append(lang)
+			self.gen_asis(gen, text)
+
+	def gen_asis(self, gen, text):
+		"""Generate code without formatting."""
+		type = gen.getType()
+		if type == 'html':
+			gen.genText(text)
+		elif type == 'latex':
+			gen.genVerbatim("\\begin{verbatim}\n")
+			gen.genTex(text)
+			gen.genVerbatim("\n\\end{verbatim}\n")
+		else:
+			gen.genVerbatim(text)
+
+
+
+# Pygments usage
+
+class PygmentBackend:
+	"""Pygment back-end."""
+
+	def __init__(self, feature, formatter):
+		self.feature = feature
+		self.formatter = formatter
+
+	def prepare(self, gen):
+		"""Called to prepare a generation."""
+		pass
+
+	def gen(self, gen, code, lexer):
+		"""Generate the code."""
+		if lexer is None:
+			self.gen_raw(gen, code)
+		else:
+			class Out:
+				def write(self, text):
+					gen.genVerbatim(text)
+			opts = {}
+			if code.line_number:
+				opts["linenos"] = True
+				opts["linenostart"] = code.line_number
+			formatter = self.formatter(**opts)
+			Pygments.MAIN.highlight(code.get_text(), lexer, formatter, Out())
+
+	def gen_raw(self, gen, code):
+		"""Generate raw code."""
+		gen.genText(code.get_text())
+
+
+class PygmentsDefault(PygmentBackend):
+	"""Default pygments back-end."""
+
+	def __init__(self, feature, formatter):
+		PygmentBackend.__init__(self, feature, None)
+
+	def gen(self, gen, code, lexer):
+		self.gen_raw(gen, code)
+
+	def gen_raw(self, gen, code):
+		gen.genText(code.getText())
+
+
+class PygmentsHTML(PygmentBackend):
+	"""Pygment back-end for HTML."""
+
+	def __init__(self, feature):
+		PygmentBackend.__init__(self, feature, feature.FORM.HtmlFormatter)
+
+	def prepare(self, gen):
+		"""Prepare for HTML output."""
+		if not gen.getTemplate().use_listing('pygments'):
+
+			# generate the highlight file
+			css = gen.new_resource('highlight/highlight.css')
+			with open(css, "w") as out:
+				out.write(self.formatter().get_style_defs('.highlight'))
+
+			# add the file to the style
+			styles = gen.doc.getVar('HTML_STYLES')
+			if styles:
+				styles += ':'
+			styles += css
+			gen.doc.setVar('HTML_STYLES', styles)
+
+	def gen(self, gen, code, lexer):
+		gen.genEmbeddedBegin(code)
+		gen.genVerbatim('<pre class="code">\n')
+		PygmentBackend.gen(self, gen, code, lexer)
+		gen.genVerbatim('</pre>')
+		gen.genEmbeddedEnd(code)
+
+
+class PygmentsLatex(PygmentBackend):
+	"""Pygments back-end for latex."""
+
+	def __init__(self, feature):
+		PygmentBackend.__init__(self, feature, Pygments.FORM.LatexFormatter)
+
+	def prepare(self, gen):
+
+		# build style file
+		css = gen.new_resource('highlight/highlight.sty')
+		with open(css, "w") as out:
+			out.write(self.formatter().get_style_defs('.highlight'))
+
+		# build the preamble
+		preamble = gen.doc.getVar('LATEX_PREAMBLE')
+		preamble += '\\usepackage{color}\n'
+		preamble += '\\usepackage{alltt}\n'
+		preamble += "\\usepackage{fancyvrb}\n"
+		preamble += '\\input {%s}\n' % gen.get_resource_path(css)
+		gen.doc.setVar('LATEX_PREAMBLE', preamble)
+
+	def gen(self, gen, code, lexer):
+		gen.genEmbeddedBegin(code)
+		PygmentBackend.gen(self, gen, code, lexer)
+		gen.genEmbeddedEnd(code)
+
+	def gen_raw(self, gen, code):
+		gen.genVerbatim("\\begin{verbatim}\n")
+		gen.genText(code.get_text())
+		gen.genVerbatim("\n\\end{verbatim}\n")
+
+
+class PygmentsDocBook(PygmentBackend):
+	"""Pygments back-end for DocBook."""
+
+	def __init__(self, feature):
+		PygmentBackend.__init__(self, feature, feature.formatters.HtmlFormatter())
+
+	def gen(self, gen, code, lexer):
+		gen.genEmbeddedBegin(code)
+		gen.genVerbatim('<programlisting xml:space="preserve" ')
+		if self.lang in DOCBOOK_LANGS:
+			gen.genVerbatim(f' language="{DOCBOOK_LANGS[self.lang]}"')
+		gen.genVerbatim('>\n')
+		gen.genText(code.toText())
+		gen.genVerbatim('</programlisting>\n')
+		gen.genEmbeddedEnd(code)
+
+
+class Pygments(doc.Feature):
+	"""Feature managing code highlighting with module pygments."""
+
+	BACK_MAP = {
+		"html":		PygmentsHTML,
+		"latex":	PygmentsLatex,
+		"docbook":	PygmentsDocBook
+	}
+	MAIN = None
+	LEX = None
+	FORM = None
+	UTIL = None
+
+	@staticmethod
+	def init():
+		"""Initialize the use of Pygments and returns True if it is ok."""
+		try:
+			Pygments.MAIN = importlib.import_module("pygments")
+			Pygments.LEX = importlib.import_module("pygments.lexers")
+			Pygments.FORM = importlib.import_module("pygments.formatters")
+			Pygments.UTIL = importlib.import_module("pygments.util")
+			return True
+		except ModuleNotFoundError:
+			return False
+
+	@staticmethod
+	def get_feature(doc):
+		feature = doc.get_info(FEATURE)
+		if feature is None:
+			feature = Pygments()
+			doc.set_info(FEATURE, feature)
+			doc.addFeature(feature)
+		return feature
+
+	def __init__(self):
+		self.backend = None
+
+		# link library
+
+		# record information
+		self.lexer_map = {}
+
+	def prepare(self, gen):
+		type = gen.getType()
+		try:
+			self.backend = self.BACK_MAP[gen.getType()](self)
+		except KeyError:
+			self.backend = PygmentsDefault(self)
+		self.backend.prepare(gen)
+
+	def get_lexer(self, lang):
+		"""Get the lexer for the asked lang. Reurn None if lang is not found."""
+		try:
+			return self.lexer_map[lang]
+		except KeyError:
+			try:
+				lexer = Pygments.LEX.get_lexer_by_name(lang)
+			except Pygments.UTIL.ClassNotFound:
+				lexer = None
+			self.lexer_map[lang] = lexer
+			return lexer
+
+	def gen(self, gen, code):
+		"""Generates the passed code."""
+		self.backend.gen(gen, code, self.get_lexer(code.lang))
+
+
+class PygmentsCodeBlock(doc.Block):
+	"""Code block for Pygments module."""
+
+	def __init__(self, man, lang, line = None):
+		doc.Block.__init__(self, "code")
+		self.lang = lang
+		self.line_number = line
+		self.feature = Pygments.get_feature(man.doc)
+
+	def get_text(self):
+		return "\n".join(self.content)
+
+	def dumpHead(self, out, tab):
+		out.write(tab + "code(" + self.lang + ",\n")
+
+	def gen(self, gen):
+		self.feature.gen(gen, self)
+
+	def numbering(self):
+		if self.get_caption() or self.get_labels():
+			return "listing"
+		else:
+			return None
+
+
+# selection of code highlighter
+if Pygments.init():
+	CodeBlock = PygmentsCodeBlock
+else:
+	HighlightCodeBlock.feature = Highlight()
+	CodeBlock = HighlightCodeBlock
+
 

@@ -1,4 +1,4 @@
-/* Solarized Dark 
+/* Solarized Dark
 
 For use with Jekyll and Pygments
 
@@ -21,6 +21,7 @@ green     #859900  operators, other keywords
 	padding: 8px;
 	color: white;
 }
+.code td, .code table { border: 0; }
 .highlight .c { color: #586e75 } /* Comment */
 .highlight .err { color: #93a1a1 } /* Error */
 .highlight .g { color: #93a1a1 } /* Generic */

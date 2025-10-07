@@ -1,0 +1,31 @@
+====== Test of highlight ======
+
+Python code:
+<code python>
+for i in range(10):
+	print("Hello, World!")
+</code>
+
+C code:
+<code c>
+for(int i = 0; i < 10; i++)
+	printf("Hello, World!\n");
+</code>
+
+C code with number:
+<code c,line>
+for(int i = 0; i < 10; i++)
+	printf("Hello, World!\n");
+</code>
+
+C code with number starting at 10:
+<code c,line=10>
+for(int i = 0; i < 10; i++)
+	printf("Hello, World!\n");
+</code>
+
+No language:
+<code>
+for(int i = 0; i < 10; i++)
+	printf("Hello, World!\n");
+</code>

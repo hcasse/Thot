@@ -557,12 +557,12 @@ class Generator(back.Generator):
 			self.out.write("}")
 
 	def genEmbeddedBegin(self, node):
-		floatting = node.get_caption() or self.doc.getLabelFor(self)
+		floatting = node.get_caption() or node.get_labels()
 		if floatting:
 			self.out.write("\\begin{figure}[htbp]\n")
 
 	def genEmbeddedEnd(self, node):
-		floatting = node.get_caption() or self.doc.getLabelFor(self)
+		floatting = node.get_caption() or node.get_labels()
 		if floatting:
 			self.genLabel(node)
 			self.out.write("\\end{figure}\n")
