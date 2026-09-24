@@ -25,11 +25,16 @@ from thot import common
 DEBUG = False
 
 PARSERS = {
-	".md": "markdown",
-	".thot": None,
-	".doku": "dokuwiki",
-	".textile": "textile",
-	".creole": "creole",
+	".creole":		"creole",
+	".doku": 		"dokuwiki",
+	".markdown":	"markdown",
+	".md": 			"markdown",
+	".mdown":		"markdown",
+	".mkd": 		"markdown",
+	".mkdown":		"markdown",
+	".mdown":		"markdown",
+	".textile": 	"textile",
+	".thot": 		None,
 	".wiki": "wiki"
 }
 
