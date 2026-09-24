@@ -2,6 +2,9 @@ PYLINT=pylint
 
 export PYTHONPATH=$(PWD)
 
+SOURCES = \
+	thot/common.py
+
 all:
 
 check:
@@ -9,3 +12,6 @@ check:
 
 autodoc:
 	gnome-terminal -- pydoc3 -b
+
+type:
+	mypy $(SOURCES)

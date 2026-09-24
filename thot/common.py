@@ -26,27 +26,32 @@ import subprocess
 import sys
 import traceback
 
+from collections.abc import Callable
+from typing import Never, Any, IO
+from types import ModuleType
+
 VERSION = "2.2"
 
-def print_version():
+def print_version() -> None:
 	print("Thot", VERSION)
 	print("Copyright (c) 2023 Hugues Cassé <hug.cassegmail.com>")
 	print(
 """This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.""")
 
+
 class ThotException(Exception):
 	"""Exception of the Thot system.
 	Any back-passed to the Thot system must inherit this exception.
 	Other exceptions will not be caught."""
 
-	def __init__(self, msg):
+	def __init__(self, msg: str):
 		self.msg = msg
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return self.msg
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return self.msg
 
 
@@ -54,14 +59,14 @@ class ParseException(ThotException):
 	"""This exception may be thrown by any parser encountering an error.
 	File and line information will be added by the parser."""
 
-	def __init__(self, msg):
+	def __init__(self, msg: str):
 		ThotException.__init__(self, msg)
 
 
 class BackException(ThotException):
 	"""Exception thrown by a back-end."""
 
-	def __init__(self, msg):
+	def __init__(self, msg: str):
 		ThotException.__init__(self, msg)
 
 
@@ -76,49 +81,45 @@ IS_VERBOSE = False
 ENCODING = "UTF-8"
 
 
-def onVerbose(f):
+def onVerbose(f: Callable[[], str]) -> None:
 	"""Invoke and display the result of the given function if verbose
 	mode is activated."""
 	if IS_VERBOSE:
-		sys.stderr.write(f(()))
+		sys.stderr.write(f())
 		sys.stderr.write("\n")
 
-
-def show_stack():
+def show_stack() -> str:
 	"""Show the stack (for debugging purpose)."""
 	traceback.print_exc()
 	return ""
 
-
-def onParseError(msg):
+def onParseError(msg: str) -> Never:
 	raise ParseException(msg)
 
-def onError(text):
+def onError(text: str) -> None:
 	"""Display the given error and stop the application."""
-	onVerbose(lambda _: show_stack())
+	onVerbose(lambda: show_stack())
 	sys.stderr.write(f"ERROR: {text}\n")
 	sys.exit(1)
 
-
-def onWarning(message):
+def onWarning(message: str) -> None:
 	"""Display a warning message."""
 	sys.stderr.write(f"WARNING: {message}\n")
 
-
-def onInfo(message):
+def onInfo(message: str) -> None:
 	"""Display an information message."""
 	sys.stderr.write(f"INFO: {message}\n")
 
 
-DEPRECATED = []
-def onDeprecated(msg):
+DEPRECATED: list[str] = []
+
+def onDeprecated(msg: str) -> None:
 	"""Display a deprecated message with the given message."""
 	if msg not in DEPRECATED:
 		sys.stderr.write(f"DEPRECATED: {msg}\n")
 		DEPRECATED.append(msg)
 
-
-def loadModule(name, paths):
+def loadModule(name: str, paths: str) -> ModuleType|None:
 	"""Load a module by its name and a collection of paths to look in
 	and return its object. Raises ThotException in case of error."""
 	try:
@@ -126,16 +127,19 @@ def loadModule(name, paths):
 			path = os.path.join(path, name + ".py")
 			if os.path.exists(path):
 				spec = importlib.util.spec_from_file_location(name, path)
+				if spec is None or spec.loader is None:
+					continue
 				module = importlib.util.module_from_spec(spec)
 				spec.loader.exec_module(module)
 				return module
 		return None
 	except Exception as e:
-		onVerbose(lambda _: show_stack())
+		onVerbose(lambda: show_stack())
 		raise ThotException(f"cannot open module '{path}': {e}")
 
 AUTHOR_RE = re.compile(r'(.*)\<([^>]*)\>\s*')
-def scanAuthors(text):
+
+def scanAuthors(text: str) -> list[dict[str, str]]:
 	"""Scan the author text to get structured representation of authors.
 	text -- text containing author declaration separated by ','
 	and with format "NAME <EMAIL>"
@@ -155,13 +159,11 @@ def scanAuthors(text):
 		authors.append(author)
 	return authors
 
-
-def is_exe(fpath):
+def is_exe(fpath: str) -> bool:
 	"""Test if a path is executable."""
 	return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
-
-def which(program):
+def which(program: str) -> str|None:
 	"""Function to test if an executable is available.
 	program: program to look for
 	return: the found path of None."""
@@ -177,8 +179,7 @@ def which(program):
 				return exe_file
 	return None
 
-
-def getLinuxDistrib():
+def getLinuxDistrib() -> tuple[str, int]:
 	"""Look for the current linux distribution.
 	Return (distribution, release) or None if version cannot be found."""
 	try:
@@ -188,7 +189,7 @@ def getLinuxDistrib():
 			if line.startswith("DISTRIB_ID="):
 				id = line[11:-1]
 			elif line.startswith("DISTRIB_RELEASE="):
-				release = line[16:-1]
+				release = int(line[16:-1])
 		return (id, release)
 	except IOError:
 		return ("", 0)
@@ -196,33 +197,47 @@ def getLinuxDistrib():
 
 class CommandRequirement:
 	"""Implements facilities for test for the existence of a command."""
-	checked = False
-	path = None
-	cmd = None
-	msg = None
-	error = False
 
-	def __init__(self, cmd, msg = None, error = onWarning):
+	def __init__(
+		self,
+		cmd: str,
+		msg:str = "command not found",
+		error: Callable[[str], None] = onWarning
+	):
 		self.cmd = cmd
 		self.msg = msg
 		self.error = error
+		self.checked = False
+		self.path = ""
 
-	def get(self):
+	def get(self) -> str:
 		if not self.checked:
 			self.checked = True
-			self.path = which(self.cmd)
-			if not self.path:
+			path = which(self.cmd)
+			if path is None:
 				self.error(self.msg)
+			else:
+				self.path = path
 		return self.path
 
 
 class Command(CommandRequirement):
 	"""Handle the operation of an external command."""
 
-	def __init__(self, cmd, msg = None, error = False):
+	def __init__(
+		self,
+		cmd: str,
+		msg: str = "command not found",
+		error: Callable[[str], None] = onWarning
+	):
 		CommandRequirement.__init__(self, cmd, msg, error)
 
-	def call(self, args = None, input = None, quiet = False):
+	def call(
+		self,
+		args: list[str]|None = None,
+		input: IO[Any]|None = None,
+		quiet: bool = False
+	):
 		"""Call the command. Throw CommandException if there is an error.
 		args -- list of arguments.
 		input -- input to pass to the called command.
@@ -242,7 +257,12 @@ class Command(CommandRequirement):
 		except (OSError, subprocess.CalledProcessError) as e:
 			self.error(f"command {self.cmd} failed: {e}")
 
-	def scan(self, args = None, input = None, err = False):
+	def scan(
+		self,
+		args: list[str]|None = None,
+		input: IO[Any]|None = None,
+		err: bool = False
+	):
 		"""Launch a command and return the output if successful, a CommandException is raise else.
 		input -- optional input stream.
 		err -- if True, redirect also the standard error."""
@@ -265,14 +285,16 @@ class Command(CommandRequirement):
 
 
 ESCAPES = [ '(', ')', '+', '.', '*', '/', '?', '^', '$', '\\', '|' ]
-def escape_re(str):
+
+def escape_re(text: str):
 	res = ""
-	for c in str:
+	for c in text:
 		if c in ESCAPES:
 			res = res + "\\" + c
 		else:
 			res = res + c
 	return res
+
 
 class Options:
 	"""Contains a collection of options and behaves as a dictionary,
@@ -280,13 +302,13 @@ class Options:
 	It may also defined with accepted identifier s and default values.
 	Any value that is not in the original definition list is warned."""
 
-	def __init__(self, man, defs):
+	def __init__(self, man, defs: list[tuple[str, Any]]):	# to fix
 		self.man = man
 		self.map = { }
 		for (id, val) in defs:
 			self.map[id] = val
 
-	def parse(self, options):
+	def parse(self, options: str) -> None:
 		"""Parse the given set of options."""
 		if options:
 			for opt in options.split(","):
@@ -301,10 +323,11 @@ class Options:
 				else:
 					self.map[id] = val
 
-	def __getitem__(self, key):
+	def __getitem__(self, key: str) -> Any:		# to fix
 		return self.map[key]
 
-def parse_options(man, text, defs):
+
+def parse_options(man, text: str, defs: list[tuple[str, Any]]):
 	"""Parse the given text for options given un defs and return
 	an Options object containing the result."""
 	opts = Options(man, defs)
@@ -323,7 +346,7 @@ STANDARD_VARS = [
 	("TITLE",			"title of the document"),
 ]
 
-def make_var_doc(custom):
+def make_var_doc(custom: list[tuple[str, str]]) -> str:
 	"""Generate documentation text for variables (for __description__
 	building). The documented variables includes standard variables
 	and custom variables."""
@@ -349,7 +372,7 @@ REPS = [
 	("^", 		""		),
 	("$", 		""		)
 ]
-def prepare_syntax(t):
+def prepare_syntax(t: str) -> str:
 	"""Prepare a regular expression to be displayed to human user."""
 	if t in ("^$", r"^\s+$"):
 		return "\\n"
@@ -358,24 +381,24 @@ def prepare_syntax(t):
 		t = t.replace(p, r)
 	return t.strip()
 
-
-def supports_ansi():
+def supports_ansi() -> bool:
 	plat = sys.platform
 	supported_platform = plat != 'Pocket PC' and \
 		(plat != 'win32' or 'ANSICON' in os.environ)
 	is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
 	return supported_platform and is_a_tty
 
-IS_ANSI = supports_ansi()
-NORMAL = "\033[0m"
-SLASH_COLOR = "\033[4m"
-VAR_COLOR = "\033[3m"
+IS_ANSI: bool = supports_ansi()
+NORMAL: str = "\033[0m"
+SLASH_COLOR: str = "\033[4m"
+VAR_COLOR: str = "\033[3m"
 
 slash_re = re.compile("\\\\(.)")
 slash_rep = SLASH_COLOR + "\\1" + NORMAL
 var_re = re.compile("\\/([a-zA-Z][a-zA-Z0-9]*)\\/")
 var_rep = VAR_COLOR + "\\1" + NORMAL
-def decorate_syntax(t):
+
+def decorate_syntax(t: str) -> tuple[int, str]:
 	"""Colorize, if available, escaped special characters."""
 	l = len(t)
 	if not IS_ANSI:
@@ -385,7 +408,7 @@ def decorate_syntax(t):
 		(t, cv) = var_re.subn(var_rep, t)
 		return (l - cs - 2 * cv, t)
 
-def display_syntax(syn):
+def display_syntax(syn: list[tuple[str, str]]) -> None:
 	"""Display list of syntax items. syn is a sequence of pairs (s, d)
 	where s is the syntax and d is the documentation. The documentation
 	may be split in several lines."""
@@ -394,11 +417,11 @@ def display_syntax(syn):
 	(w, _) = os.get_terminal_size()
 
 	# prepare the strings
-	syn = [(decorate_syntax(s), d) for (s, d) in syn]
+	dec_syn = [(decorate_syntax(s), d) for (s, d) in syn]
 
 	# display the strings
-	m = min(16, 1 + max(l for ((l, _), _) in syn))
-	for ((l, r), d) in syn:
+	m = min(16, 1 + max(l for ((l, _), _) in dec_syn))
+	for ((l, r), d) in dec_syn:
 		ls = d.split("\n")
 		if l > m:
 			print(f"{r}:")
@@ -408,11 +431,11 @@ def display_syntax(syn):
 				ls[0] = ls[0][w:]
 			else:
 				ls = ls[1:]
-		for l in ls:
-			while len(l) > w:
-				print(f"{' ' * m} {l[:w]}")
-				l = l[w:]
-			print("{' ' * m} {l}")
+		for word in ls:
+			while len(word) > w:
+				print(f"{' ' * m} {word[:w]}")
+				word = word[w:]
+			print(f"{' ' * m} {word}")
 
 
 class Env:
@@ -423,7 +446,7 @@ class Env:
 	VAR_RE = r"@\((?P<varid>[a-zA-Z_0-9]+)\)"
 	VAR_REC = re.compile(VAR_RE)
 
-	def __init__(self, map = None):
+	def __init__(self, map: dict[str,str]|None = None):
 		if map is not None:
 			self.map = map
 		else:
@@ -436,11 +459,11 @@ class Env:
 			self.map["THOT_USE_PATH"] = os.path.join(thot_dir, "mods", "")
 			self.map["THOT_DATE"] = str(datetime.datetime.today())
 
-	def set(self, name, val):
+	def set(self, name: str, val: str) -> None:
 		"""Set a new definition or overwrite an existing one."""
 		self.map[name] = val
 
-	def get(self, name, default = ""):
+	def get(self, name: str, default: str = "") -> str:
 		"""Get the value in an environment. If the value does not
 		exist, return an empty string (or the default value)."""
 		try:
@@ -448,13 +471,13 @@ class Env:
 		except KeyError:
 			return default
 
-	def __getitem__(self, key):
+	def __getitem__(self, key: str) -> str:
 		return self.get(key)
 
-	def __setitem__(self, key, val):
+	def __setitem__(self, key: str, val: str) -> None:
 		self.set(key, val)
 
-	def reduce(self, text):
+	def reduce(self, text: str) -> str:
 		"""Reduce variables in the given text.
 		- doc -- current document
 		- text -- text to replace in."""
@@ -468,7 +491,7 @@ class Env:
 	def __iter__(self):
 		return iter(self.map)
 
-	def copy(self):
+	def copy(self) -> "Env":
 		"""Get a new environment copy of this one."""
 		return Env(dict(self.map))
 
@@ -496,36 +519,36 @@ class Monitor:
 		self.err = sys.stderr
 		self.verbose = False
 
-	def set_verbosity(self, verbose):
+	def set_verbosity(self, verbose: bool) -> None:
 		"""Enable/disable verbose mode."""
 		self.verbose = verbose
 
-	def fatal(self, msg, *args):
+	def fatal(self, msg: str, *args) -> Never:
 		"""Print an error and stop the application."""
 		self.err.write(Monitor.ERROR_FMT % (msg % args))
 		sys.exit(1)
 
-	def error(self, msg, *args):
+	def error(self, msg: str, *args) -> None:
 		"""Print an error."""
 		self.err.write(Monitor.ERROR_FMT % (msg % args))
 
-	def warn(self, msg, *args):
+	def warn(self, msg: str, *args) -> None:
 		"""Print a warning."""
 		self.err.write(Monitor.WARN_FMT % (msg % args))
 
-	def info(self, msg, *args):
+	def info(self, msg: str, *args) -> None:
 		"""Print an information."""
 		self.err.write(Monitor.INFO_FMT % (msg % args))
 
-	def succeed(self, msg, *args):
+	def succeed(self, msg: str, *args) -> None:
 		"""Print a success message."""
 		self.err.write(Monitor.SUCCESS_FMT % (msg % args))
 
-	def fail(self, msg, *args):
+	def fail(self, msg: str, *args) -> None:
 		"""Print a failure message."""
 		self.err.write(Monitor.FAILURE_FMT % (msg % args))
 
-	def say(self, msg, *args):
+	def say(self, msg: str, *args) -> None:
 		"""Print a verbose message."""
 		if self.verbose:
 			self.err.write(Monitor.VERB_FMT % (msg % args))
@@ -533,12 +556,12 @@ class Monitor:
 DEFAULT_MONITOR = Monitor()
 
 
-def get_data():
+def get_data() -> str:
 	"""Return data directory for Thot application."""
 	return os.path.join(os.path.dirname(__file__), "data")
 
 
-def set_ext(path, ext, replaced = None):
+def set_ext(path: str, ext: str, replaced: str|None = None):
 	"""Set extension to a path. If replaced is not none and the path
 	has this extension, the path is replaced. Otherwise the extension
 	is just appended."""

@@ -137,10 +137,8 @@ INFO_HTML_CLASSES = "thot:html:classes"	# classes to put with HTML output
 # supported events
 class Event:
 	"""Base class of all events."""
-	level = None
-	id = None
 
-	def __init__(self, level, id):
+	def __init__(self, level: int, id: str):
 		"""Build a new event with level and id."""
 		self.level = level
 		self.id = id
@@ -151,7 +149,7 @@ class Event:
 
 	def make_ext(self, man):
 		"""Extended version of make() to support manager as argument.
-		Default implemtation call simply make()."""
+		Default implementation call simply make()."""
 		return self.make()
 
 	def __str__(self):
