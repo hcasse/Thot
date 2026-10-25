@@ -23,13 +23,15 @@ import argparse
 import os
 import os.path
 import sys
+from typing import IO
 
+from thot import builtin
 from thot import common
 from thot import doc
 from thot import tparser
 
 
-def list_avail_modules(document):
+def list_avail_modules(document: doc.Document) -> None:
 	"""List available modules."""
 	print("Available modules:")
 	paths = document.getVar("THOT_USE_PATH")
@@ -38,6 +40,7 @@ def list_avail_modules(document):
 			if os.path.splitext(file)[1] in { ".py" } and not file.startswith("__")})
 	for name in names:
 		mod = common.loadModule(name, paths)
+		assert mod is not None
 		desc = ""
 		if "__short__" in mod.__dict__:
 			desc = f" ({mod.__short__})"
@@ -51,13 +54,18 @@ def list_avail_modules(document):
 			and not file.startswith("__")})
 	for name in names:
 		mod = common.loadModule(name, path)
+		assert mod is not None
 		desc = ""
 		if "__short__" in mod.__dict__:
 			desc = f" ({mod.__short__})"
 		print(f"- {name}{desc}")
 
 
-def list_module(document, name, mon = common.DEFAULT_MONITOR):
+def list_module(
+	document: doc.Document,
+	name: str,
+	mon: common.Monitor = common.DEFAULT_MONITOR
+) -> None:
 	""""List the content of a particular module."""
 	paths = document.getVar("THOT_USE_PATH") + ":" + os.path.join(document.env["THOT_LIB"], "backs")
 	mod = common.loadModule(name, paths)
@@ -94,9 +102,9 @@ def list_module(document, name, mon = common.DEFAULT_MONITOR):
 				print(f"\t{form}\n\t\t{desc}" % (form, desc))
 
 
-def list_syntax(man):
+def list_syntax(man: tparser.Manager) -> None:
 	"""List the syntax used in the current document."""
-	syn = []
+	syn: list[tuple[str, str]] = []
 	for mod in man.used_mods + [tparser]:
 		#print("- %s" % ("thot" if mod == tparser else mod.__name__))
 		if "__words__" in mod.__dict__:
@@ -110,7 +118,7 @@ def list_syntax(man):
 		common.display_syntax(syn)
 
 
-def list_output(man, output):
+def list_output(man: tparser.Manager, output: IO) -> None:
 	"""List possible outputs."""
 	print("Available outputs:")
 	for mod in man.used_mods:
@@ -121,7 +129,7 @@ def list_output(man, output):
 				print(f"\t{form}\n\t\t{desc}")
 
 
-def list_used_modules(man):
+def list_used_modules(man: tparser.Manager) -> None:
 	"""Print used modules."""
 	print("Used modules:")
 	for mod in man.used_mods:
@@ -131,7 +139,7 @@ def list_used_modules(man):
 		print(f"- {mod.__name__}{desc}")
 
 
-def main():
+def main() -> None:
 	"""Command line entry point."""
 	env = common.Env()
 	mon = common.Monitor()
@@ -222,12 +230,13 @@ def main():
 		sys.exit(0)
 
 	# Parse the file
-	man = tparser.Manager(document, mon=mon)
+	man = builtin.make_manager(document, mon=mon)
 	if "init" in out_driver.__dict__:
 		out_driver.init(man)
 	if args.uses:
 		for u in args.uses:
 			man.use(u)
+	assert input is not None
 	man.parse(input, env['THOT_FILE'])
 
 	# dump the parsed document

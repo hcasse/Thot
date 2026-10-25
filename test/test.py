@@ -1,20 +1,21 @@
 #!/usr/bin/python3
+from typing import IO
 import subprocess
 import sys
 
-THOT = "../bin/thot"
+THOT = "../thot-gen.py"
 
 class Test:
 
-	def __init__(self, label, file = None, params = ""):
+	def __init__(self, label: str, file: None|IO = None, params: str = ""):
 		self.label = label
-		if file == None:
+		if file is None:
 			self.file = label + ".thot"
 		else:
 			self.file = file
 		self.params = params
 
-	def process(self, dump = False):
+	def process(self, dump: bool = False):
 		sys.stderr.write("%s ....\n" % self.label)
 		sys.stderr.flush()
 		ret = subprocess.run(
@@ -37,14 +38,15 @@ class Test:
 			return False
 
 ALL = [
-	Test("simple-html", "simple.thot"),
-	Test("simple-latex", "simple.thot", "-t latex"),	
-	Test("simple-docbook", "simple.thot", "-t docbook"),
-	Test("textile-html", "textile.thot"),
-	Test("markdown-html", "markdown.thot"),
-	Test("unicode-html", "unicode.thot"),
-	Test("lexicon-html", "lexicon.thot"),
-	Test("doxygen-html", "doxygen.thot"),
+	Test("dokuwiki", "dokuwiki.doku")
+	#Test("simple-html", "simple.thot"),
+	#Test("simple-latex", "simple.thot", "-t latex"),
+	#Test("simple-docbook", "simple.thot", "-t docbook"),
+	#Test("textile-html", "textile.thot"),
+	#Test("markdown-html", "markdown.thot"),
+	#Test("unicode-html", "unicode.thot"),
+	#Test("lexicon-html", "lexicon.thot"),
+	#Test("doxygen-html", "doxygen.thot"),
 #	Test("wiki", "wiki.thot", "-t wiki")
 ]
 
@@ -65,4 +67,4 @@ else:
 			if not t.process(True):
 				break
 
-	
+

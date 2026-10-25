@@ -19,7 +19,10 @@
 import re
 import sys
 
+from typing import Any, IO
+
 from thot import common
+from thot.back import Generator
 
 INDENT = "  "
 
@@ -134,7 +137,37 @@ INFO_NUMBER = "thot:number"				# number for a node (header, figure, etc)
 INFO_HTML_CLASSES = "thot:html:classes"	# classes to put with HTML output
 
 
-# supported events
+# base classes
+
+class AbstractManager:
+	"""Event bubbling system requires a manager to handle the stack of nodes
+	with functions included in this class. In addition, it contains the
+	factory."""
+
+	def __init__(self, factory: "Factory"):
+		self.factory = factory
+
+	def get_factory(self) -> "Factory":
+		"""Get the current factory."""
+		return self.factory
+
+	def top(self) -> "Node":
+		"""Get the top of the stack."""
+		return NULL
+
+	def forward(self, event: "Event") -> None:
+		pass
+
+	def push(self, node: "Node") -> None:
+		pass
+
+	def pop(self) -> "Node":
+		return NULL
+
+	def send(self, event: "Event") -> None:
+		pass
+
+
 class Event:
 	"""Base class of all events."""
 
@@ -143,11 +176,11 @@ class Event:
 		self.level = level
 		self.id = id
 
-	def make(self):
+	def make(self) -> "Node":
 		"""Make an object matching the event."""
-		return None
+		return NULL
 
-	def make_ext(self, man):
+	def make_ext(self, man: AbstractManager) -> "Node":
 		"""Extended version of make() to support manager as argument.
 		Default implementation call simply make()."""
 		return self.make()
@@ -156,164 +189,47 @@ class Event:
 		return "event(" + LEVELS[self.level] + ", " + self.id + ")"
 
 
-class ObjectEvent(Event):
-	"""Event carrying an object to make."""
-	object = None
-
-	def __init__(self, level, id, object):
-		Event.__init__(self, level, id)
-		self.object = object
-
-	def make(self):
-		return self.object
-
-	def __str__(self):
-		return f"event({LEVELS[self.level]}, {self.id}, {self.object})"
-
-
-class TypedEvent(Event):
-	"""Event containing a type."""
-	type = None
-
-	def __init__(self, level, id, type):
-		Event.__init__(self, level, id)
-		self.type = type
-
-
-class StyleEvent(TypedEvent):
-	"""Event for a simple style."""
-
-	def __init__(self, type):
-		TypedEvent.__init__(self, L_WORD, ID_NEW_STYLE, type)
-
-	def make(self):
-		return Style(self.type)
-
-
-class OpenStyleEvent(TypedEvent):
-	"""Event for an open/close style."""
-
-	def __init__(self, type):
-		TypedEvent.__init__(self, L_WORD, ID_NEW_STYLE, type)
-
-	def make(self):
-		return OpenStyle(self.type)
-
-
-class CloseEvent(TypedEvent):
-	"""An event for a closing tag."""
-
-	def __init__(self, level, id, type):
-		TypedEvent.__init__(self, level, id, type)
-
-	def make(self):
-		raise common.ParseException(self.type + " closed but not opened !")
-
-
-class CloseStyleEvent(CloseEvent):
-	"""Event for an open/close style."""
-
-	def __init__(self, type):
-		CloseEvent.__init__(self, L_WORD, ID_END_STYLE, type)
-
-
-class ItemEvent(TypedEvent):
-	"""Event for list item."""
-	depth = None
-
-	def __init__(self, type, depth):
-		TypedEvent.__init__(self, L_PAR, ID_NEW_ITEM, type)
-		self.depth = depth
-
-	def make(self):
-		return List(self.type, self.depth)
-
-
-class DefEvent(Event):
-	"""Event for list definition."""
-
-	def __init__(self, id = ID_NEW_DEF, depth = -1):
-		Event.__init__(self, L_PAR, id)
-		self.depth = depth
-
-	def make_ext(self, man):
-		list = man.factory.makeDefList(self.depth)
-		list.add_item(man.factory.makeDefItem())
-		return list
-
-
-class QuoteEvent(Event):
-	"""An event designing a quoted text."""
-	depth = None
-
-	def __init__(self, depth, begin = True):
-		Event.__init__(self, L_PAR,
-			ID_NEW_QUOTE if begin else ID_END_QUOTE)
-		self.depth = depth
-
-	def make(self):
-		return Quote(self.depth)
-
-
-class CustomizeEvent(Event):
-	"""Event to customize some already created object. Its function
-	is applied to the first found object of the given type if the
-	match function returns true."""
-
-	def __init__(self, level, id = ID_CUSTOMIZE):
-		Event.__init__(self, level, id)
-
-	def matches(self, object):
-		"""Called to check if the given object matches.
-		Default implementation returns true."""
-		return True
-
-	def process(self, object):
-		"""Called to let the event process the current object."""
-		pass
-
-
-
 class Info:
 	LABELS = "thot:labels"
 
-	info = None
+	def __init__(self) -> None:
+		self.info: dict[str, Any]|None = None
 
-	def setInfo(self, id, val):
+	def setInfo(self, id: str, val: Any) -> None:
 		"""Deprecated."""
 		self.set_info(id, val)
 
-	def set_info(self, id, val):
+	def set_info(self, id: str, val: Any) -> None:
 		"""Set an information value."""
-		if not self.info:
+		if self.info is None:
 			self.info = { }
 		self.info[id] = val
 
-	def appendInfo(self, id, val):
+	def appendInfo(self, id: str, val: Any) -> None:
 		"""Append the given value to identifier with identifier processed as a list."""
-		if not self.info:
+		if self.info is None:
 			self.info = { }
 		try:
 			self.info[id].append(val)
 		except KeyError:
 			self.info[id] = [ val ]
 
-	def getInfo(self, id, dflt = None):
+	def getInfo(self, id: str, dflt: Any = None) -> Any:
 		"""Deprecated."""
 		return self.get_info(id, dflt)
 
-	def get_info(self, id, dflt = None):
+	def get_info(self, id: str, dflt: Any = None) -> Any:
 		"""Get an information value. None if it not defined."""
-		if not self.info:
-			return None
+		if self.info is None:
+			return dflt
 		try:
 			return self.info[id]
 		except KeyError:
 			return dflt
 
-	def mergeInfo(self, info):
+	def mergeInfo(self, info: "Info") -> None:
 		"""Merge the given information with the current one."""
-		if info.info:
+		if info.info is not None:
 			for k in info.info.keys():
 				self.setInfo(k, info.info[k])
 
@@ -327,32 +243,32 @@ class Node(Info):
 	file = None
 	line = None
 
-	def __init__(self):
-		pass
+	def __init__(self) -> None:
+		Info.__init__(self)
 
-	def setFileLine(self, file, line):
+	def setFileLine(self, file: str, line: int) -> None:
 		"""Set file/line information corresponding to the node."""
 		if self.file is None:
 			self.file = file
 			self.line = line
 
-	def getFileLine(self):
+	def getFileLine(self) -> str:
 		"""Get formatted version of file/line (useful for message display)."""
 		return f"{self.file}:{self.line}"
 
-	def onError(self, msg):
+	def onError(self, msg: str) -> None:
 		"""Called to display an error."""
 		common.onError(f'{self.file}:{self.line}: {msg}')
 
-	def onWarning(self, msg):
+	def onWarning(self, msg: str) -> None:
 		"""Called to display a warning."""
 		common.onWarning(f'{self.file}:{self.line}: {msg}')
 
-	def onInfo(self, msg):
+	def onInfo(self, msg: str) -> None:
 		"""Called to display an information to the user."""
 		common.onInfo(f'{self.file}:{self.line}: {msg}')
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		"""Called each time a new word is found.
 		man -- current parser manager
 		event -- current event."""
@@ -361,115 +277,232 @@ class Node(Info):
 		else:
 			man.forward(event)
 
-	def isEmpty(self):
+	def isEmpty(self) -> bool:
 		"""Test if the node is empty (and can be removed)."""
 		return False
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		"""Output the given node to the output stream with tab indentation."""
 		pass
 
-	def getHeaderLevel(self):
+	def getHeaderLevel(self) -> int:
 		"""For a header node, get the level."""
 		return -1
 
-	def genTitle(self, gen):
+	def genTitle(self, gen: Generator) -> None:
 		"""generate the title for a header node."""
-		return None
+		pass
 
-	def getContent(self):
+	def getContent(self) -> list["Node"]:
 		"""Get the sub-nodes of the current nodes."""
 		return []
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		"""Method to perform document generation.
 		gen -- used generator."""
 		pass
 
-	def acceptLabel(self):
+	def acceptLabel(self) -> bool:
 		"""Method called called when a label is found. Nodes not supporting
 		just return False (default behaviour) else node return True."""
 		return False
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		"""Visit the current node, that is, call the method in
 		visitor that matches the node."""
 		pass
 
-	def numbering(self):
+	def numbering(self) -> int|str|None:
 		"""Return the group of numbering the node belongs to.
 		Return None if there is no numbering (default).
 		Level (0 is higher) for header numbering, "figure" pour image and the like,
 		"listing" for code, etc."""
 		return None
 
-	def toText(self):
+	def toText(self) -> str:
 		"""Produce only the raw text of the node."""
 		return ""
 
-	def get_width(self):
+	def get_width(self) -> int:
 		return self.get_info(INFO_WIDTH)
 
-	def get_height(self):
+	def get_height(self) -> int:
 		return self.get_info(INFO_HEIGHT)
 
-	def get_align(self):
+	def get_align(self) -> int:
 		return self.get_info(INFO_ALIGN)
 
-	def get_caption(self):
+	def get_caption(self) -> "Node|None":
 		"""Return the associated caption. return none if there is no caption."""
 		return self.get_info(INFO_CAPTION)
 
-	def set_caption(self, caption):
+	def set_caption(self, caption: "Node") -> None:
 		"""Set the caption of the node."""
 		self.set_info(INFO_CAPTION, caption)
 
-	def put_caption(self, caption):
+	def put_caption(self, caption: "Node") -> bool:
 		"""Called by the parser to put a caption on this. Return True if the
 		caption is supported, False else (default implementation)."""
 		return False
 
-	def complete(self):
+	def complete(self) -> None:
 		"""Called when the node is popped from the document stack."""
 		pass
 
-	def aggregate(self, man, node):
+	def aggregate(self, man: AbstractManager, node: "Node") -> bool:
 		"""Called by the container when it adds a new node after the
 		current one to let, for example, lists to aggregates.
 		Must return True is aggregation arises. This function is
 		allowed to update the stack."""
 		return False
 
-	def set_number(self, number):
+	def set_number(self, number: int) -> None:
 		"""Record number for the node."""
 		self.set_info(INFO_NUMBER, number)
 
-	def get_number(self):
+	def get_number(self) -> int:
 		"""Get the number associated with a node. Return None if there is no number."""
 		return self.get_info(INFO_NUMBER)
 
-	def get_labels(self):
+	def get_labels(self) -> list[str]:
 		"""Get the list of labels, if any, for the node.
 		Return [] if there is no label."""
 		return self.get_info(Info.LABELS, [])
 
+NULL = Node()
+
+
+# supported events
+
+class ObjectEvent(Event):
+	"""Event carrying an object to make."""
+
+	def __init__(self, level: int, id: str, object: Node):
+		Event.__init__(self, level, id)
+		self.object = object
+
+	def make(self) -> Node:
+		return self.object
+
+	def __str__(self) -> str:
+		return f"event({LEVELS[self.level]}, {self.id}, {self.object})"
+
+
+class TypedEvent(Event):
+	"""Event containing a type."""
+
+	def __init__(self, level: int, id: str, type: str):
+		Event.__init__(self, level, id)
+		self.type = type
+
+
+class StyleEvent(TypedEvent):
+	"""Event for a simple style."""
+
+	def __init__(self, type: str):
+		TypedEvent.__init__(self, L_WORD, ID_NEW_STYLE, type)
+
+	def make(self) -> Node:
+		return Style(self.type)
+
+
+class OpenStyleEvent(TypedEvent):
+	"""Event for an open/close style."""
+
+	def __init__(self, type: str):
+		TypedEvent.__init__(self, L_WORD, ID_NEW_STYLE, type)
+
+	def make(self) -> Node:
+		return OpenStyle(self.type)
+
+
+class CloseEvent(TypedEvent):
+	"""An event for a closing tag."""
+
+	def __init__(self, level: int, id: str, type: str):
+		TypedEvent.__init__(self, level, id, type)
+
+	def make(self) -> Node:
+		raise common.ParseException(self.type + " closed but not opened !")
+
+
+class CloseStyleEvent(CloseEvent):
+	"""Event for an open/close style."""
+
+	def __init__(self, type):
+		CloseEvent.__init__(self, L_WORD, ID_END_STYLE, type)
+
+
+class ItemEvent(TypedEvent):
+	"""Event for list item."""
+
+	def __init__(self, type: str, depth: int):
+		TypedEvent.__init__(self, L_PAR, ID_NEW_ITEM, type)
+		self.depth = depth
+
+	def make(self) -> Node:
+		return List(self.type, self.depth)
+
+
+class DefEvent(Event):
+	"""Event for list definition."""
+
+	def __init__(self, id: str = ID_NEW_DEF, depth: int = -1):
+		Event.__init__(self, L_PAR, id)
+		self.depth = depth
+
+	def make_ext(self, man: AbstractManager) -> Node:
+		list = man.factory.makeDefList(self.depth)
+		list.add_item(man.factory.makeDefItem())
+		return list
+
+
+class QuoteEvent(Event):
+	"""An event designing a quoted text."""
+
+	def __init__(self, depth: int, begin: bool = True):
+		Event.__init__(self, L_PAR,
+			ID_NEW_QUOTE if begin else ID_END_QUOTE)
+		self.depth = depth
+
+	def make(self) -> Node:
+		return Quote(self.depth)
+
+
+class CustomizeEvent(Event):
+	"""Event to customize some already created object. Its function
+	is applied to the first found object of the given type if the
+	match function returns true."""
+
+	def __init__(self, level: int, id: str = ID_CUSTOMIZE):
+		Event.__init__(self, level, id)
+
+	def matches(self, object: Node) -> bool:
+		"""Called to check if the given object matches.
+		Default implementation returns true."""
+		return True
+
+	def process(self, object: Node) -> None:
+		"""Called to let the event process the current object."""
+		pass
+
+
+# basic nodes
 
 class Container(Node):
 	"""A container is an item containing other items."""
-	content = None
 
-	def __init__(self, content = None):
+	def __init__(self, content: list[Node]|None = None):
 		Node.__init__(self)
-		if content is not None:
-			self.content = content
-		else:
-			self.content = []
+		if content is None:
+			content = []
+		self.content = content
 
-	def check_last(self):
+	def check_last(self) -> None:
 		if self.content != [] and self.content[-1].isEmpty():
 			del self.content[-1]
 
-	def add(self, man, item):
+	def add(self, man: AbstractManager, item: Node) -> None:
 		self.check_last()
 		if self.content != []:
 			if self.content[-1].aggregate(man, item):
@@ -478,24 +511,25 @@ class Container(Node):
 			self.content.append(item)
 			man.push(item)
 
-	def complete(self):
+	def complete(self) -> None:
 		self.check_last()
 
-	def remove(self, item):
+	def remove(self, item: Node) -> None:
 		"""Remove an item from the container."""
 		self.content.remove(item)
 
-	def append(self, item):
+	def append(self, item: Node) -> None:
 		"""Add child without refering to the parsing."""
 		self.content.append(item)
 
-	def last(self):
+	def last(self) -> Node:
+		"""Get the last sub-item."""
 		return self.content[-1]
 
-	def isEmpty(self):
+	def isEmpty(self) -> bool:
 		return self.content == []
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		pass
 
 	def dump(self, out=sys.stdout, tab=""):
@@ -504,24 +538,24 @@ class Container(Node):
 			item.dump(out, tab + INDENT)
 		out.write(tab + ")\n")
 
-	def getContent(self):
+	def getContent(self) -> list[Node]:
 		return self.content
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		for item in self.content:
 			item.gen(gen)
 
-	def toText(self):
+	def toText(self) -> str:
 		r = ""
 		for item in self.content:
 			r = r + item.toText()
 		return r
 
-	def clear(self):
+	def clear(self) -> None:
 		"""Clear all items of the container."""
 		self.content = []
 
-	def move_content(self, target):
+	def move_content(self, target: "Container") -> None:
 		"""Move target from on container to target container."""
 		target.content = self.content
 		self.content = []
@@ -529,79 +563,77 @@ class Container(Node):
 
 # Word family
 class Word(Node):
-	text = None
 
-	def __init__(self, text):
+	def __init__(self, text: str):
 		Node.__init__(self)
 		self.text = text
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		out.write(f"{tab}{self}\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator):
 		gen.genText(self.text)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"word({self.text})"
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onWord(self)
 
-	def toText(self):
-		return self.text
-
-	def __str__(self):
+	def toText(self) -> str:
 		return self.text
 
 
 class Ref(Node):
-	label = None
 
-	def __init__(self, label):
+	def __init__(self, label: str):
 		Node.__init__(self)
 		self.label = label
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		out.write(f"{tab}ref({self.label})\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genRef(self)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"ref({self.label})"
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onRef(self)
 
 
 class Tag(Node):
 
-	def __init__(self, tag, doc):
+	def __init__(self, tag: str, doc: "Document"):
 		Node.__init__(self)
 		self.tag = tag
 		self.doc = doc
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		v = self.doc.resolve_hash(self.tag)
 		if v is not None:
 			v.gen(gen)
 		else:
 			gen.genText(self.tag)
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		out.write(f"{tab}tag({self.tag})\n")
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"tag({self.tag})"
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onTag(self)
 
 
 class Image(Node):
-	path = None
 
-	def __init__(self, path, width = None, height = None, caption = None):
+	def __init__(self,
+			  path: str,
+			  width: int|None = None,
+			  height: int|None = None,
+			  caption: Node|None = None):
 		Node.__init__(self)
 		self.path = path
 		if width:
@@ -611,34 +643,33 @@ class Image(Node):
 		if caption:
 			self.set_caption(caption)
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		out.write(f"{tab}image({self.path}, {self.get_width()}, " +
 			f"{self.get_height()}, {self.get_caption()})\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genImage(self.path, self, self.get_caption())
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onImage(self)
 
-	def accepts_caption(self):
+	def accepts_caption(self) -> bool:
 		return True
 
 
 class Glyph(Node):
-	code = None
 
-	def __init__(self, code):
+	def __init__(self, code: int):
 		Node.__init__(self)
 		self.code = code
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		out.write(f"{tab}glyph({hex(self.code)})\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genGlyph(self.code)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onGlyph(self)
 
 
@@ -648,69 +679,71 @@ class LineBreak(Node):
 	def __init__(self):
 		Node.__init__(self)
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		print(f"{tab}line-break\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.gen_line_break()
 
 
 # Style family
 class Style(Container):
-	style = None
 
-	def __init__(self, style):
+	def __init__(self, style: str):
 		Container.__init__(self)
 		self.style = style
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.level is not L_WORD:
 			man.forward(event)
 		elif event.id is not ID_NEW_STYLE:
 			self.add(man, event.make_ext(man))
-		elif event.type == self.style:
-			man.pop()
 		else:
-			self.add(man, event.make_ext(man))
+			assert isinstance(event, StyleEvent)
+			if event.type == self.style:
+				man.pop()
+			else:
+				self.add(man, event.make_ext(man))
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(tab + "style(" + self.style + ",\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genStyleBegin(self.style)
 		Container.gen(self, gen)
 		gen.genStyleEnd(self.style)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onStyle(self)
 
 
 class OpenStyle(Container):
-	style = None
 
-	def __init__(self, style):
+	def __init__(self, style: str):
 		Container.__init__(self)
 		self.style = style
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.level is not L_WORD:
 			man.forward(event)
 		elif event.id is not ID_END_STYLE:
 			self.add(man, event.make_ext(man))
-		elif event.type == self.style:
-			man.pop()
 		else:
-			raise Exception("closing style without opening")
+			assert isinstance(event, CloseStyleEvent)
+			if event.type == self.style:
+				man.pop()
+			else:
+				raise Exception("closing style without opening")
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(tab + "style(" + self.style + ",\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genStyleBegin(self.style)
 		Container.gen(self, gen)
 		gen.genStyleEnd(self.style)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onStyle(self)
 
 
@@ -723,11 +756,8 @@ class FootNote(OpenStyle):
 	* FOOTNOTE_DEF -- provide the content of a foot note whose reference is given
 		by FOOTNOTE_REF.
 	"""
-	kind = None
-	id = None		# footnote identifier as displayed to the user
-	ref = None		# footnote identifier as used in the links
 
-	def __init__(self, kind = FOOTNOTE_EMBED, ref = None, id = None):
+	def __init__(self, kind: str = FOOTNOTE_EMBED, ref: str|None = None, id: str|None = None):
 		OpenStyle.__init__(self, 'footnote')
 		self.kind = kind
 		if not id:
@@ -735,35 +765,34 @@ class FootNote(OpenStyle):
 		self.ref = ref
 		self.id = id
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		if self.kind == FOOTNOTE_EMBED:
 			out.write(f'{tab}footnote(\n')
 		else:
 			out.write(f'{tab}footnote#{self.ref}(\n')
 
-	def isEmpty(self):
+	def isEmpty(self) -> bool:
 		return False
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genFootNote(self)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onFootNote(self)
 
-	def toText(self):
+	def toText(self) -> str:
 		return ""
 
 
 class Link(Container):
 	"""A link in a text."""
-	ref = None
 
-	def __init__(self, ref, title = None):
+	def __init__(self, ref: str, title: str|None = None):
 		Container.__init__(self)
 		self.ref = ref
 		self.title = title
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.level is not L_WORD:
 			man.forward(event)
 		elif event.id is ID_END_LINK:
@@ -771,60 +800,61 @@ class Link(Container):
 		else:
 			self.add(man, event.make_ext(man))
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(f"{tab}link(\"{self.ref}\",\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genLinkBegin(self.ref, self.title)
 		Container.gen(self, gen)
 		gen.genLinkEnd(self.ref)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onLink(self)
 
 
 # Par family
 class Par(Container):
 
-	def __init__(self, content = None):
+	def __init__(self, content: list[Node]|None = None):
 		Container.__init__(self, content)
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.level is L_WORD:
 			self.add(man, event.make_ext(man))
 		else:
 			man.forward(event)
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(tab + "par(\n")
 
-	def gen_content(self, gen):
+	def gen_content(self, gen: Generator) -> None:
 		"""Generate the content of the paragraph."""
 		Container.gen(self, gen)
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genParBegin()
 		self.gen_content(gen)
 		gen.genParEnd()
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onPar(self)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"par({' '.join(str(x) for x in self.getContent())})"
 
 
 class Quote(Par):
 	"""A quoted paragraph."""
 
-	def __init__(self, depth):
+	def __init__(self, depth: int):
 		Par.__init__(self)
 		self.depth = depth
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.id is ID_END_QUOTE:
 			man.pop()
 		elif event.id is ID_NEW_QUOTE:
+			assert isinstance(event, QuoteEvent)
 			if event.depth == self.depth:
 				pass
 			else:
@@ -832,15 +862,15 @@ class Quote(Par):
 		else:
 			Par.onEvent(self, man, event)
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(f"{tab}quote:{self.depth}(\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genQuoteBegin(self.depth)
 		Container.gen(self, gen)
 		gen.genQuoteEnd(self.depth)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor") -> None:
 		visitor.onQuote(self)
 
 
@@ -852,103 +882,110 @@ class Embedded(Node):
 	def __init__(self):
 		Node.__init__(self)
 
-	def acceptLabel(self):
+	def acceptLabel(self) -> bool:
 		return True
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onEmbedded(self)
 
-	def getKind(self):
+	def getKind(self) -> str:
 		"""Get the kind of embed object."""
 		return "none"
 
-	def numbering(self):
+	def numbering(self) -> int|str|None:
 		if self.get_caption() or self.get_labels():
 			return "figure"
 		else:
 			return None
 
-	def put_caption(self, text):
+	def put_caption(self, text: Node) -> bool:
 		self.set_caption(text)
 		return True
 
 
 class Block(Embedded):
 
-	def __init__(self, kind):
+	def __init__(self, kind: str):
 		Embedded.__init__(self)
 		self.kind = kind
-		self.content = []
+		self.content: list[str] = []
 
-	def get_kind(self):
+	def get_kind(self) -> str:
 		"""Get the kind of the block."""
 		return self.kind
 
-	def get_lines(self):
+	def get_lines(self) -> list[str]:
 		"""Get the lines inside the block."""
 		return self.content
 
-	def add(self, line):
+	def add(self, line: str) -> None:
 		self.content.append(line)
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(f"{tab}{self.kind}(\n")
 
-	def dump(self, out=sys.stdout, tab=""):
+	def dump(self, out: IO = sys.stdout, tab: str = "") -> None:
 		self.dumpHead(out, tab)
 		for line in self.content:
 			out.write(tab + "  " + line + "\n")
 		out.write(tab + ")\n")
 
-	def isEmpty(self):
+	def isEmpty(self) -> bool:
 		return False
 
-	def toText(self):
+	def toText(self) -> str:
 		"""Get the content as single text."""
 		text = ''
 		for line in self.content:
 			text += line + '\n'
 		return text
 
-	def put_caption(self, text):
+	def put_caption(self, text: Node) -> bool:
 		self.set_caption(text)
 		return True
 
 
 class Figure(Block):
-	path = None
 
-	def __init__(self, path, width = None, height = None, caption = None, align = ALIGN_NONE):
+	def __init__(self,
+		path: str,
+		width: int|None = None,
+		height: int|None = None,
+		caption: Node|None = None,
+		align: int = ALIGN_NONE
+	):
 		Block.__init__(self, "figure")
 		self.path = path
-		if width:
+		if width is not None:
 			self.setInfo(INFO_WIDTH, width)
 		if height:
 			self.setInfo(INFO_HEIGHT, height)
-		if align:
+		if align is not None:
 			self.setInfo(INFO_ALIGN, align)
-		if caption:
+		if caption is not None:
 			self.set_caption(caption)
 
-	def dump(self, out=sys.stdout, tab=""):
-		caption = ""
-		if self.get_caption() is not None:
-			caption = self.get_caption().toText()
-		out.write(f"{tab}figure({self.path}, {caption})\n")
+	def dump(self, out: IO = sys.stdout, tab: str =""):
+		caption = self.get_caption()
+		if caption is not None:
+			text = caption.toText()
+		else:
+			text = ""
+		out.write(f"{tab}figure({self.path}, {text})\n")
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genFigure(self.path, self, self.get_caption())
 
-	def visit(self, visitor):
-		visitor.onEmbeddedImage(self)
+	def visit(self, visitor: "Visitor") -> None:
+		visitor.onFigure(self)
 
-	def numbering(self):
+	def numbering(self) -> str:
 		return "figure"
 
-	def acceptLabel(self):
+	def acceptLabel(self) -> bool:
 		return True
 
-	def put_caption(self, text):
+	def put_caption(self, text: Node) -> bool:
 		self.set_caption(text)
 		return True
 
@@ -961,34 +998,42 @@ class ListItem(Container):
 		Container.__init__(self)
 		self.content.append(Par())
 
-	def dumpHead(self,out,  tab):
+	def dumpHead(self, out: IO,  tab: str) -> None:
 		out.write(tab + "item(\n")
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onListItem(self)
 
 
 class List(Container):
 	"""Description of any kind of list (numbered, unnumbered)."""
-	kind = None
-	depth = None
 
-	def __init__(self, kind, depth):
+	def __init__(self, kind: str, depth: int):
 		Container.__init__(self)
 		self.kind = kind
 		self.depth = depth
 
-	def onEvent(self, man, event):
+	def onEvent(self, man: AbstractManager, event: Event) -> None:
 		if event.level is L_WORD:
 			if self.isEmpty():
 				self.content.append(ListItem())
-				self.last().content.append(man.make_par())
-			self.last().last().add(man, event.make_ext(man))
+				last = self.last()
+				assert isinstance(last, ListItem)
+				par = man.get_factory().makePar()
+				last.content.append(par)
+			last = self.last()
+			assert isinstance(last, Container)
+			last = last.last()
+			assert isinstance(last, Container)
+			last.add(man, event.make_ext(man))
 		elif event.id is ID_NEW_ITEM:
+			assert isinstance(event, ItemEvent)
 			if event.depth < self.depth:
 				man.forward(event)
 			elif event.depth > self.depth:
-				self.last().add(man, event.make_ext(man))
+				last = self.last()
+				assert(isinstance(last, Container))
+				last.add(man, event.make_ext(man))
 			elif self.kind == event.type:
 				self.content.append(ListItem())
 			else:
@@ -998,17 +1043,17 @@ class List(Container):
 		else:
 			man.forward(event)
 
-	def dumpHead(self, out, tab):
+	def dumpHead(self, out: IO, tab: str) -> None:
 		out.write(tab + "list(" + self.kind + "," + str(self.depth) + ",\n")
 
-	def getItems(self):
+	def getItems(self) -> list[Node]:
 		"""Get the list of items in the list."""
 		return self.content
 
-	def gen(self, gen):
+	def gen(self, gen: Generator) -> None:
 		gen.genList(self)
 
-	def visit(self, visitor):
+	def visit(self, visitor: "Visitor"):
 		visitor.onList(self)
 
 
@@ -1435,12 +1480,6 @@ class RawBlock(Block):
 class Document(Container):
 	"""This is the top object of the document, containing the headings
 	and also the configuration environment."""
-	env = None
-	features = None
-	labels = { }
-	inv_labels = { }
-	hashes = None
-	hash_srcs = None
 
 	def __init__(self, env):
 		Container.__init__(self)
@@ -1448,6 +1487,8 @@ class Document(Container):
 		self.features = []
 		self.hashes = { }
 		self.hash_srcs = []
+		self.labels = { }
+		self.inv_labels = { }
 
 	def onEvent(self, man, event):
 		if event.level is L_WORD:
@@ -1589,6 +1630,32 @@ class Visitor:
 	def onTag(self, tag):
 		pass
 
+	def onWord(self, word: Word) -> None:
+		pass
+
+	def onRef(self, ref: Ref) -> None:
+		pass
+
+	def onImage(self, image: Image) -> None:
+		pass
+
+	def onGlyph(self, glyph: Glyph) -> None:
+		pass
+
+	def onStyle(self, style: Node) -> None:
+		pass
+
+	def onFootNote(self, footnote: FootNote) -> None:
+		pass
+
+	def onLink(self, link: Link) -> None:
+		pass
+
+	def onFigure(self, figure: Figure) -> None:
+		pass
+
+	def onListItem(self, item: ListItem) -> None:
+		pass
 
 class Factory:
 	"""Factory to customize the building of objects."""

@@ -1,3 +1,4 @@
+#
 # thot.tparser -- Thot document parser
 # Copyright (C) 2009  <hugues.casse@laposte.net>
 #
@@ -16,15 +17,24 @@
 
 """Generic parser for Thot."""
 
+from collections.abc import Callable
 import os.path
 import re
+from re import Pattern
+from typing import Any, IO, Iterator
+from types import ModuleType
 
 from thot import doc
 from thot import common
 
 DEBUG = False
 
-PARSERS = {
+type HandleFun = Callable[["Manager", re.Match], None]
+type WordSyntax = list[tuple[HandleFun, str]]
+type LineSyntax = list[tuple[HandleFun, re.Pattern]]
+type CompleterFun = Callable[["Manager"], None]
+
+PARSERS: dict[str, str|None] = {
 	".creole":		"creole",
 	".doku": 		"dokuwiki",
 	".markdown":	"markdown",
@@ -39,51 +49,7 @@ PARSERS = {
 }
 
 
-############### Word Parsing #####################
-
-def handleVar(man, match):
-	id = match.group('varid')
-	val = man.doc.getVar(id)
-	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, man.factory.makeWord(val)))
-
-def handleRef(man, match):
-	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, man.factory.makeRef(match.group("ref"))))
-
-def handleDouble(man, match):
-	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, doc.Word("#")))
-
-def handle_term(man, word):
-	"""Handle a hashed word."""
-	res = doc.Tag(word, man.doc)
-	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, res))
-
-def handleSharp(man, match):
-	handle_term(man, match.group("term"))
-
-def handleParent(man, match):
-	handle_term(man, match.group("pterm"))
-
-
-__words__ = [
-	(handleVar,
-		doc.VAR_RE,
-		"""use of a variable (replaced by the variable value)."""),
-	(handleRef,
-		r"@ref:(?P<ref>[^@]+)@",
-		"""reference to a labeled element."""),
-	(handleDouble,
-		r"##",
-		"""single '#'."""),
-	(handleParent,
-		r"#\((?P<pterm>[^)\s]+)\)",
-		"""definition of a term."""),
-	(handleSharp,
-		r"#(?P<term>\w+)",
-		"""reference to a defined term.""")
-]
-INITIAL_WORDS = [(f, e) for (f, e, _) in __words__]
-
-def handleText(man, line, suffix = ' '):
+def handleText(man: "Manager", line: str, suffix: str = ' ') -> None:
 
 	# init RE_WORDS
 	if man.words_re is None:
@@ -97,8 +63,10 @@ def handleText(man, line, suffix = ' '):
 		man.words_re = re.compile(text)
 
 	# look in line
-	match = man.words_re.search(line)
-	while match:
+	words_re = man.words_re
+	match = words_re.search(line)
+	while match is not None:
+		assert match.lastgroup is not None
 		idx = int(match.lastgroup[1:])
 		fun, wre = man.words[idx]
 		word = line[:match.start()]
@@ -112,79 +80,13 @@ def handleText(man, line, suffix = ' '):
 	man.send(doc.ObjectEvent(doc.L_WORD, doc.ID_NEW, man.factory.makeWord(line + suffix)))
 
 
-############### Line Parsing ######################
-
-def handleComment(man, match):
-	pass
-
-def handleAssign(man, match):
-	man.doc.setVar(match.group(1), match.group(2))
-
-def handleUse(man, match):
-	name = match.group(1).strip()
-	man.use(name)
-
-def handleInclude(man, match):
-	path = match.group(1).strip()
-	if not os.path.isabs(path):
-		path = os.path.join(os.path.dirname(man.file_name), path)
-	try:
-		file = open(path, encoding="utf8")
-		man.parseInternal(file, path)
-	except IOError as e:
-		man.error('cannot include "%s": %s',  path, e)
-
-def handleCaption(man, match):
-	par = man.make_par()
-	man.push(par)
-	man.getParser().parse(man, match.group(1))
-	while par != man.get():
-		man.pop()
-	man.pop()
-	for item in man.iter():
-		if item.put_caption(par):
-			return
-	man.error("caption unsupported here")
-
-
-def handleLabel(man, match):
-	for item in man.iter():
-		if item.acceptLabel():
-			man.doc.addLabel(match.group(1), item)
-			return
-	man.warn(f'label {match.group(1)} out of any container')
-
-
-__lines__ = [
-	(handleComment,
-		r"^@@.*",
-		"""comment."""),
-	(handleAssign,
-		r"^@([a-zA-Z_0-9]+)\s*=(.*)",
-		"""definition of a variable."""),
-	(handleUse,
-		r"^@use\s+(\S+)",
-		"""use of a module."""),
-	(handleInclude,
-		r'^@include\s+(.*)',
-		"""inclusion of a THOT file."""),
-	(handleCaption,
-		r'^@caption\s+(.*)',
-		"""assignment of a caption to the previous element."""),
-	(handleLabel,
-		r'^@label\s+(.*)',
-		"""assignment of a label for references to the previous element.""")
-]
-INITIAL_LINES = [(f, re.compile(e)) for (f, e, _) in __lines__]
-
-
 class LineParser:
 	"""Abstract class of line parser."""
 
 	def __init__(self):
 		self.prev = None
 
-	def parse(self, manager, line):
+	def parse(self, manager: "Manager", line: str) -> None:
 		"""Parse the given line using the given manager."""
 		pass
 
@@ -193,7 +95,7 @@ class DefaultParser(LineParser):
 	"""Default parser that tries to parser the line with the manager
 	recorded lines. Else scan the text with the manager recorded words."""
 
-	def parse(self, manager, line):
+	def parse(self, manager: "Manager", line: str) -> None:
 		line = manager.doc.reduceVars(line)
 		done = False
 		for (fun, re) in manager.lines:
@@ -209,119 +111,115 @@ class DefaultParser(LineParser):
 class Syntax:
 	"""Base class of all syntaxes added to the parser."""
 
-	def get_doc(self):
+	def get_doc(self) -> list[tuple[str, str]]:
 		"""Get the documentation for the syntax, a sequence of pairs
 		(RE, description) where RE is a pseudo-regular expression
 		describing the syntax and description is the descritpion of the
 		syntax (possibly multi-line)."""
 		return [("", "")]
 
-	def get_lines(self):
+	def get_lines(self) -> list[tuple[HandleFun, re.Pattern]]:
 		"""Get the pairs (function, RE) to parse lines."""
 		return []
 
-	def get_words(self):
+	def get_words(self) -> list[tuple[HandleFun, str]]:
 		"""Get the pairs (function, RE) to parse words."""
 		return []
 
 
-class Manager:
+class Manager(doc.AbstractManager):
 
-	def __init__(self, document, mon = common.DEFAULT_MONITOR):
+	def __init__(self,
+		document: doc.Document,
+		builtin_word_syntax: WordSyntax,
+		builtin_line_syntax: LineSyntax,
+		mon: common.Monitor = common.DEFAULT_MONITOR
+	):
 		self.factory = doc.Factory()
+		self.builtin_word_syntax = builtin_word_syntax
+		self.builtin_line_syntax = builtin_line_syntax
 		self.mon = mon
-		self.doc = None
-		self.item = None
-		self.items = None
-		self.parser = None
-		self.line_num = None
-		self.file_name = None
-		self.info = None
-		self.completers = None
-		self.lines = None
-		self.words = None
-		self.words_re = None
-
+		self.words_re: None|re.Pattern =  None
 		self.clear(document)
 
-	def add_completer(self, completer):
+	def add_completer(self, completer: CompleterFun) -> None:
 		"""Add a completer, a function that will be called at the end of document
 		analysis. This may be used to perform checking for example."""
 		self.completers.append(completer)
 
-	def make_par(self):
+	def make_par(self) -> doc.Par:
 		"""Build a paragraph to be used in the document."""
 		return self.factory.makePar()
 
-	def set_info(self, id, info):
+	def set_info(self, id: str, info: Any) -> None:
 		"""Store parsing information for third-party contributor."""
 		self.info[id] = info
 
-	def get_info(self, id, default = None):
+	def get_info(self, id: str, default: Any = None) -> Any:
 		"""Get parsing information."""
 		try:
 			return self.info[id]
 		except KeyError:
 			return default
 
-	def reset(self, document):
+	def reset(self, document: doc.Document) -> None:
 		"""Reset the parser to process a new document."""
 		self.doc = document
-		self.item = document
-		self.items = []
-		self.parser = DefaultParser()
-		self.line_num = None
-		self.file_name = None
-		self.info = {}
-		self.completers = []
+		self.item: doc.Node = document
+		self.items: list[doc.Node] = []
+		self.parser: LineParser = DefaultParser()
+		self.line_num = 0
+		self.file_name = ""
+		self.info: dict[str, Any] = {}
+		self.completers: list[CompleterFun] = []
 
-	def close_to_top(self):
+	def close_to_top(self) -> None:
 		"""Close the current stack to top-level."""
 		self.item = self.doc
 		self.items = []
 
-	def clear(self, document = None):
+	def clear(self, document: doc.Document) -> None:
 		"""Reset the parser in the initial state."""
 		self.reset(document)
-		self.lines = INITIAL_LINES
-		self.words = INITIAL_WORDS
+		self.lines = self.builtin_line_syntax
+		self.words = self.builtin_word_syntax
 		self.words_re = None
-		self.added_lines = []
-		self.added_words = []
-		self.used_mods = []
+		self.added_lines: LineSyntax = []
+		self.added_words: WordSyntax = []
+		self.used_mods: list[ModuleType] = []
 
-	def get_doc(self):
+	def get_doc(self) -> doc.Document:
 		"""Get the document currently built."""
 		return self.doc
 
-	def get_var(self, id, deflt = ""):
+	def get_var(self, id: str, deflt: str = "") -> str:
 		return self.doc.getVar(id, deflt)
 
-	def get(self):
+	def get(self) -> doc.Node:
 		"""Get the current node."""
 		return self.item
 
-	def debug(self, msg):
+	def debug(self, msg: str) -> None:
 		"""Used to output message."""
 		print(f"DEBUG: {msg}")
 
-	def send(self, event):
+	def send(self, event: doc.Event) -> None:
 		"""Send an event along the node stack."""
 		if DEBUG:
 			self.debug(f"send({event})")
 		self.item.onEvent(self, event)
 
-	def iter(self):
+	def iter(self) -> Iterator[doc.Node]:
 		"""Generate an iterator on the stack of items (from top to bottom)."""
 		yield self.item
 		for i in range(len(self.items) - 1, -1, -1):
 			yield self.items[i]
 
-	def top(self):
+	def top(self) -> doc.Node:
 		"""Return the top item of the element stack."""
 		return self.item
 
-	def push(self, item):
+	def push(self, item: doc.Node) -> None:
 		self.items.append(self.item)
 		self.item = item
 		item.setFileLine(self.file_name, self.line_num)
@@ -329,28 +227,29 @@ class Manager:
 			self.debug(f"push({item})")
 			self.debug(f"stack = {self.items}")
 
-	def pop(self):
+	def pop(self) -> doc.Node:
 		self.item.complete()
 		self.item = self.items.pop()
 		if DEBUG:
 			self.debug(f"pop(): {self.item}")
 			self.debug(f"stack = {self.items}")
+		return self.item
 
-	def forward(self, event):
+	def forward(self, event: doc.Event) -> None:
 		if DEBUG:
 			self.debug(f"forward({event})")
 		self.pop()
 		self.send(event)
 
-	def setParser(self, parser):
+	def setParser(self, parser: LineParser) -> None:
 		"""Change the parser."""
 		self.parser = parser
 
-	def getParser(self):
+	def getParser(self) -> LineParser:
 		"""Get the current parser."""
 		return self.parser
 
-	def parseInternal(self, file, name):
+	def parseInternal(self, file: IO, name: str) -> None:
 		"""Parse a text made of several lines.
 		file: object iterable resulting in several lines.
 		name: name of the text (for error display purpose)."""
@@ -366,10 +265,10 @@ class Manager:
 		self.line_num = prev_line
 		self.file_name = prev_file
 
-	def reparse(self, str):
-		self.parser.parse(self, str)
+	def reparse(self, text: str) -> None:
+		self.parser.parse(self, text)
 
-	def parse(self, file, name = '<unknown>'):
+	def parse(self, file: str|IO, name: str = '<unknown>') -> None:
 		"""Parse the given file. The file may be an input stream or
 		a file name. Raise common.ParseException in case of error."""
 		if isinstance(file, str):
@@ -400,35 +299,35 @@ class Manager:
 			except common.ParseException as e:
 				raise common.ParseException(f"{self.get_prefix()}:{e}")
 
-	def addLine(self, line):
+	def addLine(self, line: tuple[HandleFun, re.Pattern]) -> None:
 		"""A syntax working on lines. The line parameter is pair
 		(f, re) with f the function to call when the RE re is found."""
 		self.added_lines.append(line)
 		self.lines.append(line)
 
-	def addWord(self, word):
+	def addWord(self, word: tuple[HandleFun, str]) -> None:
 		self.added_words.append(word)
 		self.words.append(word)
 		self.words_re = None
 
-	def setSyntax(self, lines, words):
+	def setSyntax(self, lines: LineSyntax, words: WordSyntax) -> None:
 		"""Change the main syntax with the given list of line patterns
 		and the given list of word patterns."""
 
 		# process lines
 		self.lines = []
-		self.lines.extend(INITIAL_LINES)
+		self.lines.extend(self.builtin_line_syntax)
 		self.lines.extend(self.added_lines)
 		self.lines.extend(lines)
 
 		# process words
 		self.words = []
-		self.words.extend(INITIAL_WORDS)
+		self.words.extend(self.builtin_word_syntax)
 		self.words.extend(self.added_words)
 		self.words.extend(words)
 		self.words_re = None
 
-	def get_prefix(self):
+	def get_prefix(self) -> str:
 		"""Generate a message prefixed with error line and file."""
 		if self.file_name is not None and self.line_num is not None:
 			file_name = os.path.relpath(self.file_name, os.curdir)
@@ -436,19 +335,15 @@ class Manager:
 		else:
 			return ""
 
-	#def info(self, msg, *args):
-	#	"""Display an information message."""
-	#	self.mon.info(self.get_prefix() + msg, *args)
-
-	def warn(self, msg, *args):
+	def warn(self, msg: str, *args) -> None:
 		"""Display a warning with file and line."""
 		self.mon.warn(self.get_prefix() + msg, *args)
 
-	def error(self, msg, *args):
+	def error(self, msg: str, *args) -> None:
 		"""Display an error with file and line."""
 		self.mon.error(self.get_prefix() + msg, *args)
 
-	def use(self, name):
+	def use(self, name: str) -> None:
 		"""Use a module in the current parser."""
 		assert name is not None
 		if name in self.used_mods:
@@ -497,7 +392,7 @@ class Manager:
 		else:
 			self.mon.fatal(f'cannot find module {name}')
 
-	def fix_path(self, path):
+	def fix_path(self, path: str) -> str:
 		"""Fix the given path if it is not absolute to be relative to the current document path."""
 		if os.path.isabs(path):
 			rpath = path
@@ -507,52 +402,52 @@ class Manager:
 			rpath = os.path.join(os.path.dirname(self.file_name), path)
 		return rpath
 
-	def fix_url(self, url):
+	def fix_url(self, url: str) -> str:
 		"""Fix given URL into a valid absolute path if relative."""
 		if ":" in url:
 			return url
 		else:
 			return self.fix_path(url)
 
-	def parse_text(self, text):
+	def parse_text(self, text: str) -> None:
 		"""Perform parsing of the given text without considering to match
 		them with lines."""
 		handleText(self, text)
 
-	def parse_line(self, line):
+	def parse_line(self, line: str) -> None:
 		"""Parse the given line as usual text line."""
 		self.parser.parse(self, line)
 
-	def push_parser(self, parser):
+	def push_parser(self, parser: LineParser) -> None:
 		"""Push a different line parser (recalling the previous one)."""
 		parser.prev = self.parser
 		self.parser = parser
 
-	def pop_parser(self):
+	def pop_parser(self) -> None:
 		"""Re-install the previous parser."""
 		self.parser = self.parser.prev
 
-	def parse_block(self, block, parser):
+	def parse_block(self, block: doc.Block, parser: LineParser) -> None:
 		"""Parse a block with a special parser."""
 		self.push_parser(parser)
 		self.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, block))
 
+	def get_factory(self) -> doc.Factory:
+		return self.factory
+
 
 class BlockParser(LineParser):
 	"""Deprecated. Use RawParser instead."""
-	old = None
-	block = None
-	re = None
 
-	def __init__(self, man, block, re):
+	def __init__(self, man: Manager, block: doc.Block, rex: Pattern):
 		self.old = man.getParser()
 		man.setParser(self)
 		self.block = block
-		self.re = re
+		self.re: Pattern = rex
 		man.send(doc.ObjectEvent(doc.L_PAR, doc.ID_NEW, self.block))
 
-	def parse(self, manager, line):
-		if self.re.match(line):
+	def parse(self, manager: Manager, line: str) -> None:
+		if self.re.match(line) is not None:
 			manager.setParser(self.old)
 		else:
 			self.block.add(line)
@@ -560,14 +455,13 @@ class BlockParser(LineParser):
 
 class RawParser(LineParser):
 
-	def __init__(self, re):
-		self.re = re
+	def __init__(self, rex: re.Pattern):
+		self.re = rex
 
-	def parse(self, manager, line):
+	def parse(self, manager: Manager, line: str) -> None:
 		if self.re.match(line):
 			manager.pop_parser()
 		else:
-			manager.top().add(line)
-
-
-
+			top = manager.top()
+			assert isinstance(top, doc.Block)
+			top.add(line)
